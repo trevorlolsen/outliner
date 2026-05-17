@@ -1,0 +1,4480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local Outline</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script async src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" onload="if(window._onKatexLoad)window._onKatexLoad()"></script>
+<style>
+:root {
+  --bg: #141414;
+  --bg-1: #1a1a1a;
+  --bg-2: #1e1e1e;
+  --bg-3: #2a2a2a;
+  --bg-3-hover: #333;
+  --bg-4: #222;
+  --bg-list-active: #262626;
+  --bg-add-bar: #1e1e1e;
+  --bg-add-bar-hover-border: #3a3a3a;
+  --bg-input: #2a2a2a;
+
+  --border: #333;
+  --border-soft: #2a2a2a;
+  --border-softer: #2e2e2e;
+  --border-bg: #252525;
+  --border-bg-2: #232323;
+  --border-input: #444;
+  --border-secondary-hover: #484848;
+  --vault-divider: #242424;
+  --ctx-sep: #272727;
+
+  --text: #e0e0e0;
+  --text-muted: #ccc;
+  --text-dim: #aaa;
+  --text-soft: #888;
+  --text-faint: #666;
+  --text-fainter: #555;
+  --text-faintest: #444;
+  --text-ghost: #3a3a3a;
+  --text-placeholder: #333;
+
+  --accent: #5b6af4;
+  --accent-hover: #4b5ae4;
+  --accent-on: #fff;
+  --danger: #e74c3c;
+
+  --selected: #2a3a5a;
+  --selected-text: #ccdaff;
+  --selected-border: #4a5ac0;
+  --selected-count: #7e95d0;
+
+  --inline-link: #88aaff;
+  --inline-link-hover: #aac8ff;
+  --wiki-link: #c4b5fd;
+  --wiki-link-hover: #e4d5ff;
+  --mark-bg: #3a3450;
+  --mark-text: #e4d5ff;
+
+  --autosnap-active-bg: #1f2520;
+  --autosnap-active-border: #3a4a3a;
+  --autosnap-active-text: #9ec8a6;
+
+  --overlay: rgba(0,0,0,.75);
+  --overlay-soft: rgba(0,0,0,.55);
+  --shadow: 0 8px 24px rgba(0,0,0,.55);
+  --shadow-strong: 0 12px 40px rgba(0,0,0,.6);
+}
+
+:root.light {
+  --bg: #fafafa;
+  --bg-1: #f1f1f1;
+  --bg-2: #ffffff;
+  --bg-3: #ececec;
+  --bg-3-hover: #dcdcdc;
+  --bg-4: #f4f4f4;
+  --bg-list-active: #e4e9f5;
+  --bg-add-bar: #f4f4f4;
+  --bg-add-bar-hover-border: #b8b8b8;
+  --bg-input: #ffffff;
+
+  --border: #d4d4d4;
+  --border-soft: #e4e4e4;
+  --border-softer: #d8d8d8;
+  --border-bg: #e4e4e4;
+  --border-bg-2: #e0e0e0;
+  --border-input: #c8c8c8;
+  --border-secondary-hover: #c0c0c0;
+  --vault-divider: #e6e6e6;
+  --ctx-sep: #e0e0e0;
+
+  --text: #1f1f1f;
+  --text-muted: #2f2f2f;
+  --text-dim: #555;
+  --text-soft: #6e6e6e;
+  --text-faint: #888;
+  --text-fainter: #999;
+  --text-faintest: #aaa;
+  --text-ghost: #c8c8c8;
+  --text-placeholder: #c4c4c4;
+
+  --accent: #4252e0;
+  --accent-hover: #3242d0;
+  --accent-on: #ffffff;
+  --danger: #d9302a;
+
+  --selected: #cfdcfa;
+  --selected-text: #1c2f5c;
+  --selected-border: #8295dc;
+  --selected-count: #3a4c80;
+
+  --inline-link: #2a52d0;
+  --inline-link-hover: #4070e0;
+  --wiki-link: #6a40c8;
+  --wiki-link-hover: #8a60d8;
+  --mark-bg: #fff3a8;
+  --mark-text: #3a2880;
+
+  --autosnap-active-bg: #dcf2dd;
+  --autosnap-active-border: #9cc8a0;
+  --autosnap-active-text: #2e6a36;
+
+  --overlay: rgba(20,20,20,.45);
+  --overlay-soft: rgba(20,20,20,.3);
+  --shadow: 0 8px 24px rgba(0,0,0,.15);
+  --shadow-strong: 0 12px 40px rgba(0,0,0,.2);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:14px}
+.hidden{display:none!important}
+
+/* Overlay modals */
+.overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:32px;width:380px;max-width:95vw}
+.modal h2{margin:0 0 8px;font-size:18px}
+.modal .hint{color:var(--text-soft);font-size:12px;margin:0 0 18px}
+.modal label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;margin-top:12px}
+.modal input[type=password],.modal input[type=text]{width:100%;padding:7px 10px;background:var(--bg-input);border:1px solid var(--border-input);border-radius:4px;color:var(--text);font-size:13px}
+.modal input:focus{outline:none;border-color:var(--accent)}
+.modal .modal-actions{margin-top:20px;display:flex;justify-content:flex-end;gap:8px}
+.modal .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.modal .tabs button{padding:5px 11px;border:1px solid var(--border-input);border-radius:4px;background:var(--bg-input);color:var(--text-dim);cursor:pointer;font-size:12px}
+.modal .tabs button.active{border-color:var(--accent);color:var(--text)}
+.modal .file-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.modal .file-row input[type=file]{color:var(--text-dim);font-size:12px;flex:1}
+.error-msg{color:var(--danger);font-size:12px;margin-top:6px;min-height:16px}
+
+/* Buttons */
+button.btn{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:500}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+button.btn-primary{background:var(--accent);color:var(--accent-on)}
+button.btn-primary:hover:not(:disabled){background:var(--accent-hover)}
+button.btn-secondary{background:var(--bg-3);color:var(--text-muted)}
+button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hover)}
+
+/* App shell */
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+#sidebar{width:220px;background:var(--bg-1);border-right:1px solid var(--border-bg);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .15s ease}
+#sidebar .sidebar-top{padding:14px 12px 8px;display:flex;align-items:center;justify-content:space-between}
+#sidebar .app-title{font-size:12px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+#new-doc-btn{padding:3px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);font-size:12px;cursor:pointer}
+#new-doc-btn:hover{background:var(--bg-3-hover)}
+#search-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1;flex-shrink:0}
+#search-btn:hover{color:var(--text-dim)}
+#doc-list{list-style:none;margin:0;padding:4px 6px;flex:1;overflow-y:auto}
+#doc-list li{display:flex;align-items:center;border-radius:4px;padding:1px 4px}
+#doc-list li.active{background:var(--bg-list-active)}
+#doc-list .doc-name{flex:1;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;text-align:left;padding:5px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+#doc-list .doc-actions{display:none;gap:2px}
+#doc-list li:hover .doc-actions{display:flex}
+#doc-list .doc-actions button{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:11px;padding:2px 4px}
+#doc-list .doc-actions button:hover{color:var(--text-muted)}
+.sidebar-bottom{padding:8px;border-top:1px solid var(--border-bg);display:flex;gap:6px}
+.sidebar-bottom button{flex:1;padding:5px;background:var(--bg-4);border:1px solid var(--border-softer);border-radius:4px;color:var(--text-soft);font-size:12px;cursor:pointer}
+.sidebar-bottom button:hover{background:var(--bg-3);color:var(--text-muted)}
+#chpass-btn,#theme-btn{flex:0;padding:5px 8px;font-size:13px}
+#autosnap-section{padding:8px 8px 0;display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--border-bg)}
+#auto-snap-btn{width:100%;padding:5px;background:var(--bg-4);border:1px solid var(--border-softer);border-radius:4px;color:var(--text-soft);font-size:12px;cursor:pointer;text-align:center}
+#auto-snap-btn:hover:not(:disabled){background:var(--bg-3);color:var(--text-muted)}
+#auto-snap-btn:disabled{cursor:not-allowed;opacity:.6}
+#auto-snap-btn.active{color:var(--autosnap-active-text);border-color:var(--autosnap-active-border);background:var(--autosnap-active-bg)}
+.autosnap-notice{color:var(--text-soft);font-size:11px;line-height:1.4;background:var(--bg-1);border:1px solid var(--border-soft);border-radius:4px;padding:6px 8px}
+#sidebar.collapsed{width:36px}
+#sidebar.collapsed .sidebar-top{justify-content:center;padding:14px 6px 8px}
+#sidebar.collapsed #back-to-vaults-btn,#sidebar.collapsed #active-vault-label,#sidebar.collapsed #new-doc-btn,#sidebar.collapsed #search-btn{display:none}
+#sidebar.collapsed #doc-list{display:none}
+#sidebar.collapsed .sidebar-bottom,#sidebar.collapsed #autosnap-section{display:none}
+#sidebar-toggle{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:16px;padding:0 2px;line-height:1;flex-shrink:0}
+#sidebar-toggle:hover{color:var(--text-dim)}
+
+/* Daily-notes section (Today button + month calendar) */
+#daily-section{padding:6px 10px 10px;border-bottom:1px solid var(--border-bg);flex-shrink:0}
+#sidebar.collapsed #daily-section{display:none}
+#today-btn{width:100%;padding:5px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);font-size:12px;cursor:pointer;margin-bottom:8px}
+#today-btn:hover{background:var(--bg-3-hover);color:var(--text)}
+.cal-header{display:flex;align-items:center;justify-content:space-between;color:var(--text-soft);font-size:11px;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.cal-header button{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:0 4px;line-height:1;font-size:12px}
+.cal-header button:hover{color:var(--text-muted)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.cal-dow{color:var(--text-fainter);font-size:10px;text-align:center;padding:2px 0}
+.cal-day{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:3px 0;border-radius:2px;font-size:11px;position:relative;text-align:center;font-family:inherit}
+.cal-day:hover{background:var(--bg-list-active);color:var(--text)}
+.cal-day.today{background:var(--selected);color:var(--selected-text)}
+.cal-day.has-doc::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--accent)}
+
+/* Editor area */
+#editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+#editor-header{padding:10px 20px 0;display:flex;align-items:center;gap:12px}
+#doc-title-input{background:none;border:none;color:var(--text);font-size:16px;font-weight:600;padding:2px 0;flex:1;outline:none}
+#doc-title-input:focus{border-bottom:1px solid var(--accent)}
+#breadcrumb{display:flex;align-items:center;gap:0;flex:1;min-width:0;flex-wrap:wrap;row-gap:2px}
+.bc-crumb{background:none;border:none;color:var(--text-soft);font-size:13px;cursor:pointer;padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.bc-crumb:hover{color:var(--text-muted)}
+.bc-crumb.bc-current{color:var(--text);font-weight:600;cursor:default}
+.bc-sep{color:var(--text-faintest);font-size:12px;padding:0 2px;flex-shrink:0}
+#outline-tree{flex:1;padding:16px 20px 50vh;overflow-y:auto}
+#no-doc-msg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faintest);font-size:13px}
+#add-bar{padding:8px 20px;display:flex;gap:8px;border-top:1px solid var(--bg-add-bar)}
+#add-bar button{padding:4px 10px;background:var(--bg-add-bar);border:1px solid var(--border-soft);border-radius:4px;color:var(--text-faint);font-size:12px;cursor:pointer}
+#add-bar button:hover{color:var(--text-dim);border-color:var(--bg-add-bar-hover-border)}
+
+/* Footer status bar */
+#status-bar{padding:4px 20px;font-size:11px;color:var(--text-faint);background:var(--bg-1);border-top:1px solid var(--border-bg);display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;user-select:none}
+#status-bar .sb-sep{color:var(--text-faintest)}
+
+/* Outline nodes */
+.node-wrap{user-select:none}
+.node-row{display:flex;align-items:flex-start;gap:3px;padding:1px 0;position:relative}
+.node-row:hover .node-meta{opacity:1}
+.node-row.selected{background:var(--selected);border-radius:3px}
+.node-row.dragging{opacity:.4}
+.node-row.drop-before::before{content:'';position:absolute;top:-1px;left:0;right:0;height:2px;background:var(--accent);pointer-events:none;z-index:2}
+.node-row.drop-after::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);pointer-events:none;z-index:2}
+.node-row.drop-child::after{content:'';position:absolute;bottom:-1px;left:40px;right:0;height:2px;background:var(--accent);pointer-events:none;z-index:2}
+.node-meta{opacity:0.25;display:flex;gap:2px;align-items:center;flex-shrink:0;transition:opacity .1s}
+.node-meta button{background:none;border:none;color:var(--text-soft);cursor:pointer;font-size:13px;padding:1px 5px;line-height:1}
+.node-meta button:hover{color:var(--text-muted)}
+.collapse-btn{background:none;border:none;cursor:pointer;color:var(--text-fainter);font-size:9px;padding:3px 2px;line-height:1;min-width:14px;flex-shrink:0;margin-top:2px}
+.collapse-btn.invisible{visibility:hidden}
+.bullet{background:none;border:none;cursor:default;color:var(--text-fainter);font-size:16px;padding:0 3px;line-height:1.4;flex-shrink:0}
+.checkbox-input{margin:4px 4px 0 0;cursor:pointer;accent-color:var(--accent);flex-shrink:0}
+.node-text{flex:1;outline:none;color:var(--text);font-size:14px;line-height:1.6;min-height:1.6em;white-space:pre-wrap;word-break:break-word;cursor:text;user-select:text;caret-color:var(--text);padding:0}
+.node-text.done{text-decoration:line-through;color:var(--text-fainter)}
+.node-children{margin-left:20px}
+.code-block-wrap{flex:1}
+.code-lang-tag{font-size:11px;color:var(--text-faint);font-family:monospace;margin-bottom:2px}
+.code-block-el{border-radius:5px;overflow:hidden;font-size:13px}
+.code-block-el .cm-editor{border-radius:5px}
+.image-block{flex:1}
+.image-block img{max-width:100%;border-radius:4px;display:block;margin-top:2px}
+.vault-modal{width:460px}
+.vault-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.vault-modal-head h2{margin:0}
+#vault-list{list-style:none;margin:0 0 10px;padding:0;max-height:340px;overflow-y:auto}
+#vault-list li{display:flex;align-items:center;gap:8px;padding:9px 2px;border-bottom:1px solid var(--vault-divider)}
+#vault-list li:last-child{border-bottom:none}
+#vault-list .vl-name{flex:1;font-size:14px;color:var(--text-muted)}
+#vault-list .vl-date{font-size:11px;color:var(--text-fainter);flex-shrink:0}
+.vl-btn{background:var(--bg-3);border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;padding:3px 9px;cursor:pointer;flex-shrink:0}
+.vl-btn:hover{background:var(--bg-3-hover);color:var(--text)}
+.vl-btn.danger:hover{color:var(--danger);border-color:var(--danger)}
+.vault-import-btn{width:100%;margin-top:4px;font-size:12px}
+#vault-list .vault-empty{color:var(--text-faintest);font-size:13px;padding:20px 0;text-align:center;width:100%}
+#back-to-vaults-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:15px;padding:0 5px 0 0;line-height:1;flex-shrink:0}
+#back-to-vaults-btn:hover{color:var(--text-dim)}
+.node-text[data-placeholder]:empty::before{content:attr(data-placeholder);color:var(--text-placeholder);pointer-events:none}
+.node-text.has-math{cursor:text;white-space:normal}
+.node-text.has-math .katex-display{margin:.15em 0!important}
+.node-text a.inline-link{color:var(--inline-link);text-decoration:underline;cursor:pointer}
+.node-text a.inline-link:hover{color:var(--inline-link-hover)}
+.node-text a.wiki-link,.node-text a.node-link{color:var(--wiki-link);text-decoration:underline;cursor:pointer}
+.node-text a.wiki-link:hover,.node-text a.node-link:hover{color:var(--wiki-link-hover)}
+.node-text a.wiki-link.broken,.node-text a.node-link.broken{color:var(--text-soft);text-decoration:underline dashed;font-style:italic}
+
+/* Backlinks ("Linked references") panel */
+.backlinks-panel{margin-top:48px;padding-top:14px;border-top:1px solid var(--border-bg-2)}
+.backlinks-panel .bl-toggle{background:none;border:none;color:var(--text-soft);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;padding:4px 0 8px;display:flex;align-items:center;gap:8px;width:100%;text-align:left}
+.backlinks-panel .bl-toggle:hover{color:var(--text-muted)}
+.backlinks-panel .bl-count{color:var(--text-faint);font-weight:400}
+.backlinks-panel ul{list-style:none;margin:0;padding:4px 0 0;display:flex;flex-direction:column;gap:6px}
+.backlinks-panel li{background:var(--bg-1);border:1px solid var(--border-bg-2);border-radius:4px;padding:8px 11px;cursor:pointer}
+.backlinks-panel li:hover{background:var(--bg-4);border-color:var(--border-softer)}
+.backlinks-panel .bl-doc{font-size:11px;color:var(--text-soft);margin-bottom:3px}
+.backlinks-panel .bl-snippet{font-size:13px;color:var(--text-muted);white-space:pre-wrap;word-break:break-word}
+.backlinks-panel .bl-snippet mark{background:var(--mark-bg);color:var(--mark-text);padding:0 2px;border-radius:2px}
+.backlinks-panel.collapsed ul{display:none}
+
+/* [[ wiki autocomplete popup */
+#wiki-autocomplete{position:fixed;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:4px 0;box-shadow:var(--shadow);z-index:550;min-width:200px;max-width:340px;max-height:240px;overflow-y:auto;list-style:none;margin:0}
+#wiki-autocomplete li{padding:5px 12px;font-size:13px;color:var(--text-muted);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#wiki-autocomplete li.active{background:var(--bg-3);color:var(--text)}
+#wiki-autocomplete li.wac-empty{color:var(--text-fainter);cursor:default;font-style:italic}
+
+/* Tags section */
+#tags-section{border-top:1px solid var(--border-bg);padding:6px 8px 4px;max-height:30vh;overflow-y:auto;flex-shrink:0}
+#tags-section.empty{display:none}
+.tags-header{font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;padding:2px 4px 6px;display:flex;justify-content:space-between;align-items:center}
+.tags-clear{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:11px;padding:0 4px}
+.tags-clear:hover{color:var(--text-muted)}
+#tag-list{list-style:none;margin:0;padding:0 0 4px;display:flex;flex-wrap:wrap;gap:4px}
+#tag-list li{background:var(--border-bg-2);border:1px solid var(--border-softer);border-radius:10px;padding:2px 8px;color:var(--text-dim);cursor:pointer;font-size:11px;display:inline-flex;align-items:center;gap:5px;user-select:none}
+#tag-list li:hover{background:var(--bg-3);color:var(--text-muted)}
+#tag-list li.active{background:var(--selected);color:var(--selected-text);border-color:var(--selected-border)}
+#tag-list .tag-count{color:var(--text-faint);font-size:10px}
+#tag-list li.active .tag-count{color:var(--selected-count)}
+#sidebar.collapsed #tags-section{display:none}
+.outline-empty{padding:32px 0;text-align:center;color:var(--text-ghost);font-size:13px;cursor:pointer;user-select:none}
+.outline-empty:hover{color:var(--text-fainter)}
+.outline-empty kbd{background:var(--bg-4);border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:11px;color:var(--text-faint);font-family:monospace}
+.ctx-menu{position:fixed;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:224px;z-index:500;box-shadow:var(--shadow)}
+.ctx-menu ul{list-style:none;margin:0;padding:0}
+.ctx-menu li.ctx-item{padding:5px 12px;font-size:13px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;user-select:none}
+.ctx-menu li.ctx-item:hover,.ctx-menu li.ctx-item.ctx-open{background:var(--bg-3)}
+.ctx-menu li.ctx-item.ctx-disabled{color:var(--text-faintest);cursor:default;pointer-events:none}
+.ctx-sep{height:1px;background:var(--ctx-sep);margin:3px 0}
+.ctx-shortcut{font-size:11px;color:var(--text-fainter);font-family:monospace;flex-shrink:0}
+.ctx-arrow{font-size:9px;color:var(--text-fainter);flex-shrink:0;margin-left:2px}
+.ctx-sub{position:absolute;left:100%;top:-4px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:130px;box-shadow:var(--shadow);display:none;z-index:501}
+.ctx-item:hover .ctx-sub{display:block}
+.ctx-section-label{font-size:11px;color:var(--text-fainter);padding:3px 12px 2px;cursor:default}
+.ctx-cur-lang{font-style:normal;color:var(--text-soft);font-size:12px}
+.ctx-sub.ctx-langs{min-width:150px;max-height:280px;overflow-y:auto}
+
+/* Help overlay */
+#help-overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:600}
+#help-overlay .modal{width:520px;max-width:95vw;max-height:80vh;overflow-y:auto}
+#help-overlay h2{margin:0 0 14px;font-size:16px}
+#help-overlay .shortcut-grid{display:grid;grid-template-columns:max-content 1fr;gap:8px 20px;font-size:13px;align-items:center}
+#help-overlay .shortcut-grid .sc-keys{font-family:monospace;color:var(--text-dim);white-space:nowrap;background:var(--bg-list-active);border:1px solid var(--border);border-radius:3px;padding:2px 8px;font-size:12px;justify-self:start}
+#help-overlay .shortcut-grid .sc-label{color:var(--text-muted)}
+#help-overlay .help-close{margin-top:20px;width:100%}
+
+/* Command palette */
+#palette-overlay{position:fixed;inset:0;background:var(--overlay-soft);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:700}
+.palette{width:560px;max-width:92vw;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-strong);overflow:hidden;display:flex;flex-direction:column}
+#palette-input{width:100%;padding:12px 14px;background:var(--bg-4);border:none;border-bottom:1px solid var(--border-soft);color:var(--text);font-size:14px;outline:none;font-family:inherit}
+#palette-mode{font-size:11px;color:var(--text-faint);padding:4px 14px;background:var(--bg-1);border-bottom:1px solid var(--border-bg)}
+#palette-results{list-style:none;margin:0;padding:4px 0;max-height:380px;overflow-y:auto}
+#palette-results li{padding:7px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;display:flex;flex-direction:column;gap:2px}
+#palette-results li.active{background:var(--bg-3)}
+#palette-results .pal-title{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#palette-results .pal-sub{font-size:11px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#palette-results .pal-empty{color:var(--text-fainter);padding:18px;text-align:center;cursor:default}
+
+/* Full-text search overlay */
+#search-overlay{position:fixed;inset:0;background:var(--overlay-soft);display:flex;align-items:flex-start;justify-content:center;padding-top:60px;z-index:700}
+.search-panel{width:760px;max-width:95vw;max-height:80vh;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-strong);overflow:hidden;display:flex;flex-direction:column}
+.search-head{display:flex;align-items:stretch;background:var(--bg-4);border-bottom:1px solid var(--border-soft)}
+#search-input{flex:1;padding:12px 14px;background:transparent;border:none;color:var(--text);font-size:14px;outline:none;font-family:inherit}
+#search-close{background:transparent;border:none;color:var(--text-faint);cursor:pointer;font-size:16px;padding:0 14px}
+#search-close:hover{color:var(--text)}
+.search-status{font-size:11px;color:var(--text-faint);padding:5px 14px;background:var(--bg-1);border-bottom:1px solid var(--border-bg);display:flex;justify-content:space-between;gap:10px}
+.search-status .ss-filters{color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.search-status .ss-count{flex:none;color:var(--text-soft)}
+.search-history{list-style:none;margin:0;padding:6px 0;border-bottom:1px solid var(--border-bg);max-height:140px;overflow-y:auto;background:var(--bg-1)}
+.search-history li{padding:5px 14px;font-size:12px;color:var(--text-muted);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+.search-history li:hover,.search-history li.active{background:var(--bg-3);color:var(--text)}
+.search-history .sh-icon{color:var(--text-fainter);font-size:11px}
+.search-history .sh-empty{color:var(--text-fainter);cursor:default;font-style:italic}
+.search-results{flex:1;overflow-y:auto;padding:4px 0}
+.search-results .sr-empty{color:var(--text-fainter);padding:30px 18px;text-align:center;font-size:13px}
+.search-group{margin:0}
+.search-group-head{padding:8px 14px 4px;font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:600;background:var(--bg-2);border-top:1px solid var(--border-bg);position:sticky;top:0;z-index:1}
+.search-group:first-child .search-group-head{border-top:none}
+.search-result{padding:8px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;border-left:2px solid transparent;display:flex;flex-direction:column;gap:3px}
+.search-result.active{background:var(--bg-3);border-left-color:var(--accent);color:var(--text)}
+.search-result:hover{background:var(--bg-3-hover)}
+.search-result .sr-snippet{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.search-result .sr-snippet mark{background:var(--mark-bg);color:var(--mark-text);padding:0 2px;border-radius:2px}
+.search-result .sr-meta{font-size:11px;color:var(--text-faint);display:flex;gap:8px;align-items:center}
+.search-result .sr-kind{padding:1px 5px;background:var(--bg-list-active);border-radius:3px;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.03em}
+.search-result .sr-kind.checked{color:var(--autosnap-active-text)}
+
+/* Print stylesheet — hides chrome, prints the outline tree cleanly */
+@media print {
+  @page { margin: 18mm 14mm; }
+  body { background:#fff !important; color:#000 !important; font-size:11pt; }
+  #sidebar, #editor-header, #add-bar, #status-bar,
+  #wiki-autocomplete, #node-ctx-menu, #help-overlay, #palette-overlay, #search-overlay,
+  #vault-screen, #vault-new-modal, #vault-unlock-modal,
+  #export-modal, #import-modal, #vault-snap-modal, #vault-chpass-modal,
+  .node-meta, .collapse-btn, .backlinks-panel { display:none !important; }
+  #app { display:block; height:auto; overflow:visible; }
+  #editor-area { background:#fff; overflow:visible; display:block; }
+  #outline-tree { padding:0; overflow:visible; color:#000; }
+  .node-row { padding:1px 0; }
+  .node-row.selected { background:none !important; }
+  .node-text, .bc-crumb, .bc-current { color:#000 !important; caret-color:auto; }
+  .node-text.done { color:#666 !important; }
+  .node-text a, .node-text a.inline-link, .node-text a.wiki-link, .node-text a.node-link { color:#1a4ed8 !important; text-decoration:underline; }
+  .bullet { color:#666 !important; }
+  .node-children { margin-left:18px; }
+  .code-block-el { border:1px solid #ccc; }
+  .code-block-el .cm-editor { background:#fafafa !important; color:#000 !important; }
+}
+
+.install-hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-1, #1a1a1a);
+  color: var(--text, #e0e0e0);
+  border: 1px solid var(--border, #333);
+  border-radius: 10px;
+  box-shadow: var(--shadow, 0 8px 24px rgba(0,0,0,.55));
+  font-size: 14px;
+  line-height: 1.4;
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform .2s ease, opacity .2s ease;
+}
+.install-hint--leaving {
+  transform: translateY(12px);
+  opacity: 0;
+}
+.install-hint__body { flex: 1; min-width: 0; }
+.install-hint__buttons { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.install-hint__action {
+  background: var(--accent, #5b6af4);
+  color: var(--accent-on, #fff);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.install-hint__action:hover { background: var(--accent-hover, #4b5ae4); }
+.install-hint__close {
+  background: transparent;
+  color: var(--text-dim, #aaa);
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.install-hint__close:hover { color: var(--text, #e0e0e0); background: var(--bg-3, #2a2a2a); }
+</style>
+</head>
+<body>
+
+<!-- Vault picker -->
+<div id="vault-screen" class="overlay">
+  <div class="modal vault-modal">
+    <div class="vault-modal-head">
+      <h2>Vaults</h2>
+      <button id="vault-new-btn" class="btn btn-primary">+ New vault</button>
+    </div>
+    <ul id="vault-list"></ul>
+    <button id="vault-import-btn" class="btn btn-secondary vault-import-btn">Import vault from snapshot…</button>
+  </div>
+</div>
+
+<!-- Create vault -->
+<div id="vault-new-modal" class="overlay hidden">
+  <div class="modal">
+    <h2>New Vault</h2>
+    <label for="vnew-name">Name</label>
+    <input type="text" id="vnew-name" placeholder="e.g. Personal, Work…" autocomplete="off">
+    <label for="vnew-pass">Password</label>
+    <input type="password" id="vnew-pass" placeholder="At least 8 characters" autocomplete="new-password">
+    <label for="vnew-confirm">Confirm password</label>
+    <input type="password" id="vnew-confirm" placeholder="Repeat password" autocomplete="new-password">
+    <div class="error-msg" id="vnew-error"></div>
+    <div id="vnew-kdf-warning" class="hidden" style="color:#e0a020;font-size:11px;margin-top:6px;line-height:1.4">⚠ Argon2id unavailable (offline?). This vault will use PBKDF2 — still secure, but weaker against offline cracking. It will silently upgrade on the next online unlock.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="vnew-cancel">Cancel</button>
+      <button class="btn btn-primary" id="vnew-submit">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unlock vault -->
+<div id="vault-unlock-modal" class="overlay hidden">
+  <div class="modal">
+    <h2 id="vunlock-title">Unlock Vault</h2>
+    <label for="vunlock-pass">Password</label>
+    <input type="password" id="vunlock-pass" placeholder="Vault password" autocomplete="current-password">
+    <div class="error-msg" id="vunlock-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="vunlock-cancel">Cancel</button>
+      <button class="btn btn-primary" id="vunlock-submit">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div id="export-modal" class="overlay hidden">
+  <div class="modal">
+    <h2>Export</h2>
+    <div class="tabs">
+      <button class="active" data-tab="snapshot" id="exp-tab-snap">Encrypted snapshot</button>
+      <button data-tab="markdown" id="exp-tab-md">Markdown</button>
+      <button data-tab="html" id="exp-tab-html">HTML</button>
+      <button data-tab="print" id="exp-tab-print">Print / PDF</button>
+    </div>
+    <div id="exp-snapshot-section">
+      <p class="hint">Exports all documents + images, encrypted. Import requires your password.</p>
+      <label for="exp-pass">Confirm password</label>
+      <input type="password" id="exp-pass" placeholder="Your vault password">
+    </div>
+    <div id="exp-markdown-section" class="hidden">
+      <p class="hint">Exports the active document as Markdown. Images are not included.</p>
+    </div>
+    <div id="exp-html-section" class="hidden">
+      <p class="hint">Exports the active document as a self-contained HTML file with inline CSS, rendered markdown, and math.</p>
+    </div>
+    <div id="exp-print-section" class="hidden">
+      <p class="hint">Opens the browser print dialog. Choose <strong>Save as PDF</strong> as the destination for a PDF copy of the active document.</p>
+    </div>
+    <div class="error-msg" id="exp-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="exp-cancel">Cancel</button>
+      <button class="btn btn-primary" id="exp-submit">Export</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import modal (Markdown only — snapshot import is on vault screen) -->
+<div id="import-modal" class="overlay hidden">
+  <div class="modal">
+    <h2>Import Markdown</h2>
+    <p class="hint">Imports a Markdown file as a new document in this vault.</p>
+    <label>File</label>
+    <div class="file-row"><input type="file" id="imp-file" accept=".md,.markdown"></div>
+    <div class="error-msg" id="imp-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="imp-cancel">Cancel</button>
+      <button class="btn btn-primary" id="imp-submit">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import vault from snapshot (vault screen) -->
+<div id="vault-snap-modal" class="overlay hidden">
+  <div class="modal">
+    <h2>Import Vault Snapshot</h2>
+    <p class="hint">Creates a new vault from an encrypted snapshot file.</p>
+    <label for="vsnap-name">Vault name</label>
+    <input type="text" id="vsnap-name" placeholder="e.g. Imported" autocomplete="off">
+    <label for="vsnap-pass">Snapshot password</label>
+    <input type="password" id="vsnap-pass" placeholder="Password used when exporting" autocomplete="current-password">
+    <label>Snapshot file</label>
+    <div class="file-row"><input type="file" id="vsnap-file" accept=".json"></div>
+    <div class="error-msg" id="vsnap-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="vsnap-cancel">Cancel</button>
+      <button class="btn btn-primary" id="vsnap-submit">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change vault password -->
+<div id="vault-chpass-modal" class="overlay hidden">
+  <div class="modal">
+    <h2 id="vchpass-title">Change Password</h2>
+    <label for="vchpass-current">Current password</label>
+    <input type="password" id="vchpass-current" autocomplete="current-password">
+    <label for="vchpass-new">New password</label>
+    <input type="password" id="vchpass-new" placeholder="At least 8 characters" autocomplete="new-password">
+    <label for="vchpass-confirm">Confirm new password</label>
+    <input type="password" id="vchpass-confirm" autocomplete="new-password">
+    <div class="error-msg" id="vchpass-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="vchpass-cancel">Cancel</button>
+      <button class="btn btn-primary" id="vchpass-submit">Change password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" class="hidden">
+  <aside id="sidebar">
+    <div class="sidebar-top">
+      <button id="back-to-vaults-btn" title="All vaults">⊞</button>
+      <span class="app-title" id="active-vault-label">Outline</span>
+      <button id="search-btn" title="Search (Ctrl+Shift+F)">🔍</button>
+      <button id="new-doc-btn">+ New</button>
+      <button id="sidebar-toggle" title="Toggle sidebar">‹</button>
+    </div>
+    <div id="daily-section">
+      <button id="today-btn" title="Open or create today's daily note">📅 Today</button>
+      <div class="cal-header">
+        <button id="cal-prev" title="Previous month">‹</button>
+        <span id="cal-label"></span>
+        <button id="cal-next" title="Next month">›</button>
+      </div>
+      <div class="cal-grid" id="calendar"></div>
+    </div>
+    <ul id="doc-list"></ul>
+    <div id="tags-section" class="empty">
+      <div class="tags-header">
+        <span>Tags</span>
+        <button class="tags-clear hidden" id="tags-clear-btn" title="Clear filter">✕ clear</button>
+      </div>
+      <ul id="tag-list"></ul>
+    </div>
+    <div id="autosnap-section">
+      <button id="auto-snap-btn">Enable auto-snapshot</button>
+      <div id="auto-snap-notice" class="autosnap-notice hidden"></div>
+    </div>
+    <div class="sidebar-bottom">
+      <button id="import-btn">Import</button>
+      <button id="export-btn">Export</button>
+      <button id="theme-btn" title="Toggle light/dark theme">🌙</button>
+      <button id="chpass-btn" title="Change vault password">🔑</button>
+    </div>
+  </aside>
+  <div id="editor-area">
+    <div id="editor-header" class="hidden">
+      <input id="doc-title-input" placeholder="Untitled">
+      <nav id="breadcrumb" class="hidden"></nav>
+    </div>
+    <div id="outline-tree"></div>
+    <div id="add-bar" class="hidden">
+      <button id="add-text-btn">+ Text</button>
+      <button id="add-code-btn">+ Code</button>
+    </div>
+    <div id="status-bar" class="hidden">
+      <span id="sb-node-count">0 nodes</span>
+      <span class="sb-sep">·</span>
+      <span id="sb-word-count">0 words</span>
+    </div>
+    <div id="no-doc-msg">Select or create a document.</div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  basicSetup, EditorView,
+  javascript, python, markdownLang, css, html, json, sql, rust, cpp, java,
+  StreamLanguage, julia, r,
+  oneDark, Dexie, MarkdownIt, generateKeyBetween
+} from './libs/deps.js'
+
+// =====================================================================
+// UTILITIES
+// =====================================================================
+
+const enc = new TextEncoder()
+const dec = new TextDecoder()
+function toB64(bytes) { let s=''; for(let i=0;i<bytes.length;i++) s+=String.fromCharCode(bytes[i]); return btoa(s) }
+function fromB64(s) { const b=atob(s); const a=new Uint8Array(b.length); for(let i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a }
+function genId() { return crypto.randomUUID() }
+function now() { return Date.now() }
+
+// =====================================================================
+// DATABASE
+// =====================================================================
+
+const db = new Dexie('local-outline')
+db.version(1).stores({
+  vaultMeta: 'id',
+  keyRecords: 'id',
+  encryptedRecords: 'id, store, updatedAt',
+  encryptedAssets: 'id, kind, updatedAt',
+  appState: 'key',
+})
+db.version(2).stores({
+  vaultMeta:        'id',
+  keyRecords:       'id, vaultId',
+  encryptedRecords: 'id, store, vaultId, updatedAt',
+  encryptedAssets:  'id, kind, vaultId, updatedAt',
+  appState:         'key',
+}).upgrade(async tx => {
+  await tx.table('encryptedRecords').toCollection().modify(r => { if (!r.vaultId) r.vaultId = 'vault' })
+  await tx.table('encryptedAssets').toCollection().modify(r  => { if (!r.vaultId) r.vaultId = 'vault' })
+  const oldKey = await tx.table('keyRecords').get('vaultKey-v1')
+  if (oldKey) {
+    await tx.table('keyRecords').put({ ...oldKey, id: 'vaultKey-vault-v1', vaultId: 'vault' })
+    await tx.table('keyRecords').delete('vaultKey-v1')
+  }
+  const v = await tx.table('vaultMeta').get('vault')
+  if (v && !v.name) await tx.table('vaultMeta').put({ ...v, name: 'Default', createdAt: Date.now() })
+})
+
+// =====================================================================
+// CRYPTO  (Argon2id / PBKDF2 + AES-GCM)
+// =====================================================================
+
+const PBKDF2_ITERATIONS = 600000
+const ARGON2_PARAMS = { time: 3, memory: 65536, parallelism: 1, hashLen: 32 }
+
+// Argon2 WASM loader. Resolves to the argon2-browser module, or null when
+// the module can't be loaded (e.g. offline / SW cache miss).
+let _argon2Promise = null
+let _argon2 = null
+function loadArgon2() {
+  if (_argon2) return Promise.resolve(_argon2)
+  if (_argon2Promise) return _argon2Promise
+  _argon2Promise = import('https://esm.sh/argon2-browser@1.18.0')
+    .then(mod => { _argon2 = mod.default ?? mod; return _argon2 })
+    .catch(err => { console.warn('Argon2id unavailable:', err); _argon2Promise = null; return null })
+  return _argon2Promise
+}
+
+function kdfSpecFromMeta(meta) {
+  if (meta.kdfSpec) return meta.kdfSpec
+  // Legacy vaults: top-level salt + implicit pbkdf2 with the original iteration count.
+  return { kind: 'pbkdf2', salt: meta.salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' }
+}
+
+function newPbkdf2Spec() {
+  const salt = crypto.getRandomValues(new Uint8Array(32))
+  return { kind: 'pbkdf2', salt: toB64(salt), iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' }
+}
+
+function newArgon2idSpec() {
+  const salt = crypto.getRandomValues(new Uint8Array(32))
+  return { kind: 'argon2id', salt: toB64(salt), ...ARGON2_PARAMS }
+}
+
+// Pick the strongest KDF available. Returns { spec, fallback } where
+// fallback=true means Argon2id was unavailable and we degraded to PBKDF2.
+async function pickKdfSpec() {
+  const argon2 = await loadArgon2()
+  if (argon2) return { spec: newArgon2idSpec(), fallback: false }
+  return { spec: newPbkdf2Spec(), fallback: true }
+}
+
+// Dispatch on kdfSpec.kind. Accepts a raw Uint8Array salt as legacy shorthand
+// for PBKDF2 (used by snapshot import/export, which embeds its own salt).
+async function deriveKey(password, kdfSpec) {
+  if (kdfSpec instanceof Uint8Array) {
+    kdfSpec = { kind: 'pbkdf2', salt: kdfSpec, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' }
+  }
+  const salt = typeof kdfSpec.salt === 'string' ? fromB64(kdfSpec.salt) : kdfSpec.salt
+  if (kdfSpec.kind === 'argon2id') {
+    const argon2 = await loadArgon2()
+    if (!argon2) throw new Error('Argon2id KDF is required for this vault but the module is unavailable.')
+    const res = await argon2.hash({
+      pass: password,
+      salt,
+      type: argon2.ArgonType.Argon2id,
+      time: kdfSpec.time ?? ARGON2_PARAMS.time,
+      mem: kdfSpec.memory ?? ARGON2_PARAMS.memory,
+      parallelism: kdfSpec.parallelism ?? ARGON2_PARAMS.parallelism,
+      hashLen: kdfSpec.hashLen ?? ARGON2_PARAMS.hashLen,
+    })
+    return crypto.subtle.importKey(
+      'raw', res.hash, { name: 'AES-GCM', length: 256 }, false,
+      ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
+    )
+  }
+  const iterations = kdfSpec.iterations ?? PBKDF2_ITERATIONS
+  const hash = kdfSpec.hash ?? 'SHA-256'
+  const mat = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey'])
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations, hash },
+    mat, { name: 'AES-GCM', length: 256 }, false,
+    ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
+  )
+}
+
+async function aesEncrypt(key, plaintext) {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext)
+  return { ciphertext: new Uint8Array(ct), iv }
+}
+
+async function aesDecrypt(key, ciphertext, iv) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext)
+  return new Uint8Array(pt)
+}
+
+function makeCtx(vaultKey, vaultId) {
+  return {
+    vaultId,
+    async encrypt(bytes) {
+      const { ciphertext, iv } = await aesEncrypt(vaultKey, bytes)
+      return { ciphertext: toB64(ciphertext), iv: toB64(iv) }
+    },
+    async decrypt(ciphertext, iv) {
+      return aesDecrypt(vaultKey, fromB64(ciphertext), fromB64(iv))
+    }
+  }
+}
+
+async function initVault(name, password) {
+  const id = genId()
+  const { spec: kdfSpec, fallback: kdfFallback } = await pickKdfSpec()
+  const passwordKey = await deriveKey(password, kdfSpec)
+  const vaultKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+  const wrapIv = crypto.getRandomValues(new Uint8Array(12))
+  const wrapped = await crypto.subtle.wrapKey('raw', vaultKey, passwordKey, { name: 'AES-GCM', iv: wrapIv })
+  await db.vaultMeta.put({
+    id, name,
+    salt: kdfSpec.salt,
+    kdf: kdfSpec.kind, kdfSpec,
+    keyVersion: 1, createdAt: now(),
+  })
+  await db.keyRecords.put({ id: `vaultKey-${id}-v1`, vaultId: id, version: 1, wrappedKey: toB64(new Uint8Array(wrapped)), iv: toB64(wrapIv) })
+  const rawKey = await crypto.subtle.exportKey('raw', vaultKey)
+  const runtimeKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+  const ctx = makeCtx(runtimeKey, id)
+  ctx.kdfFallback = kdfFallback
+  return ctx
+}
+
+async function unlockVault(vaultId, password) {
+  const meta = await db.vaultMeta.get(vaultId)
+  if (!meta) throw new Error('Vault not found.')
+  const kdfSpec = kdfSpecFromMeta(meta)
+  const passwordKey = await deriveKey(password, kdfSpec)
+  const rec = await db.keyRecords.get(`vaultKey-${vaultId}-v${meta.keyVersion}`)
+  if (!rec) throw new Error('Key record missing.')
+  // extractable=true so we can re-wrap during a silent KDF migration; the
+  // runtime key we hand out below is re-imported as non-extractable.
+  const vaultKey = await crypto.subtle.unwrapKey(
+    'raw', fromB64(rec.wrappedKey), passwordKey,
+    { name: 'AES-GCM', iv: fromB64(rec.iv) },
+    { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']
+  )
+
+  // Silent migration: legacy PBKDF2 vault -> Argon2id, if the WASM is loadable.
+  // Write the new key record before flipping vaultMeta and deleting the old
+  // record, so a crash mid-migration always leaves a working key on disk.
+  if (kdfSpec.kind === 'pbkdf2') {
+    const argon2 = await loadArgon2()
+    if (argon2) {
+      try {
+        const newKdfSpec = newArgon2idSpec()
+        const newPasswordKey = await deriveKey(password, newKdfSpec)
+        const newWrapIv = crypto.getRandomValues(new Uint8Array(12))
+        const newWrapped = await crypto.subtle.wrapKey('raw', vaultKey, newPasswordKey, { name: 'AES-GCM', iv: newWrapIv })
+        const newVersion = (meta.keyVersion || 1) + 1
+        const newRecId = `vaultKey-${vaultId}-v${newVersion}`
+        await db.keyRecords.put({ id: newRecId, vaultId, version: newVersion, wrappedKey: toB64(new Uint8Array(newWrapped)), iv: toB64(newWrapIv) })
+        await db.vaultMeta.put({ ...meta, salt: newKdfSpec.salt, kdf: newKdfSpec.kind, kdfSpec: newKdfSpec, keyVersion: newVersion })
+        await db.keyRecords.delete(rec.id)
+      } catch (e) {
+        console.warn('Argon2id migration failed; keeping PBKDF2 record:', e)
+      }
+    }
+  }
+
+  const rawKey = await crypto.subtle.exportKey('raw', vaultKey)
+  const runtimeKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+  return makeCtx(runtimeKey, vaultId)
+}
+
+async function deleteVault(vaultId) {
+  await db.vaultMeta.delete(vaultId)
+  await db.keyRecords.where('vaultId').equals(vaultId).delete()
+  await db.encryptedRecords.where('vaultId').equals(vaultId).delete()
+  await db.encryptedAssets.where('vaultId').equals(vaultId).delete()
+}
+
+async function getAllVaults() { return db.vaultMeta.toArray() }
+
+async function changeVaultPassword(vaultId, currentPassword, newPassword) {
+  const meta = await db.vaultMeta.get(vaultId)
+  if (!meta) throw new Error('Vault not found.')
+  const rec = await db.keyRecords.get(`vaultKey-${vaultId}-v${meta.keyVersion}`)
+  if (!rec) throw new Error('Key record missing.')
+  const oldPasswordKey = await deriveKey(currentPassword, kdfSpecFromMeta(meta))
+  let vaultKey
+  try {
+    vaultKey = await crypto.subtle.unwrapKey(
+      'raw', fromB64(rec.wrappedKey), oldPasswordKey,
+      { name: 'AES-GCM', iv: fromB64(rec.iv) },
+      { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']
+    )
+  } catch { throw new Error('Current password is incorrect.') }
+  const { spec: newKdfSpec } = await pickKdfSpec()
+  const newPasswordKey = await deriveKey(newPassword, newKdfSpec)
+  const newWrapIv = crypto.getRandomValues(new Uint8Array(12))
+  const newWrapped = await crypto.subtle.wrapKey('raw', vaultKey, newPasswordKey, { name: 'AES-GCM', iv: newWrapIv })
+  await db.vaultMeta.put({ ...meta, salt: newKdfSpec.salt, kdf: newKdfSpec.kind, kdfSpec: newKdfSpec })
+  await db.keyRecords.put({ ...rec, wrappedKey: toB64(new Uint8Array(newWrapped)), iv: toB64(newWrapIv) })
+}
+
+// =====================================================================
+// RECORDS  (CRUD)
+// =====================================================================
+
+async function encPayload(obj, ctx) {
+  const bytes = enc.encode(JSON.stringify(obj))
+  if (ctx) return ctx.encrypt(bytes)
+  return { ciphertext: toB64(bytes), iv: '' }
+}
+
+async function decPayload(ciphertext, iv, ctx) {
+  if (ctx && iv) return JSON.parse(dec.decode(await ctx.decrypt(ciphertext, iv)))
+  return JSON.parse(dec.decode(fromB64(ciphertext)))
+}
+
+async function putDoc(doc, ctx) {
+  const { ciphertext, iv } = await encPayload(doc, ctx)
+  await db.encryptedRecords.put({ id: doc.id, store: 'documents', vaultId: ctx.vaultId, ciphertext, iv, updatedAt: doc.updatedAt })
+}
+
+async function getAllDocs(ctx) {
+  const recs = await db.encryptedRecords.where('store').equals('documents').and(r => r.vaultId === ctx.vaultId).toArray()
+  return Promise.all(recs.map(r => decPayload(r.ciphertext, r.iv, ctx)))
+}
+
+async function deleteDoc(id) { await db.encryptedRecords.delete(id) }
+
+async function putNode(node, ctx) {
+  const { ciphertext, iv } = await encPayload(node, ctx)
+  await db.encryptedRecords.put({ id: node.id, store: 'nodes', vaultId: ctx.vaultId, ciphertext, iv, updatedAt: node.updatedAt })
+  indexNode(node)
+  autoSnapOnPutNode()
+}
+
+async function putNodes(nodes, ctx) {
+  for (const n of nodes) await putNode(n, ctx)
+}
+
+async function getNodesByDoc(docId, ctx) {
+  const recs = await db.encryptedRecords.where('store').equals('nodes').and(r => r.vaultId === ctx.vaultId).toArray()
+  const all = await Promise.all(recs.map(r => decPayload(r.ciphertext, r.iv, ctx)))
+  return all.filter(n => n.documentId === docId)
+}
+
+async function getAllNodes(ctx) {
+  const recs = await db.encryptedRecords.where('store').equals('nodes').and(r => r.vaultId === ctx.vaultId).toArray()
+  return Promise.all(recs.map(r => decPayload(r.ciphertext, r.iv, ctx)))
+}
+
+async function deleteNodes(ids) {
+  for (const id of ids) {
+    await db.encryptedRecords.delete(id)
+    unindexNode(id)
+  }
+}
+
+async function putAsset(id, kind, data, ctx) {
+  let ciphertext, iv
+  if (ctx) { const e = await ctx.encrypt(data); ciphertext = e.ciphertext; iv = e.iv }
+  else { ciphertext = toB64(data); iv = '' }
+  await db.encryptedAssets.put({ id, kind, vaultId: ctx?.vaultId ?? '', ciphertext, iv, updatedAt: now() })
+}
+
+async function getAsset(id, ctx) {
+  const rec = await db.encryptedAssets.get(id)
+  if (!rec) return null
+  if (ctx && rec.iv) return ctx.decrypt(rec.ciphertext, rec.iv)
+  return fromB64(rec.ciphertext)
+}
+
+async function getAllAssets(ctx) {
+  return db.encryptedAssets.where('vaultId').equals(ctx.vaultId).toArray()
+}
+
+// =====================================================================
+// DOMAIN  (tree + operations)
+// =====================================================================
+
+function sortedChildren(nodes, parentId, docId) {
+  return nodes
+    .filter(n => n.documentId === docId && n.parentId === parentId)
+    .sort((a, b) => a.order < b.order ? -1 : a.order > b.order ? 1 : 0)
+}
+
+function buildTreeMap(nodes) {
+  const map = new Map()
+  for (const n of nodes) {
+    const k = n.parentId
+    if (!map.has(k)) map.set(k, [])
+    map.get(k).push(n)
+  }
+  for (const [, arr] of map) arr.sort((a, b) => a.order < b.order ? -1 : a.order > b.order ? 1 : 0)
+  return map
+}
+
+function getDescendants(nodes, nodeId) {
+  const result = []; const queue = [nodeId]
+  while (queue.length) {
+    const pid = queue.shift()
+    const kids = nodes.filter(n => n.parentId === pid)
+    for (const k of kids) { result.push(k); queue.push(k.id) }
+  }
+  return result
+}
+
+function ordersAround(siblings, afterNode) {
+  if (!siblings.length) return [null, null]
+  if (!afterNode) return [null, siblings[0].order]
+  const idx = siblings.findIndex(s => s.id === afterNode.id)
+  const prev = idx >= 0 ? siblings[idx].order : null
+  const next = idx >= 0 && idx + 1 < siblings.length ? siblings[idx + 1].order : null
+  return [prev, next]
+}
+
+function applyPatch(nodes, updated) {
+  const map = new Map(nodes.map(n => [n.id, n]))
+  for (const u of updated) map.set(u.id, u)
+  return Array.from(map.values())
+}
+
+function opInsert(nodes, docId, parentId, afterNode, kind = 'text') {
+  const siblings = sortedChildren(nodes, parentId, docId)
+  const [prev, next] = ordersAround(siblings, afterNode)
+  const order = generateKeyBetween(prev, next)
+  const node = { id: genId(), parentId, documentId: docId, order, kind, content: '', createdAt: now(), updatedAt: now() }
+  return { nodes: [...nodes, node], delta: [node], deletedIds: [], newId: node.id }
+}
+
+function opDelete(nodes, nodeId) {
+  const desc = getDescendants(nodes, nodeId)
+  const ids = [nodeId, ...desc.map(d => d.id)]
+  return { nodes: nodes.filter(n => !ids.includes(n.id)), delta: [], deletedIds: ids }
+}
+
+function opIndent(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const siblings = sortedChildren(nodes, node.parentId, node.documentId)
+  const idx = siblings.findIndex(s => s.id === nodeId); if (idx <= 0) return null
+  const newParent = siblings[idx - 1]
+  const newSiblings = sortedChildren(nodes, newParent.id, node.documentId)
+  const last = newSiblings[newSiblings.length - 1] ?? null
+  const order = generateKeyBetween(last?.order ?? null, null)
+  const updated = { ...node, parentId: newParent.id, order, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opOutdent(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node || node.parentId === null) return null
+  const parent = nodes.find(n => n.id === node.parentId); if (!parent) return null
+  const parentSiblings = sortedChildren(nodes, parent.parentId, node.documentId)
+  const pIdx = parentSiblings.findIndex(s => s.id === parent.id)
+  const nextSib = parentSiblings[pIdx + 1] ?? null
+  const order = generateKeyBetween(parent.order, nextSib?.order ?? null)
+  const updated = { ...node, parentId: parent.parentId, order, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opMove(nodes, nodeId, targetParentId, afterNode) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const siblings = sortedChildren(nodes, targetParentId, node.documentId).filter(s => s.id !== nodeId)
+  const [prev, next] = ordersAround(siblings, afterNode)
+  const order = generateKeyBetween(prev, next)
+  const updated = { ...node, parentId: targetParentId, order, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opToggleCollapse(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const updated = { ...node, collapsed: !node.collapsed, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opToggleCheck(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const updated = { ...node, checked: !node.checked, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opExpandAll(nodes, nodeId) {
+  const targets = [nodeId, ...getDescendants(nodes, nodeId).map(d => d.id)]
+  const updated = nodes.filter(n => targets.includes(n.id) && n.collapsed).map(n => ({...n, collapsed: false, updatedAt: now()}))
+  if (!updated.length) return null
+  return { nodes: applyPatch(nodes, updated), delta: updated, deletedIds: [] }
+}
+
+function opExpandToLevel(nodes, nodeId, maxDepth) {
+  function walk(nid, depth) {
+    return nodes.filter(n => n.parentId === nid)
+      .flatMap(n => [{node: n, depth}, ...walk(n.id, depth + 1)])
+  }
+  const items = [{node: nodes.find(n => n.id === nodeId), depth: 0}, ...walk(nodeId, 1)]
+  const updated = items.flatMap(({node, depth}) => {
+    if (!node) return []
+    const want = depth >= maxDepth
+    return node.collapsed !== want ? [{...node, collapsed: want, updatedAt: now()}] : []
+  })
+  if (!updated.length) return null
+  return { nodes: applyPatch(nodes, updated), delta: updated, deletedIds: [] }
+}
+
+function opExpandSiblings(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const siblings = sortedChildren(nodes, node.parentId, node.documentId).filter(s => s.id !== nodeId)
+  const updated = siblings.filter(s => s.collapsed).map(s => ({...s, collapsed: false, updatedAt: now()}))
+  if (!updated.length) return null
+  return { nodes: applyPatch(nodes, updated), delta: updated, deletedIds: [] }
+}
+
+function opSortChildren(nodes, nodeId, dir = 'asc') {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const children = sortedChildren(nodes, nodeId, node.documentId)
+  if (children.length < 2) return null
+  const sorted = [...children].sort((a, b) => {
+    const c = a.content.localeCompare(b.content, undefined, {sensitivity: 'base'})
+    return dir === 'asc' ? c : -c
+  })
+  const updated = []; let prev = null
+  for (const child of sorted) {
+    const order = generateKeyBetween(prev, null)
+    updated.push({...child, order, updatedAt: now()}); prev = order
+  }
+  return { nodes: applyPatch(nodes, updated), delta: updated, deletedIds: [] }
+}
+
+function opChangeKind(nodes, nodeId, kind) {
+  const node = nodes.find(n => n.id === nodeId); if (!node || node.kind === kind) return null
+  const updated = {...node, kind,
+    checked: kind === 'checkbox' ? (node.checked || false) : undefined,
+    codeBody: kind === 'code' ? (node.codeBody ?? '') : undefined,
+    updatedAt: now()}
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opChildrenToCheckbox(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const children = sortedChildren(nodes, nodeId, node.documentId)
+  const updated = children.filter(c => c.kind !== 'checkbox').map(c => ({...c, kind: 'checkbox', checked: false, updatedAt: now()}))
+  if (!updated.length) return null
+  return { nodes: applyPatch(nodes, updated), delta: updated, deletedIds: [] }
+}
+
+function opDeleteChecked(nodes, nodeId) {
+  const ids = getDescendants(nodes, nodeId).filter(n => n.kind === 'checkbox' && n.checked).map(n => n.id)
+  if (!ids.length) return null
+  return { nodes: nodes.filter(n => !ids.includes(n.id)), delta: [], deletedIds: ids }
+}
+
+function opNumberChildren(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const children = sortedChildren(nodes, nodeId, node.documentId)
+  if (!children.length) return null
+  const already = /^\d+\.\s/.test(children[0].content)
+  const updated = children.map((c, i) => ({
+    ...c, content: already ? c.content.replace(/^\d+\.\s/, '') : `${i + 1}. ${c.content}`, updatedAt: now()
+  }))
+  return { nodes: applyPatch(nodes, updated), delta: updated, deletedIds: [] }
+}
+
+function opChangeCodeLang(nodes, nodeId, lang) {
+  const node = nodes.find(n => n.id === nodeId); if (!node || node.kind !== 'code') return null
+  if (node.content === lang) return null
+  const updated = {...node, content: lang, updatedAt: now()}
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+// =====================================================================
+// PORTABILITY
+// =====================================================================
+
+async function exportSnapshot(password, ctx) {
+  const docs = await getAllDocs(ctx)
+  const nodes = await getAllNodes(ctx)
+  const assetRecs = await getAllAssets(ctx)
+  const assets = await Promise.all(assetRecs.map(async rec => {
+    const data = rec.iv ? await ctx.decrypt(rec.ciphertext, rec.iv) : fromB64(rec.ciphertext)
+    return { id: rec.id, kind: rec.kind, data: toB64(data), createdAt: rec.updatedAt }
+  }))
+  const vaultMeta = await db.vaultMeta.get(ctx.vaultId)
+  const payload = JSON.stringify({ documents: docs, nodes, assets })
+  const plaintext = enc.encode(payload)
+  const salt = crypto.getRandomValues(new Uint8Array(32))
+  const snapKey = await deriveKey(password, salt)
+  const { ciphertext, iv } = await aesEncrypt(snapKey, plaintext)
+  return JSON.stringify({
+    app: 'local-outline', snapshotVersion: 1, encrypted: true, createdAt: now(),
+    vaultName: vaultMeta?.name ?? 'Vault',
+    encryption: { algorithm: 'AES-GCM', kdf: 'pbkdf2', salt: toB64(salt), iv: toB64(iv), keyVersion: 1 },
+    ciphertext: toB64(ciphertext)
+  }, null, 2)
+}
+
+async function importSnapshot(json, password, vaultName) {
+  const snap = JSON.parse(json)
+  if (snap.app !== 'local-outline' || !snap.encrypted) throw new Error('Invalid snapshot.')
+  const salt = fromB64(snap.encryption.salt)
+  const iv = fromB64(snap.encryption.iv)
+  const snapKey = await deriveKey(password, salt)
+  let plaintext
+  try { plaintext = await aesDecrypt(snapKey, fromB64(snap.ciphertext), iv) }
+  catch { throw new Error('Incorrect password or corrupted snapshot.') }
+  const payload = JSON.parse(dec.decode(plaintext))
+  const name = vaultName || snap.vaultName || 'Imported'
+  const newCtx = await initVault(name, password)
+  for (const doc of payload.documents) await putDoc(doc, newCtx)
+  await putNodes(payload.nodes, newCtx)
+  for (const asset of payload.assets) await putAsset(asset.id, asset.kind, fromB64(asset.data), newCtx)
+  return newCtx
+}
+
+const mdParser = new MarkdownIt({ breaks: true })
+
+function exportMarkdown(doc, nodes) {
+  function renderNode(node, depth) {
+    const indent = '  '.repeat(depth)
+    let line = ''
+    if (node.kind === 'checkbox') {
+      line = `${indent}- ${node.checked ? '[x]' : '[ ]'} ${node.content}\n`
+    } else if (node.kind === 'code') {
+      line = `${indent}\`\`\`${node.content || ''}\n${node.codeBody ?? ''}\n${indent}\`\`\`\n`
+    } else if (node.kind === 'image') {
+      line = `${indent}- ![image](asset:${node.assetId ?? ''})\n`
+    } else {
+      line = `${indent}- ${node.content}\n`
+    }
+    for (const child of sortedChildren(nodes, node.id, node.documentId)) {
+      line += renderNode(child, depth + 1)
+    }
+    return line
+  }
+  let out = `# ${doc.title}\n\n`
+  for (const root of sortedChildren(nodes, null, doc.id)) out += renderNode(root, 0)
+  return out
+}
+
+// Self-contained HTML export: nested <ul> with rendered markdown inline and
+// KaTeX math. Images are embedded as data URIs so the file stands alone.
+async function exportHtml(doc, nodes, ctx) {
+  function escText(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+  function escAttr(s) { return escText(s).replace(/"/g,'&quot;') }
+
+  function renderContent(content) {
+    if (!content) return ''
+    const slots = []
+    let out = ''
+    let last = 0
+    const re = /\$\$[\s\S]*?\$\$|\$[^$\n]*?\$/g
+    let m
+    while ((m = re.exec(content)) !== null) {
+      out += content.slice(last, m.index)
+      const display = m[0].startsWith('$$')
+      const math = display ? m[0].slice(2, -2) : m[0].slice(1, -1)
+      let html
+      if (window.katex) {
+        try { html = katex.renderToString(math.trim(), { displayMode: display, throwOnError: true }) }
+        catch { html = escText(m[0]) }
+      } else { html = escText(m[0]) }
+      const key = `KATEXSLOT${slots.length}KATEXEND`
+      slots.push({ key, html })
+      out += key
+      last = m.index + m[0].length
+    }
+    out += content.slice(last)
+    let rendered = mdParser.renderInline(out)
+    for (const s of slots) rendered = rendered.replace(s.key, s.html)
+    return rendered
+  }
+
+  async function renderImage(node) {
+    if (!node.assetId) return '<em>(image)</em>'
+    try {
+      const bytes = await getAsset(node.assetId, ctx)
+      if (!bytes) return '<em>(image unavailable)</em>'
+      const mime = node.content || 'image/png'
+      return `<img src="data:${escAttr(mime)};base64,${toB64(bytes)}" alt="image">`
+    } catch { return '<em>(image error)</em>' }
+  }
+
+  async function renderNode(node) {
+    let body
+    if (node.kind === 'code') {
+      body = `<pre><code class="lang-${escAttr(node.content || '')}">${escText(node.codeBody ?? '')}</code></pre>`
+    } else if (node.kind === 'image') {
+      body = await renderImage(node)
+    } else if (node.kind === 'checkbox') {
+      const checked = node.checked ? ' checked' : ''
+      const cls = node.checked ? ' class="done"' : ''
+      body = `<label${cls}><input type="checkbox" disabled${checked}> <span>${renderContent(node.content)}</span></label>`
+    } else {
+      body = `<span>${renderContent(node.content)}</span>`
+    }
+    let html = body
+    const kids = sortedChildren(nodes, node.id, node.documentId)
+    if (kids.length) {
+      let kidsHtml = ''
+      for (const k of kids) kidsHtml += await renderNode(k)
+      html += `<ul>${kidsHtml}</ul>`
+    }
+    return `<li>${html}</li>`
+  }
+
+  const roots = sortedChildren(nodes, null, doc.id)
+  let bodyHtml = ''
+  for (const r of roots) bodyHtml += await renderNode(r)
+
+  const css = `
+body{font-family:system-ui,-apple-system,sans-serif;max-width:780px;margin:40px auto;padding:0 24px;color:#222;line-height:1.6}
+h1{font-size:24px;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:24px}
+ul{list-style:disc;padding-left:24px;margin:4px 0}
+li{margin:2px 0}
+pre{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:10px;overflow-x:auto;font-size:13px;line-height:1.4}
+code{font-family:ui-monospace,Menlo,Consolas,monospace}
+img{max-width:100%;border-radius:4px}
+label{display:inline-flex;align-items:baseline;gap:6px}
+label.done{text-decoration:line-through;color:#888}
+a{color:#3a5cd0}
+.katex-display{margin:.4em 0!important}
+@media print { body{margin:0;max-width:none} }
+`
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escText(doc.title || 'Outline')}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<style>${css}</style>
+</head>
+<body>
+<h1>${escText(doc.title || 'Outline')}</h1>
+<ul>${bodyHtml}</ul>
+</body>
+</html>`
+}
+
+function importMarkdown(text) {
+  const docId = genId(); const ts = now()
+  const lines = text.split('\n'); let title = 'Imported'; let i = 0
+  if (lines[0]?.startsWith('# ')) { title = lines[0].slice(2).trim(); i = 1 }
+
+  const nodes = []
+  // depthStack[d] = { parentId, lastOrder, lastId }
+  const depthStack = [{ parentId: null, lastOrder: null, lastId: null }]
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    // Fenced code block (may appear at any indent level)
+    const fenceM = line.match(/^(\s*)```(.*)$/)
+    if (fenceM) {
+      const depth = Math.floor(fenceM[1].length / 2)
+      const lang = fenceM[2].trim(); i++
+      const codeLines = []
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) codeLines.push(lines[i++])
+      i++ // closing ```
+      while (depthStack.length > depth + 1) depthStack.pop()
+      const entry = depthStack[depth] ?? depthStack[depthStack.length - 1]
+      const order = generateKeyBetween(entry.lastOrder, null)
+      const nodeId = genId()
+      nodes.push({ id: nodeId, parentId: entry.parentId, documentId: docId, order,
+        kind: 'code', content: lang, codeBody: codeLines.join('\n'), createdAt: ts, updatedAt: ts })
+      entry.lastOrder = order; entry.lastId = nodeId
+      if (!depthStack[depth + 1]) depthStack.push({ parentId: nodeId, lastOrder: null, lastId: null })
+      else { depthStack[depth + 1].parentId = nodeId; depthStack[depth + 1].lastOrder = null }
+      continue
+    }
+
+    // List item
+    const listM = line.match(/^(\s*)-\s+(.*)$/)
+    if (listM) {
+      const depth = Math.floor(listM[1].length / 2)
+      let content = listM[2]
+      while (depthStack.length > depth + 1) depthStack.pop()
+      if (!depthStack[depth]) {
+        depthStack.push({ parentId: depthStack[depth - 1]?.lastId ?? null, lastOrder: null, lastId: null })
+      }
+      const entry = depthStack[depth]
+      const order = generateKeyBetween(entry.lastOrder, null)
+      const nodeId = genId()
+      let kind = 'text', checked
+      if (content.match(/^\[(x|X| )\] /)) {
+        kind = 'checkbox'; checked = content[1].toLowerCase() === 'x'; content = content.slice(4)
+      }
+      nodes.push({ id: nodeId, parentId: entry.parentId, documentId: docId, order,
+        kind, content, checked, createdAt: ts, updatedAt: ts })
+      entry.lastOrder = order; entry.lastId = nodeId
+      if (!depthStack[depth + 1]) depthStack.push({ parentId: nodeId, lastOrder: null, lastId: null })
+      else { depthStack[depth + 1].parentId = nodeId; depthStack[depth + 1].lastOrder = null }
+    }
+    i++
+  }
+  return { doc: { id: docId, title, createdAt: ts, updatedAt: ts }, nodes }
+}
+
+// =====================================================================
+// SEARCH INDEX  (inverted index with pluggable extractor pipeline)
+// =====================================================================
+
+const searchIndex = {
+  postings: new Map(),    // token -> Set<nodeId>
+  nodeTokens: new Map(),  // nodeId -> Set<token>  (for clean removal)
+  nodeMeta: new Map(),    // nodeId -> { docId, kind, content, updatedAt }
+  extractors: [],
+}
+
+function tokenizeWords(text) {
+  if (!text) return []
+  return text.toLowerCase().split(/[^\p{L}\p{N}_]+/u).filter(Boolean)
+}
+
+// Default extractor: text content + code body. Sessions 4/5 will register
+// additional extractors (tags, links) via registerExtractor() — each returns
+// an iterable of tokens that get unioned into the node's token set.
+function wordExtractor(node) {
+  const out = []
+  if (node.kind === 'code') {
+    out.push(...tokenizeWords(node.codeBody || ''))
+    out.push(...tokenizeWords(node.content || ''))
+  } else if (node.kind !== 'image') {
+    out.push(...tokenizeWords(node.content || ''))
+  }
+  return out
+}
+
+function registerExtractor(fn) { searchIndex.extractors.push(fn) }
+registerExtractor(wordExtractor)
+
+// #tag extractor — emits "#tagname" tokens (lowercased) so tag postings live
+// alongside word postings in the same inverted index. Used by the sidebar
+// Tags section and the tag filter; see renderTagList() / renderTree().
+const TAG_RE = /(^|[^\p{L}\p{N}_])#([\p{L}\p{N}_-]+)/gu
+function tagExtractor(node) {
+  if (node.kind === 'image' || node.kind === 'code') return []
+  const text = node.content || ''
+  if (!text.includes('#')) return []
+  const out = []
+  for (const m of text.matchAll(TAG_RE)) out.push('#' + m[2].toLowerCase())
+  return out
+}
+registerExtractor(tagExtractor)
+
+// Wiki / node-ref link extractor. Emits "wiki:<lowercased-title>" and
+// "noderef:<uuid>" tokens, making the inverted index the source of truth for
+// reverse lookups. renderBacklinks() reads these postings directly.
+const WIKI_RE = /\[\[([^\]\n]+)\]\]/g
+const NODEREF_RE = /\(\(([0-9a-fA-F-]{8,})\)\)/g
+function linkExtractor(node) {
+  if (node.kind === 'image' || node.kind === 'code') return []
+  const text = node.content || ''
+  if (!text.includes('[[') && !text.includes('((')) return []
+  const out = []
+  for (const m of text.matchAll(WIKI_RE)) out.push('wiki:' + m[1].trim().toLowerCase())
+  for (const m of text.matchAll(NODEREF_RE)) out.push('noderef:' + m[1])
+  return out
+}
+registerExtractor(linkExtractor)
+
+// Due-date extractor — fires only for checkbox nodes. Emits the literal
+// "@due:YYYY-MM-DD" date token plus bucket tokens (@due:today / @due:overdue /
+// @due:thisweek) derived against the current local date so the palette
+// commands can filter without rescanning content. Buckets are recomputed
+// every time the node is indexed (edit + full vault rebuild on unlock).
+const DUE_RE = /(^|[^\w])@(\d{4})-(\d{2})-(\d{2})\b/g
+function todayLocalIso() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+function dueExtractor(node) {
+  if (node.kind !== 'checkbox') return []
+  const text = node.content || ''
+  if (!text.includes('@')) return []
+  const out = []
+  const todayD = new Date()
+  const today = new Date(todayD.getFullYear(), todayD.getMonth(), todayD.getDate())
+  for (const m of text.matchAll(DUE_RE)) {
+    const y = +m[2], mo = +m[3], d = +m[4]
+    const due = new Date(y, mo - 1, d)
+    if (due.getFullYear() !== y || due.getMonth() !== mo - 1 || due.getDate() !== d) continue
+    out.push(`@due:${m[2]}-${m[3]}-${m[4]}`)
+    const diff = Math.round((due - today) / 86400000)
+    if (diff === 0) out.push('@due:today')
+    if (diff < 0 && !node.checked) out.push('@due:overdue')
+    if (diff >= 0 && diff < 7) out.push('@due:thisweek')
+  }
+  return out
+}
+registerExtractor(dueExtractor)
+
+function getAllTags() {
+  const out = []
+  for (const [token, ids] of searchIndex.postings) {
+    if (token.startsWith('#')) out.push({ tag: token, count: ids.size })
+  }
+  out.sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+  return out
+}
+
+function indexNode(node) {
+  unindexNode(node.id)
+  const tokens = new Set()
+  for (const ex of searchIndex.extractors) {
+    for (const t of ex(node)) if (t) tokens.add(t)
+  }
+  searchIndex.nodeTokens.set(node.id, tokens)
+  // For code nodes, content is the language label — keep an excerpt of the
+  // codeBody so the search view can show useful snippets.
+  const excerpt = node.kind === 'code'
+    ? (node.codeBody || '').slice(0, 600)
+    : (node.content || '')
+  searchIndex.nodeMeta.set(node.id, {
+    docId: node.documentId, kind: node.kind,
+    content: node.content || '', updatedAt: node.updatedAt || 0,
+    checked: !!node.checked,
+    excerpt,
+  })
+  for (const t of tokens) {
+    let s = searchIndex.postings.get(t)
+    if (!s) { s = new Set(); searchIndex.postings.set(t, s) }
+    s.add(node.id)
+  }
+}
+
+function unindexNode(nodeId) {
+  const old = searchIndex.nodeTokens.get(nodeId)
+  if (!old) return
+  for (const t of old) {
+    const s = searchIndex.postings.get(t)
+    if (s) { s.delete(nodeId); if (s.size === 0) searchIndex.postings.delete(t) }
+  }
+  searchIndex.nodeTokens.delete(nodeId)
+  searchIndex.nodeMeta.delete(nodeId)
+}
+
+function clearSearchIndex() {
+  searchIndex.postings.clear()
+  searchIndex.nodeTokens.clear()
+  searchIndex.nodeMeta.clear()
+}
+
+function buildSearchIndex(nodes) {
+  clearSearchIndex()
+  for (const n of nodes) indexNode(n)
+}
+
+async function rebuildSearchIndexFromVault(ctx) {
+  if (!ctx) { clearSearchIndex(); return }
+  const all = await getAllNodes(ctx)
+  buildSearchIndex(all)
+}
+
+function searchNodes(query, limit = 30) {
+  const tokens = tokenizeWords(query)
+  if (!tokens.length) return []
+  const counts = new Map()  // nodeId -> tokenMatches
+  for (const t of tokens) {
+    const exact = searchIndex.postings.get(t)
+    if (exact) for (const id of exact) counts.set(id, (counts.get(id) || 0) + 1)
+    // Prefix match (weighted half) so partial words still surface
+    for (const [token, ids] of searchIndex.postings) {
+      if (token === t || !token.startsWith(t)) continue
+      for (const id of ids) counts.set(id, (counts.get(id) || 0) + 0.5)
+    }
+  }
+  const nowTs = now()
+  const scored = []
+  for (const [id, matchCount] of counts) {
+    const meta = searchIndex.nodeMeta.get(id); if (!meta) continue
+    const ageDays = (nowTs - meta.updatedAt) / 86400000
+    const recencyBoost = Math.max(0, 10 - ageDays / 30)  // ~10 if today, 0 after 300 days
+    scored.push({ id, score: matchCount * 10 + recencyBoost, meta })
+  }
+  scored.sort((a, b) => b.score - a.score)
+  return scored.slice(0, limit)
+}
+
+// =====================================================================
+// MATH RENDERING  (KaTeX — inline $...$ and display $$...$$)
+// =====================================================================
+
+function renderMath(text) {
+  if (!window.katex || !/\$/.test(text)) return null
+  try {
+    const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]*?\$)/)
+    if (parts.length === 1) return null  // no complete delimiters
+    return parts.map((p, i) => {
+      if (i % 2 === 0) return p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      const display = p.startsWith('$$')
+      const math = display ? p.slice(2,-2) : p.slice(1,-1)
+      try { return katex.renderToString(math.trim(), { displayMode: display, throwOnError: true }) }
+      catch { return (display ? '$$'+math+'$$' : '$'+math+'$').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+    }).join('')
+  } catch { return null }
+}
+
+function applyMath(el, content) {
+  const html = renderMath(content)
+  if (html !== null) {
+    el.innerHTML = html
+    el.classList.add('has-math')
+    return true
+  } else if (el.classList.contains('has-math')) {
+    el.textContent = content
+    el.classList.remove('has-math')
+  }
+  return false
+}
+
+// Inline links: render [[Doc Title]] wiki links, ((node-uuid)) node refs,
+// [label](url) markdown links, and bare http(s) URLs as clickable anchors.
+// Mirrors the math pattern at applyMath — rendered HTML is swapped back to
+// plain text on focus so contentEditable cursor behavior is correct.
+// Groups: 1=wiki title, 2=node uuid, 3+4=md label/url, 5=bare url.
+const LINK_RE = /\[\[([^\]\n]+)\]\]|\(\(([0-9a-fA-F-]{8,})\)\)|\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|(?<![\w/])(https?:\/\/[^\s<>"')]+)/g
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+function renderLinks(text) {
+  if (!text) return null
+  if (!/https?:\/\//.test(text) && !text.includes('[[') && !text.includes('((')) return null
+  LINK_RE.lastIndex = 0
+  let m, html = '', last = 0, found = false
+  while ((m = LINK_RE.exec(text)) !== null) {
+    html += escapeHtml(text.slice(last, m.index))
+    if (m[1] != null) {
+      // [[Doc Title]] wiki link
+      const title = m[1].trim()
+      const docExists = state.docs.some(d => (d.title || '').trim().toLowerCase() === title.toLowerCase())
+      const cls = docExists ? 'wiki-link' : 'wiki-link broken'
+      html += `<a class="${cls}" data-wiki-title="${escapeHtml(title)}">${escapeHtml(title)}</a>`
+    } else if (m[2] != null) {
+      // ((uuid)) node ref
+      const nid = m[2]
+      const meta = searchIndex.nodeMeta.get(nid)
+      const labelRaw = (meta?.content || '').trim() || nid.slice(0, 8)
+      const label = labelRaw.length > 60 ? labelRaw.slice(0, 60) + '…' : labelRaw
+      const cls = meta ? 'node-link' : 'node-link broken'
+      html += `<a class="${cls}" data-noderef="${escapeHtml(nid)}">↗ ${escapeHtml(label)}</a>`
+    } else if (m[3] && m[4]) {
+      html += `<a class="inline-link" href="${escapeHtml(m[4])}" target="_blank" rel="noopener">${escapeHtml(m[3])}</a>`
+    } else if (m[5]) {
+      html += `<a class="inline-link" href="${escapeHtml(m[5])}" target="_blank" rel="noopener">${escapeHtml(m[5])}</a>`
+    }
+    last = m.index + m[0].length
+    found = true
+  }
+  if (!found) return null
+  html += escapeHtml(text.slice(last))
+  return html
+}
+
+function applyLinks(el, content) {
+  const html = renderLinks(content)
+  if (html !== null) {
+    el.innerHTML = html
+    el.classList.add('has-links')
+    return true
+  } else if (el.classList.contains('has-links')) {
+    el.textContent = content
+    el.classList.remove('has-links')
+  }
+  return false
+}
+
+function applyRichRender(el, content) {
+  if (applyMath(el, content)) { el.classList.remove('has-links'); return }
+  applyLinks(el, content)
+}
+
+// =====================================================================
+// STATE
+// =====================================================================
+
+const state = {
+  vaults: [],
+  unlockingVaultId: null,
+  unlocked: false,
+  ctx: null,
+  docs: [],
+  activeDocId: null,
+  nodes: [],
+  zoomedId: null,
+  selectedId: null,
+  selectedIds: new Set(),
+  ctxNodeId: null,
+  activeTagFilter: null,
+  calendarOffset: 0, // months from current; 0 = current month
+}
+
+// Drag state for outline node drag-and-drop. ids = nodes being moved (in
+// document order). target = current hovered drop position (set by dragover,
+// applied on drop).
+const dragState = { ids: [], target: null }
+
+function lockVault() {
+  state.unlocked = false; state.ctx = null; state._password = null
+  state.docs = []; state.nodes = []; state.activeDocId = null
+  state.zoomedId = null; state.selectedId = null
+  state.selectedIds.clear()
+  state.activeTagFilter = null
+  autoSnapStop()
+  clearHistory()
+  clearSearchIndex()
+  closePalette()
+  closeSearchView()
+  searchView.history = []
+  for (const [id] of cmInstances) destroyCM(id)
+  stopAutoLockTimer()
+}
+
+// =====================================================================
+// APP STATE  (small persisted settings store)
+// =====================================================================
+
+async function getAppState(key, defaultVal) {
+  const r = await db.appState.get(key)
+  return r ? r.value : defaultVal
+}
+async function setAppState(key, value) {
+  await db.appState.put({ key, value })
+}
+
+// =====================================================================
+// THEME  (light / dark — toggle persisted in appState)
+// =====================================================================
+
+function applyTheme(theme) {
+  const isLight = theme === 'light'
+  document.documentElement.classList.toggle('light', isLight)
+  const meta = document.querySelector('meta[name=theme-color]')
+  if (meta) meta.setAttribute('content', isLight ? '#fafafa' : '#1a1a1a')
+  const btn = document.getElementById('theme-btn')
+  if (btn) {
+    btn.textContent = isLight ? '☀' : '🌙'
+    btn.title = `Switch to ${isLight ? 'dark' : 'light'} theme`
+  }
+}
+
+async function loadTheme() {
+  const theme = await getAppState('theme', 'dark')
+  applyTheme(theme)
+}
+
+async function toggleTheme() {
+  const cur = await getAppState('theme', 'dark')
+  const next = cur === 'light' ? 'dark' : 'light'
+  await setAppState('theme', next)
+  applyTheme(next)
+}
+
+// =====================================================================
+// AUTO-SNAPSHOT  (File System Access API → directory)
+// =====================================================================
+
+const AUTOSNAP_INTERVAL_MS = 30 * 60 * 1000
+const AUTOSNAP_NODE_THRESHOLD = 50
+const AUTOSNAP_MAX_RETAINED = 20
+
+const autoSnap = {
+  dirHandle: null,
+  vaultId: null,
+  putCount: 0,
+  intervalTimer: null,
+  beforeUnloadAttached: false,
+  writing: false,
+  pendingWrite: false,
+}
+
+function autoSnapSupported() {
+  return typeof window.showDirectoryPicker === 'function'
+}
+
+async function autoSnapMaybeShowUnsupportedNotice() {
+  if (autoSnapSupported()) return
+  const btn = document.getElementById('auto-snap-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Auto-snapshot unavailable' }
+  const shown = await getAppState('autoSnapshotUnsupportedShown', false)
+  if (shown) return
+  const notice = document.getElementById('auto-snap-notice')
+  if (notice) {
+    notice.textContent = 'Auto-snapshot needs the File System Access API. This browser does not support it — use Chrome or Edge on desktop to enable.'
+    notice.classList.remove('hidden')
+  }
+  await setAppState('autoSnapshotUnsupportedShown', true)
+}
+
+async function autoSnapEnableClicked() {
+  if (!autoSnapSupported()) { await autoSnapMaybeShowUnsupportedNotice(); return }
+  if (!state.ctx || !state._password) return
+  if (autoSnap.dirHandle && autoSnap.vaultId === state.ctx.vaultId) {
+    autoSnapStop()
+    await setAppState(`autoSnapshotDir-${state.ctx.vaultId}`, null)
+    autoSnapRenderButton()
+    return
+  }
+  let handle
+  try {
+    handle = await window.showDirectoryPicker({ mode: 'readwrite' })
+  } catch (e) {
+    if (e.name !== 'AbortError') console.warn('Auto-snapshot picker:', e)
+    return
+  }
+  await setAppState(`autoSnapshotDir-${state.ctx.vaultId}`, handle)
+  const ok = await autoSnapStart(handle)
+  if (ok) autoSnapWrite('enable')
+  autoSnapRenderButton()
+}
+
+async function autoSnapStart(handle) {
+  if (!state.ctx) return false
+  let perm = await handle.queryPermission({ mode: 'readwrite' })
+  if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'readwrite' })
+  if (perm !== 'granted') return false
+  autoSnap.dirHandle = handle
+  autoSnap.vaultId = state.ctx.vaultId
+  autoSnap.putCount = 0
+  if (autoSnap.intervalTimer) clearInterval(autoSnap.intervalTimer)
+  autoSnap.intervalTimer = setInterval(() => autoSnapWrite('interval'), AUTOSNAP_INTERVAL_MS)
+  if (!autoSnap.beforeUnloadAttached) {
+    window.addEventListener('beforeunload', () => {
+      if (autoSnap.dirHandle && autoSnap.vaultId === state.ctx?.vaultId && state._password) {
+        autoSnapWrite('beforeunload')
+      }
+    })
+    autoSnap.beforeUnloadAttached = true
+  }
+  return true
+}
+
+function autoSnapStop() {
+  if (autoSnap.intervalTimer) clearInterval(autoSnap.intervalTimer)
+  autoSnap.intervalTimer = null
+  autoSnap.dirHandle = null
+  autoSnap.vaultId = null
+  autoSnap.putCount = 0
+  autoSnap.writing = false
+  autoSnap.pendingWrite = false
+}
+
+async function autoSnapRestoreOnUnlock() {
+  if (!autoSnapSupported() || !state.ctx) { autoSnapRenderButton(); return }
+  const handle = await getAppState(`autoSnapshotDir-${state.ctx.vaultId}`, null)
+  if (!handle || typeof handle.queryPermission !== 'function') { autoSnapRenderButton(); return }
+  try { await autoSnapStart(handle) }
+  catch (e) { console.warn('Auto-snapshot restore failed:', e) }
+  autoSnapRenderButton()
+}
+
+function autoSnapOnPutNode() {
+  if (!autoSnap.dirHandle) return
+  if (autoSnap.vaultId !== state.ctx?.vaultId) return
+  autoSnap.putCount++
+  if (autoSnap.putCount >= AUTOSNAP_NODE_THRESHOLD) {
+    autoSnap.putCount = 0
+    autoSnapWrite('putNode-batch')
+  }
+}
+
+async function autoSnapWrite(reason) {
+  if (!autoSnap.dirHandle || !state.ctx || !state._password) return
+  if (autoSnap.vaultId !== state.ctx.vaultId) return
+  if (autoSnap.writing) { autoSnap.pendingWrite = true; return }
+  autoSnap.writing = true
+  try {
+    const perm = await autoSnap.dirHandle.queryPermission({ mode: 'readwrite' })
+    if (perm !== 'granted') return
+    const json = await exportSnapshot(state._password, state.ctx)
+    const ts = new Date().toISOString().replace(/[:.]/g, '-')
+    const filename = `vault-${state.ctx.vaultId}-${ts}.json`
+    const fileHandle = await autoSnap.dirHandle.getFileHandle(filename, { create: true })
+    const writable = await fileHandle.createWritable()
+    await writable.write(json)
+    await writable.close()
+    await autoSnapPrune()
+  } catch (e) {
+    console.warn('Auto-snapshot write failed (' + reason + '):', e)
+  } finally {
+    autoSnap.writing = false
+    if (autoSnap.pendingWrite) {
+      autoSnap.pendingWrite = false
+      autoSnapWrite('pending')
+    }
+  }
+}
+
+async function autoSnapPrune() {
+  if (!autoSnap.dirHandle) return
+  const prefix = `vault-${autoSnap.vaultId}-`
+  const matches = []
+  for await (const [name, h] of autoSnap.dirHandle.entries()) {
+    if (h.kind === 'file' && name.startsWith(prefix) && name.endsWith('.json')) matches.push(name)
+  }
+  matches.sort()  // ISO timestamps sort chronologically; oldest first
+  while (matches.length > AUTOSNAP_MAX_RETAINED) {
+    const oldest = matches.shift()
+    try { await autoSnap.dirHandle.removeEntry(oldest) }
+    catch (e) { console.warn('Auto-snapshot prune failed for', oldest, e) }
+  }
+}
+
+function autoSnapRenderButton() {
+  const btn = document.getElementById('auto-snap-btn')
+  if (!btn) return
+  if (!autoSnapSupported()) { btn.disabled = true; btn.textContent = 'Auto-snapshot unavailable'; return }
+  btn.disabled = false
+  if (autoSnap.dirHandle && autoSnap.vaultId === state.ctx?.vaultId) {
+    btn.textContent = '✓ Auto-snapshot on — click to disable'
+    btn.classList.add('active')
+  } else {
+    btn.textContent = 'Enable auto-snapshot'
+    btn.classList.remove('active')
+  }
+}
+
+// =====================================================================
+// IDLE AUTO-LOCK
+// =====================================================================
+
+const AUTO_LOCK_DEFAULT_MINUTES = 15
+let _autoLockMinutes = AUTO_LOCK_DEFAULT_MINUTES
+let _autoLockTimer = null
+
+async function loadAutoLockSetting() {
+  const v = await getAppState('autoLockMinutes', AUTO_LOCK_DEFAULT_MINUTES)
+  _autoLockMinutes = Number.isFinite(v) && v >= 0 ? v : AUTO_LOCK_DEFAULT_MINUTES
+}
+
+function stopAutoLockTimer() {
+  if (_autoLockTimer) { clearTimeout(_autoLockTimer); _autoLockTimer = null }
+}
+
+function resetAutoLockTimer() {
+  stopAutoLockTimer()
+  if (!state.unlocked) return
+  if (!_autoLockMinutes || _autoLockMinutes <= 0) return
+  _autoLockTimer = setTimeout(() => {
+    if (state.unlocked) { lockVault(); renderApp() }
+  }, _autoLockMinutes * 60 * 1000)
+}
+
+window.addEventListener('keydown', resetAutoLockTimer, { capture: true, passive: true })
+window.addEventListener('pointerdown', resetAutoLockTimer, { capture: true, passive: true })
+document.addEventListener('visibilitychange', resetAutoLockTimer)
+
+// =====================================================================
+// CODEMIRROR INSTANCE CACHE
+// =====================================================================
+
+const cmInstances = new Map() // nodeId -> EditorView
+
+function getCMLang(lang) {
+  switch ((lang || '').toLowerCase()) {
+    case 'ts': case 'typescript': return javascript({ typescript: true })
+    case 'js': case 'javascript': return javascript()
+    case 'py': case 'python': return python()
+    case 'md': case 'markdown': return markdownLang()
+    case 'css':                  return css()
+    case 'html':                 return html()
+    case 'json':                 return json()
+    case 'sql':                  return sql()
+    case 'rs': case 'rust':      return rust()
+    case 'cpp': case 'c++': case 'c': return cpp()
+    case 'java':                 return java()
+    case 'jl': case 'julia':     return StreamLanguage.define(julia)
+    case 'r':                    return StreamLanguage.define(r)
+    default: return []
+  }
+}
+
+function destroyCM(nodeId) {
+  const view = cmInstances.get(nodeId)
+  if (view) { view.destroy(); cmInstances.delete(nodeId) }
+}
+
+// =====================================================================
+// RENDER
+// =====================================================================
+
+function show(id) { document.getElementById(id)?.classList.remove('hidden') }
+function hide(id) { document.getElementById(id)?.classList.add('hidden') }
+
+function openCtxMenu(nodeId, x, y) {
+  state.ctxNodeId = nodeId
+  const menu = document.getElementById('node-ctx-menu')
+  renderCtxMenu(nodeId, menu)
+  menu.classList.remove('hidden')
+  const vw = window.innerWidth, vh = window.innerHeight
+  const mw = 232, mh = 380
+  menu.style.left = (x + mw > vw ? vw - mw - 8 : x) + 'px'
+  menu.style.top  = (y + mh > vh ? vh - mh - 8 : y) + 'px'
+}
+
+function closeCtxMenu() {
+  document.getElementById('node-ctx-menu').classList.add('hidden')
+  state.ctxNodeId = null
+}
+
+const CODE_LANGS = [
+  { id: 'typescript', label: 'TypeScript' },
+  { id: 'javascript', label: 'JavaScript' },
+  { id: 'python',     label: 'Python' },
+  { id: 'rust',       label: 'Rust' },
+  { id: 'cpp',        label: 'C / C++' },
+  { id: 'java',       label: 'Java' },
+  { id: 'css',        label: 'CSS' },
+  { id: 'html',       label: 'HTML' },
+  { id: 'json',       label: 'JSON' },
+  { id: 'sql',        label: 'SQL' },
+  { id: 'julia',      label: 'Julia' },
+  { id: 'r',          label: 'R' },
+  { id: 'markdown',   label: 'Markdown' },
+  { id: '',           label: 'Plain text' },
+]
+
+function activeLangId(content) {
+  const c = (content || '').toLowerCase()
+  if (c === 'ts' || c === 'typescript') return 'typescript'
+  if (c === 'js' || c === 'javascript') return 'javascript'
+  if (c === 'py' || c === 'python')     return 'python'
+  if (c === 'rs' || c === 'rust')       return 'rust'
+  if (c === 'c' || c === 'cpp' || c === 'c++') return 'cpp'
+  if (c === 'md' || c === 'markdown')   return 'markdown'
+  if (c === 'jl' || c === 'julia')      return 'julia'
+  return c
+}
+
+const SHORTCUTS = {
+  'toggle-collapse':  { keys: 'Ctrl+.',        label: 'Collapse / expand node' },
+  'expand-all':       { keys: 'Ctrl+Shift+.',  label: 'Expand all descendants' },
+  'insert-below':     { keys: 'Enter',         label: 'Add node below' },
+  'zoom':             { keys: 'Ctrl+]',        label: 'Zoom into node' },
+  'delete':           { keys: 'Ctrl+Shift+⌫', label: 'Delete node' },
+  'move-up':          { keys: 'Ctrl+↑',        label: 'Move node up' },
+  'move-down':        { keys: 'Ctrl+↓',        label: 'Move node down' },
+  'indent':           { keys: 'Tab',           label: 'Indent' },
+  'outdent':          { keys: 'Shift+Tab',     label: 'Outdent' },
+  'add-checkbox':     { keys: 'Ctrl+Shift+C',  label: 'Add checkbox' },
+  'check-off':        { keys: 'Ctrl+/',        label: 'Toggle checkbox' },
+  'number-children':  { keys: 'Ctrl+Shift+X',  label: 'Number children' },
+  'undo':             { keys: 'Ctrl+Z',        label: 'Undo' },
+  'redo':             { keys: 'Ctrl+Shift+Z',  label: 'Redo' },
+  'search':           { keys: 'Ctrl+Shift+F',  label: 'Search all' },
+  'help':             { keys: '?',             label: 'Show this help' },
+}
+
+function renderCtxMenu(nodeId, el) {
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) { el.innerHTML = ''; return }
+  const children = sortedChildren(state.nodes, nodeId, node.documentId)
+  const siblings = sortedChildren(state.nodes, node.parentId, node.documentId).filter(s => s.id !== nodeId)
+  const hasDesc = getDescendants(state.nodes, nodeId).length > 0
+  const hasCheckedDesc = getDescendants(state.nodes, nodeId).some(n => n.kind === 'checkbox' && n.checked)
+
+  function item(action, label, shortcut, disabled, param) {
+    const d = disabled ? ' ctx-disabled' : ''
+    const sc = shortcut ? `<span class="ctx-shortcut">${shortcut}</span>` : ''
+    const p = param !== undefined ? ` data-param="${param}"` : ''
+    return `<li class="ctx-item${d}" data-action="${action}"${p}>${label}${sc}</li>`
+  }
+  function sep() { return '<li class="ctx-sep"></li>' }
+
+  const colLabel = node.collapsed ? 'Expand' : 'Collapse'
+  const lvlSub = [1,2,3,4,5].map(n => item('ctx-expand-level', `Level ${n}`, '', false, n)).join('')
+
+  const commonItems = `
+    ${children.length ? item('ctx-toggle-collapse', colLabel, SHORTCUTS['toggle-collapse'].keys) : ''}
+    ${hasDesc ? item('ctx-expand-all', 'Expand all', SHORTCUTS['expand-all'].keys) : ''}
+    ${hasDesc ? `<li class="ctx-item" data-action="ctx-expand-level-sub">Expand to level <span class="ctx-arrow">▶</span><ul class="ctx-sub">${lvlSub}</ul></li>` : ''}
+    ${siblings.length ? item('ctx-expand-siblings', 'Expand all siblings') : ''}
+    ${sep()}
+    ${item('ctx-insert-below', 'Add node below', SHORTCUTS['insert-below'].keys)}
+    ${item('ctx-insert-child', 'Add child node')}
+    ${sep()}
+    ${item('ctx-zoom', 'Zoom in', SHORTCUTS['zoom'].keys)}
+    ${sep()}
+    ${item('ctx-delete', 'Delete', SHORTCUTS['delete'].keys)}
+    ${item('ctx-delete-checked', 'Delete checked items', '', !hasCheckedDesc)}
+    ${sep()}
+    ${item('ctx-move-up',   'Move up',   SHORTCUTS['move-up'].keys,   siblings.findIndex(s => s.id === nodeId) === 0)}
+    ${item('ctx-move-down', 'Move down', SHORTCUTS['move-down'].keys, siblings.findIndex(s => s.id === nodeId) === siblings.length - 1)}
+    ${children.length >= 2 ? `<li class="ctx-item" data-action="ctx-sort-sub">Sort <span class="ctx-arrow">▶</span><ul class="ctx-sub">${item('ctx-sort','A → Z','','','asc')}${item('ctx-sort','Z → A','','','desc')}</ul></li>` : item('ctx-sort-sub','Sort <span class="ctx-arrow">▶</span>','',true)}
+    ${item('ctx-indent', 'Indent', SHORTCUTS['indent'].keys)}`
+
+  let typeItems
+  if (node.kind === 'code') {
+    const curId = activeLangId(node.content)
+    const curLabel = CODE_LANGS.find(l => l.id === curId)?.label ?? (node.content || 'Plain text')
+    const langItems = CODE_LANGS.map(l => {
+      const active = curId === l.id
+      return item('ctx-code-lang', (active ? '✓ ' : '​') + l.label, '', false, l.id)
+    }).join('')
+    typeItems = `
+    ${sep()}
+    <li class="ctx-item" data-action="ctx-lang-sub">Language: <em class="ctx-cur-lang">${curLabel}</em><span class="ctx-arrow" style="margin-left:auto">▶</span><ul class="ctx-sub ctx-langs">${langItems}</ul></li>
+    ${sep()}
+    ${item('ctx-to-text', 'Convert to text')}`
+  } else {
+    typeItems = `
+    ${sep()}
+    ${item('ctx-add-checkbox', 'Add checkbox', SHORTCUTS['add-checkbox'].keys, node.kind === 'checkbox')}
+    ${item('ctx-children-checkbox', 'Add checkbox to children', '', !children.length)}
+    ${item('ctx-check-off', 'Check off', SHORTCUTS['check-off'].keys, node.kind !== 'checkbox')}
+    ${item('ctx-to-code', 'Convert to code')}
+    ${sep()}
+    ${item('ctx-number-children', 'Number children', SHORTCUTS['number-children'].keys, !children.length)}`
+  }
+
+  el.innerHTML = `<ul>${commonItems}${typeItems}</ul>`
+  for (const ctxItem of el.querySelectorAll('.ctx-item')) {
+    const sub = ctxItem.querySelector('.ctx-sub')
+    if (!sub) continue
+    ctxItem.addEventListener('mouseenter', () => {
+      sub.style.top = ''
+      sub.style.bottom = ''
+      requestAnimationFrame(() => {
+        const rect = sub.getBoundingClientRect()
+        if (rect.bottom > window.innerHeight - 8) {
+          sub.style.top = 'auto'
+          sub.style.bottom = '0px'
+        }
+      })
+    })
+  }
+}
+
+function renderApp() {
+  if (!state.unlocked) {
+    show('vault-screen'); hide('vault-new-modal'); hide('vault-unlock-modal'); hide('app')
+    renderVaultScreen()
+  } else {
+    hide('vault-screen'); hide('vault-new-modal'); hide('vault-unlock-modal'); show('app')
+    renderSidebar(); renderEditor()
+  }
+}
+
+function renderVaultScreen() {
+  const list = document.getElementById('vault-list')
+  list.innerHTML = ''
+  if (!state.vaults.length) {
+    const li = document.createElement('li')
+    li.innerHTML = '<span class="vault-empty">No vaults yet — create one above.</span>'
+    list.appendChild(li); return
+  }
+  const sorted = [...state.vaults].sort((a,b) => (b.createdAt||0) - (a.createdAt||0))
+  for (const v of sorted) {
+    const li = document.createElement('li')
+    const d = new Date(v.createdAt || 0)
+    const dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' })
+    li.innerHTML = `<span class="vl-name">${v.name || 'Unnamed'}</span><span class="vl-date">${dateStr}</span>`
+    const openBtn = document.createElement('button')
+    openBtn.className = 'vl-btn'; openBtn.textContent = 'Open'
+    openBtn.onclick = () => startUnlock(v)
+    const expBtn = document.createElement('button')
+    expBtn.className = 'vl-btn'; expBtn.textContent = 'Export'
+    expBtn.onclick = () => exportVault(v)
+    const pwdBtn = document.createElement('button')
+    pwdBtn.className = 'vl-btn'; pwdBtn.textContent = 'Change password'
+    pwdBtn.onclick = () => openChpassModal(v)
+    const delBtn = document.createElement('button')
+    delBtn.className = 'vl-btn danger'; delBtn.textContent = 'Delete'
+    delBtn.onclick = () => confirmDeleteVault(v)
+    li.append(openBtn, expBtn, pwdBtn, delBtn)
+    list.appendChild(li)
+  }
+}
+
+function startUnlock(vault, afterUnlock) {
+  state.unlockingVaultId = vault.id
+  state._afterUnlock = afterUnlock || null
+  document.getElementById('vunlock-title').textContent = `Unlock "${vault.name}"`
+  document.getElementById('vunlock-pass').value = ''
+  setErr('vunlock-error', '')
+  show('vault-unlock-modal')
+  setTimeout(() => document.getElementById('vunlock-pass').focus(), 50)
+}
+
+function exportVault(vault) {
+  if (state.ctx && state.ctx.vaultId === vault.id) {
+    show('export-modal')
+  } else {
+    startUnlock(vault, () => show('export-modal'))
+  }
+}
+
+function renderTagList() {
+  const section = document.getElementById('tags-section')
+  const list = document.getElementById('tag-list')
+  const clearBtn = document.getElementById('tags-clear-btn')
+  if (!list || !section) return
+  const tags = getAllTags()
+  list.innerHTML = ''
+  const filter = state.activeTagFilter
+  const filterIsTag = filter && filter.startsWith('#')
+  // Drop a stale #tag filter only if its postings are gone. Non-tag filters
+  // (e.g. @due:today) are kept even when the tag list is empty.
+  if (filterIsTag && !tags.find(t => t.tag === filter)) {
+    state.activeTagFilter = null
+  }
+  if (!tags.length && !state.activeTagFilter) {
+    section.classList.add('empty')
+    clearBtn?.classList.add('hidden')
+    return
+  }
+  section.classList.remove('empty')
+  // Non-tag filter pill (e.g. @due:today) — clicking clears the filter.
+  if (state.activeTagFilter && !state.activeTagFilter.startsWith('#')) {
+    const f = state.activeTagFilter
+    const count = (searchIndex.postings.get(f) ?? new Set()).size
+    const li = document.createElement('li')
+    li.classList.add('active')
+    li.innerHTML = `<span>${escapeHtml(f)}</span><span class="tag-count">${count}</span>`
+    li.addEventListener('click', () => { state.activeTagFilter = null; renderTagList(); renderTree() })
+    list.appendChild(li)
+  }
+  for (const { tag, count } of tags) {
+    const li = document.createElement('li')
+    if (tag === state.activeTagFilter) li.classList.add('active')
+    li.dataset.tag = tag
+    li.innerHTML = `<span>${escapeHtml(tag)}</span><span class="tag-count">${count}</span>`
+    li.addEventListener('click', () => toggleTagFilter(tag))
+    list.appendChild(li)
+  }
+  if (state.activeTagFilter) clearBtn?.classList.remove('hidden')
+  else clearBtn?.classList.add('hidden')
+}
+
+function toggleTagFilter(tag) {
+  if (state.activeTagFilter === tag) state.activeTagFilter = null
+  else state.activeTagFilter = tag
+  // If filter is active and current doc has no matches, jump to a doc that does
+  if (state.activeTagFilter) {
+    const ids = searchIndex.postings.get(state.activeTagFilter) ?? new Set()
+    const hasInActiveDoc = state.nodes.some(n => ids.has(n.id))
+    if (!hasInActiveDoc) {
+      // Find a doc that has matches
+      let targetDocId = null
+      for (const id of ids) {
+        const meta = searchIndex.nodeMeta.get(id)
+        if (meta) { targetDocId = meta.docId; break }
+      }
+      if (targetDocId && targetDocId !== state.activeDocId) {
+        selectDoc(targetDocId).then(() => { renderTagList() })
+        return
+      }
+    }
+  }
+  renderTagList()
+  renderTree()
+}
+
+function buildVisibleSet(matchedIds, nodes) {
+  const map = new Map(nodes.map(n => [n.id, n]))
+  const set = new Set()
+  for (const id of matchedIds) {
+    let cur = map.get(id)
+    while (cur) {
+      set.add(cur.id)
+      cur = cur.parentId ? map.get(cur.parentId) : null
+    }
+  }
+  return set
+}
+
+// Daily notes — docs titled `daily/YYYY-MM-DD`. The sidebar Today button and
+// month calendar both route through openOrCreateDailyDoc; the calendar dot
+// marker just checks for the matching doc title in state.docs.
+const DAILY_PREFIX = 'daily/'
+
+async function openOrCreateDailyDoc(dateIso) {
+  if (!state.ctx) return
+  const title = DAILY_PREFIX + dateIso
+  let doc = state.docs.find(d => d.title === title)
+  if (!doc) {
+    doc = { id: genId(), title, createdAt: now(), updatedAt: now() }
+    await putDoc(doc, state.ctx)
+    state.docs = await getAllDocs(state.ctx)
+  }
+  await selectDoc(doc.id)
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar')
+  const label = document.getElementById('cal-label')
+  if (!grid || !label) return
+  const base = new Date()
+  base.setDate(1)
+  base.setMonth(base.getMonth() + state.calendarOffset)
+  const year = base.getFullYear(), month = base.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const startDow = firstDay.getDay()
+  label.textContent = firstDay.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+
+  const dailyIsoSet = new Set()
+  for (const d of state.docs) {
+    const t = d.title || ''
+    if (t.startsWith(DAILY_PREFIX)) dailyIsoSet.add(t.slice(DAILY_PREFIX.length))
+  }
+  const todayIso = todayLocalIso()
+
+  let html = ''
+  for (const dow of ['S','M','T','W','T','F','S']) html += `<div class="cal-dow">${dow}</div>`
+  for (let i = 0; i < startDow; i++) html += '<div></div>'
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+    const cls = 'cal-day' + (iso === todayIso ? ' today' : '') + (dailyIsoSet.has(iso) ? ' has-doc' : '')
+    html += `<button class="${cls}" data-iso="${iso}">${d}</button>`
+  }
+  grid.innerHTML = html
+}
+
+function renderSidebar() {
+  const vault = state.vaults.find(v => v.id === state.ctx?.vaultId)
+  const label = document.getElementById('active-vault-label')
+  if (label) label.textContent = vault?.name || 'Outline'
+  const list = document.getElementById('doc-list')
+  list.innerHTML = ''
+  for (const doc of state.docs) {
+    const li = document.createElement('li')
+    if (doc.id === state.activeDocId) li.classList.add('active')
+    li.dataset.docId = doc.id
+    const btn = document.createElement('button')
+    btn.className = 'doc-name'; btn.textContent = doc.title || 'Untitled'
+    btn.onclick = () => selectDoc(doc.id)
+    const actions = document.createElement('div')
+    actions.className = 'doc-actions'
+    const renBtn = document.createElement('button')
+    renBtn.textContent = '✎'; renBtn.title = 'Rename'
+    renBtn.onclick = (e) => { e.stopPropagation(); renameDoc(doc) }
+    const delBtn = document.createElement('button')
+    delBtn.textContent = '✕'; delBtn.title = 'Delete'
+    delBtn.onclick = (e) => { e.stopPropagation(); removeDoc(doc) }
+    actions.append(renBtn, delBtn)
+    li.append(btn, actions)
+    list.appendChild(li)
+  }
+  renderCalendar()
+  renderTagList()
+  autoSnapRenderButton()
+}
+
+function renderEditor() {
+  if (!state.activeDocId) {
+    hide('editor-header'); hide('add-bar'); hide('status-bar'); hide('outline-tree')
+    show('no-doc-msg'); return
+  }
+  show('editor-header'); show('add-bar'); show('status-bar'); show('outline-tree'); hide('no-doc-msg')
+  const doc = state.docs.find(d => d.id === state.activeDocId)
+  updateStatusBar()
+
+  if (state.zoomedId) {
+    hide('doc-title-input'); show('breadcrumb')
+    // Build ancestor chain up to doc root
+    const crumbs = []
+    let cur = state.nodes.find(n => n.id === state.zoomedId)
+    while (cur) {
+      crumbs.unshift(cur)
+      cur = cur.parentId ? state.nodes.find(n => n.id === cur.parentId) : null
+    }
+    const bc = document.getElementById('breadcrumb')
+    bc.innerHTML = ''
+    // Doc title crumb — zooms out completely
+    const docCrumb = document.createElement('button')
+    docCrumb.className = 'bc-crumb'; docCrumb.textContent = doc?.title || 'Untitled'
+    docCrumb.onclick = () => { state.zoomedId = null; renderEditor() }
+    bc.appendChild(docCrumb)
+    // Ancestor crumbs
+    crumbs.forEach((node, i) => {
+      const sep = document.createElement('span'); sep.className = 'bc-sep'; sep.textContent = '›'
+      bc.appendChild(sep)
+      const btn = document.createElement('button')
+      btn.className = 'bc-crumb' + (i === crumbs.length - 1 ? ' bc-current' : '')
+      btn.textContent = node.content || '(empty)'
+      if (i < crumbs.length - 1) {
+        btn.onclick = () => { state.zoomedId = node.id; renderEditor() }
+      }
+      bc.appendChild(btn)
+    })
+  } else {
+    show('doc-title-input'); hide('breadcrumb')
+    const titleInput = document.getElementById('doc-title-input')
+    if (titleInput && doc) titleInput.value = doc.title || ''
+  }
+
+  renderTree()
+}
+
+function renderTree() {
+  const container = document.getElementById('outline-tree')
+  const baseTreeMap = buildTreeMap(state.nodes)
+  const rootParentId = state.zoomedId ?? null
+
+  // Tag filter: restrict to matched nodes + their ancestor chain so context
+  // is preserved. Filtered view force-expands collapsed ancestors.
+  let treeMap = baseTreeMap
+  let forceExpand = false
+  let filterMatchedCount = -1
+  if (state.activeTagFilter && state.activeDocId) {
+    const postings = searchIndex.postings.get(state.activeTagFilter) ?? new Set()
+    const matched = state.nodes.filter(n => postings.has(n.id))
+    filterMatchedCount = matched.length
+    if (matched.length) {
+      const visibleSet = buildVisibleSet(matched.map(n => n.id), state.nodes)
+      const filtered = new Map()
+      for (const [pid, children] of baseTreeMap) {
+        filtered.set(pid, children.filter(c => visibleSet.has(c.id)))
+      }
+      treeMap = filtered
+      forceExpand = true
+    } else {
+      treeMap = new Map()
+    }
+  }
+
+  const roots = (treeMap.get(rootParentId) ?? []).filter(n => n.documentId === state.activeDocId)
+
+  const neededCM = new Set()
+
+  // Detach live CM editor DOMs before clearing container (prevents destruction)
+  for (const [, view] of cmInstances) view.dom.parentElement?.removeChild(view.dom)
+
+  const frag = document.createDocumentFragment()
+  for (const node of roots) frag.appendChild(buildNodeEl(node, treeMap, 0, neededCM, forceExpand))
+  container.innerHTML = ''
+  container.appendChild(frag)
+
+  if (state.activeTagFilter && filterMatchedCount === 0) {
+    const empty = document.createElement('div')
+    empty.className = 'outline-empty'
+    empty.innerHTML = `No nodes tagged <strong>${escapeHtml(state.activeTagFilter)}</strong> in this document.`
+    container.appendChild(empty)
+  } else if (roots.length === 0 && state.activeDocId) {
+    // Empty-state placeholder when no nodes
+    const empty = document.createElement('div')
+    empty.className = 'outline-empty'
+    empty.innerHTML = 'Click <strong>+ Text</strong> below or press <kbd>Enter</kbd> in the title to start'
+    empty.addEventListener('click', () => document.getElementById('add-text-btn').click())
+    container.appendChild(empty)
+  }
+
+  // Destroy CM instances for nodes no longer visible
+  for (const [id] of cmInstances) if (!neededCM.has(id)) destroyCM(id)
+
+  renderBacklinks()
+
+  // Reattach existing or create new CM instances
+  for (const id of neededCM) {
+    const el = container.querySelector(`[data-cm-target="${id}"]`)
+    if (!el) continue
+    if (cmInstances.has(id)) {
+      el.appendChild(cmInstances.get(id).dom) // reattach
+    } else {
+      const node = state.nodes.find(n => n.id === id); if (!node) continue
+      let saveTimer
+      const view = new EditorView({
+        doc: node.codeBody ?? '',
+        extensions: [
+          basicSetup, oneDark, getCMLang(node.content),
+          EditorView.updateListener.of(update => {
+            if (!update.docChanged) return
+            clearTimeout(saveTimer)
+            saveTimer = setTimeout(() => {
+              const body = update.state.doc.toString()
+              state.nodes = applyPatch(state.nodes, [{ ...node, codeBody: body, updatedAt: now() }])
+              putNode(state.nodes.find(n => n.id === id), state.ctx)
+            }, 300)
+          })
+        ],
+        parent: el
+      })
+      cmInstances.set(id, view)
+    }
+  }
+}
+
+function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
+  const children = treeMap.get(node.id) ?? []
+  const wrap = document.createElement('div')
+  wrap.className = 'node-wrap'; wrap.dataset.nodeId = node.id
+
+  const row = document.createElement('div')
+  row.className = 'node-row' + (state.selectedIds.has(node.id) ? ' selected' : '')
+  row.draggable = true
+  row.dataset.nodeId = node.id
+
+  // Collapse button
+  const colBtn = document.createElement('button')
+  colBtn.className = 'collapse-btn' + (children.length ? '' : ' invisible')
+  colBtn.dataset.action = 'collapse'; colBtn.dataset.nodeId = node.id
+  colBtn.textContent = node.collapsed ? '▶' : '▼'
+  row.appendChild(colBtn)
+
+  // Bullet or checkbox
+  if (node.kind === 'checkbox') {
+    const cb = document.createElement('input')
+    cb.type = 'checkbox'; cb.className = 'checkbox-input'
+    cb.checked = !!node.checked; cb.dataset.action = 'check'; cb.dataset.nodeId = node.id
+    row.appendChild(cb)
+  } else {
+    const bullet = document.createElement('button')
+    bullet.className = 'bullet'; bullet.dataset.action = 'zoom'; bullet.dataset.nodeId = node.id
+    bullet.textContent = '•'; bullet.title = 'Double-click to zoom'
+    row.appendChild(bullet)
+  }
+
+  // Content
+  if (node.kind === 'code') {
+    const wrapper = document.createElement('div'); wrapper.className = 'code-block-wrap'
+    const langTag = document.createElement('div'); langTag.className = 'code-lang-tag'
+    langTag.textContent = node.content || 'text'
+    const cmEl = document.createElement('div'); cmEl.className = 'code-block-el'
+    cmEl.dataset.cmTarget = node.id
+    wrapper.append(langTag, cmEl)
+    row.appendChild(wrapper)
+    neededCM.add(node.id)
+  } else if (node.kind === 'image') {
+    const imgWrap = document.createElement('div'); imgWrap.className = 'image-block'
+    if (node.assetId) {
+      getAsset(node.assetId, state.ctx).then(bytes => {
+        if (!bytes) return
+        const blob = new Blob([bytes], { type: node.content || 'image/png' })
+        const url = URL.createObjectURL(blob)
+        const img = document.createElement('img'); img.src = url; img.alt = 'image'
+        img.onload = () => {} // keep url alive while img visible
+        imgWrap.appendChild(img)
+      })
+    }
+    row.appendChild(imgWrap)
+  } else {
+    const textDiv = document.createElement('div')
+    textDiv.className = 'node-text' + (node.kind === 'checkbox' && node.checked ? ' done' : '')
+    textDiv.contentEditable = 'true'; textDiv.dataset.nodeId = node.id
+    textDiv.dataset.placeholder = 'Empty note'
+    textDiv.textContent = node.content
+    applyRichRender(textDiv, node.content)
+    row.appendChild(textDiv)
+  }
+
+  // Node meta actions (left of collapse button)
+  const meta = document.createElement('div'); meta.className = 'node-meta'
+  const kindBtn = document.createElement('button'); kindBtn.title = 'Node menu'
+  kindBtn.textContent = '☰'; kindBtn.dataset.action = 'kindmenu'; kindBtn.dataset.nodeId = node.id
+  meta.appendChild(kindBtn)
+  row.insertBefore(meta, row.firstChild)
+
+  wrap.appendChild(row)
+
+  // Children
+  if (children.length && (forceExpand || !node.collapsed)) {
+    const childrenWrap = document.createElement('div'); childrenWrap.className = 'node-children'
+    for (const child of children) childrenWrap.appendChild(buildNodeEl(child, treeMap, depth + 1, neededCM, forceExpand))
+    wrap.appendChild(childrenWrap)
+  }
+
+  return wrap
+}
+
+// =====================================================================
+// OPERATIONS + PERSISTENCE
+// =====================================================================
+
+function flushNodeText(el) {
+  if (el.classList.contains('has-math') || el.classList.contains('has-links')) {
+    const node = state.nodes.find(n => n.id === el.dataset.nodeId)
+    if (node) { el.textContent = node.content; el.classList.remove('has-math'); el.classList.remove('has-links') }
+  }
+  const nodeId = el.dataset.nodeId
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  const content = el.textContent ?? ''
+  if (node.content !== content) {
+    const updated = { ...node, content, updatedAt: now() }
+    state.nodes = applyPatch(state.nodes, [updated])
+    indexNode(updated)
+    putNode(updated, state.ctx)
+  }
+}
+
+const HISTORY_LIMIT = 200
+const undoStack = []  // [{ before: Node[], after: Node[] }]
+const redoStack = []
+
+function clearHistory() { undoStack.length = 0; redoStack.length = 0 }
+
+function pushHistory(before, after) {
+  undoStack.push({ before, after })
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift()
+  redoStack.length = 0
+}
+
+function applySnapshot(fromNodes, toNodes) {
+  const fromMap = new Map(fromNodes.map(n => [n.id, n]))
+  const toMap = new Map(toNodes.map(n => [n.id, n]))
+  const put = []
+  const del = []
+  for (const [id, n] of toMap) if (fromMap.get(id) !== n) put.push(n)
+  for (const [id] of fromMap) if (!toMap.has(id)) del.push(id)
+  state.nodes = toNodes
+  for (const id of del) destroyCM(id)
+  if (put.length) {
+    for (const n of put) indexNode(n)
+    putNodes(put, state.ctx)
+  }
+  if (del.length) {
+    for (const id of del) unindexNode(id)
+    deleteNodes(del)
+  }
+  renderTree()
+  renderTagList()
+}
+
+function undo() {
+  const entry = undoStack.pop(); if (!entry) return
+  redoStack.push(entry)
+  applySnapshot(entry.after, entry.before)
+}
+
+function redo() {
+  const entry = redoStack.pop(); if (!entry) return
+  undoStack.push(entry)
+  applySnapshot(entry.before, entry.after)
+}
+
+function applyOp(result) {
+  if (!result) return
+  pushHistory(state.nodes, result.nodes)
+  state.nodes = result.nodes
+  if (result.delta.length) {
+    for (const n of result.delta) indexNode(n)
+    putNodes(result.delta, state.ctx)
+  }
+  if (result.deletedIds.length) {
+    for (const id of result.deletedIds) unindexNode(id)
+    deleteNodes(result.deletedIds)
+  }
+  renderTree()
+  renderTagList()
+}
+
+function focusNode(id) {
+  state.selectedId = id
+  requestAnimationFrame(() => {
+    const el = document.querySelector(`[data-node-id="${id}"].node-text`)
+    if (el) { el.focus(); const r = document.createRange(); r.selectNodeContents(el); r.collapse(false); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r) }
+  })
+}
+
+// Navigate to a doc by case-insensitive title (from [[Doc Title]] click).
+async function openWikiTarget(title) {
+  if (!title) return
+  const t = title.trim().toLowerCase()
+  const target = state.docs.find(d => (d.title || '').trim().toLowerCase() === t)
+  if (!target) return
+  if (state.activeDocId !== target.id) await selectDoc(target.id)
+  else { state.zoomedId = null; renderEditor() }
+}
+
+// Navigate to a node by id (from ((uuid)) click or backlink panel).
+async function openNodeRef(nodeId) {
+  if (!nodeId) return
+  const meta = searchIndex.nodeMeta.get(nodeId)
+  if (!meta) return
+  if (state.activeDocId !== meta.docId) await selectDoc(meta.docId)
+  state.zoomedId = null
+  renderEditor()
+  focusNode(nodeId)
+}
+
+// Build the "Linked references" panel for the active doc and append it to
+// the outline tree container. Sources of truth: wiki:<title> + noderef:<uuid>
+// postings in searchIndex; combined, they give all inbound references.
+function buildBacklinksPanel() {
+  if (!state.activeDocId) return null
+  const doc = state.docs.find(d => d.id === state.activeDocId)
+  if (!doc) return null
+  const title = (doc.title || '').trim().toLowerCase()
+  const sourceIds = new Set()
+  if (title) {
+    const wikiHits = searchIndex.postings.get('wiki:' + title)
+    if (wikiHits) for (const id of wikiHits) sourceIds.add(id)
+  }
+  // Inbound node-refs: any source pointing to any node in this doc.
+  for (const n of state.nodes) {
+    const refs = searchIndex.postings.get('noderef:' + n.id)
+    if (refs) for (const id of refs) sourceIds.add(id)
+  }
+  // Don't list source nodes that don't exist in the index anymore.
+  const items = []
+  for (const srcId of sourceIds) {
+    const meta = searchIndex.nodeMeta.get(srcId); if (!meta) continue
+    const srcDoc = state.docs.find(d => d.id === meta.docId)
+    items.push({ id: srcId, docId: meta.docId, docTitle: srcDoc?.title || 'Untitled', content: meta.content || '', updatedAt: meta.updatedAt || 0 })
+  }
+  if (!items.length) return null
+  items.sort((a, b) => b.updatedAt - a.updatedAt)
+
+  const panel = document.createElement('div')
+  panel.className = 'backlinks-panel'
+  if (localStorage.getItem('blCollapsed') === '1') panel.classList.add('collapsed')
+  const toggle = document.createElement('button')
+  toggle.className = 'bl-toggle'; toggle.type = 'button'
+  toggle.innerHTML = `<span class="bl-arrow">▼</span> Linked references <span class="bl-count">${items.length}</span>`
+  toggle.addEventListener('click', () => {
+    const c = panel.classList.toggle('collapsed')
+    toggle.querySelector('.bl-arrow').textContent = c ? '▶' : '▼'
+    localStorage.setItem('blCollapsed', c ? '1' : '0')
+  })
+  panel.appendChild(toggle)
+  const ul = document.createElement('ul')
+  const docTitleRaw = doc.title || ''
+  const activeNodeIds = new Set(state.nodes.map(n => n.id))
+  for (const it of items) {
+    const li = document.createElement('li')
+    li.dataset.nodeId = it.id
+    const docLine = document.createElement('div')
+    docLine.className = 'bl-doc'; docLine.textContent = it.docTitle
+    const snip = document.createElement('div')
+    snip.className = 'bl-snippet'
+    snip.innerHTML = highlightBacklinkSnippet(it.content, docTitleRaw, activeNodeIds)
+    li.append(docLine, snip)
+    li.addEventListener('click', () => openNodeRef(it.id))
+    ul.appendChild(li)
+  }
+  panel.appendChild(ul)
+  // Sync arrow with collapsed state on first render.
+  if (panel.classList.contains('collapsed')) toggle.querySelector('.bl-arrow').textContent = '▶'
+  return panel
+}
+
+function highlightBacklinkSnippet(content, docTitle, activeNodeIds) {
+  if (!content) return '<em style="color:#555">(empty)</em>'
+  const targetTitle = (docTitle || '').trim().toLowerCase()
+  let html = escapeHtml(content)
+  html = html.replace(/\[\[([^\]\n]+)\]\]/g, (m, t) => {
+    if (t.trim().toLowerCase() === targetTitle) return `<mark>[[${escapeHtml(t)}]]</mark>`
+    return m
+  })
+  html = html.replace(/\(\(([0-9a-fA-F-]{8,})\)\)/g, (m, id) => {
+    if (activeNodeIds.has(id)) return `<mark>((${escapeHtml(id)}))</mark>`
+    return m
+  })
+  return html
+}
+
+function renderBacklinks() {
+  const container = document.getElementById('outline-tree')
+  if (!container) return
+  const existing = container.querySelector('.backlinks-panel')
+  if (existing) existing.remove()
+  const panel = buildBacklinksPanel()
+  if (panel) container.appendChild(panel)
+}
+
+async function selectDoc(id) {
+  state.activeDocId = id; state.zoomedId = null
+  state.selectedIds.clear()
+  state.nodes = await getNodesByDoc(id, state.ctx)
+  clearHistory()
+  for (const [nodeId] of cmInstances) destroyCM(nodeId)
+  renderSidebar(); renderEditor()
+}
+
+async function newDoc() {
+  const doc = { id: genId(), title: 'Untitled', createdAt: now(), updatedAt: now() }
+  await putDoc(doc, state.ctx)
+  state.docs = await getAllDocs(state.ctx)
+  await selectDoc(doc.id)
+}
+
+async function renameDoc(doc) {
+  const title = prompt('Rename document:', doc.title); if (!title || title === doc.title) return
+  const updated = { ...doc, title, updatedAt: now() }
+  await putDoc(updated, state.ctx)
+  state.docs = await getAllDocs(state.ctx)
+  renderSidebar()
+  if (state.activeDocId === doc.id) document.getElementById('doc-title-input').value = title
+}
+
+async function removeDoc(doc) {
+  if (!confirm(`Delete "${doc.title}"?`)) return
+  const nodes = await getNodesByDoc(doc.id, state.ctx)
+  await deleteNodes(nodes.map(n => n.id))
+  await deleteDoc(doc.id)
+  state.docs = await getAllDocs(state.ctx)
+  if (state.activeDocId === doc.id) { state.activeDocId = null; state.nodes = [] }
+  renderSidebar(); renderEditor()
+}
+
+// =====================================================================
+// EVENTS
+// =====================================================================
+
+function setBtn(id, text) { const b = document.getElementById(id); if (b) b.textContent = text }
+function setErr(id, msg) { const e = document.getElementById(id); if (e) e.textContent = msg || '' }
+
+// Vault screen — new vault
+document.getElementById('vault-new-btn').addEventListener('click', () => {
+  document.getElementById('vnew-name').value = ''
+  document.getElementById('vnew-pass').value = ''
+  document.getElementById('vnew-confirm').value = ''
+  setErr('vnew-error', '')
+  const warn = document.getElementById('vnew-kdf-warning')
+  warn.classList.add('hidden')
+  loadArgon2().then(a => { if (!a) warn.classList.remove('hidden') })
+  show('vault-new-modal')
+  setTimeout(() => document.getElementById('vnew-name').focus(), 50)
+})
+document.getElementById('vnew-cancel').addEventListener('click', () => hide('vault-new-modal'))
+document.getElementById('vnew-submit').addEventListener('click', async () => {
+  const name = document.getElementById('vnew-name').value.trim() || 'Unnamed'
+  const pass = document.getElementById('vnew-pass').value
+  const confirm = document.getElementById('vnew-confirm').value
+  setErr('vnew-error', '')
+  if (pass.length < 8) { setErr('vnew-error', 'Password must be at least 8 characters.'); return }
+  if (pass !== confirm) { setErr('vnew-error', 'Passwords do not match.'); return }
+  const btn = document.getElementById('vnew-submit'); btn.disabled = true; btn.textContent = 'Creating…'
+  try {
+    const newCtx = await initVault(name, pass)
+    state.vaults = await getAllVaults()
+    hide('vault-new-modal')
+    if (newCtx.kdfFallback) {
+      // Visible warning when Argon2id WASM couldn't load (likely offline).
+      alert('Argon2id is unavailable (offline?). Vault was created with PBKDF2 fallback. It will silently upgrade to Argon2id next time you unlock it online.')
+    }
+    // auto-open into the new vault
+    state.ctx = newCtx; state.unlocked = true; state._password = pass; state.docs = []; state.nodes = []
+    clearSearchIndex()
+    renderApp()
+    await autoSnapRestoreOnUnlock()
+    resetAutoLockTimer()
+  } catch (e) { setErr('vnew-error', String(e)) }
+  btn.disabled = false; btn.textContent = 'Create'
+})
+document.getElementById('vnew-confirm').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('vnew-submit').click()
+})
+
+// Vault screen — unlock vault
+document.getElementById('vunlock-cancel').addEventListener('click', () => {
+  hide('vault-unlock-modal'); state.unlockingVaultId = null; state._afterUnlock = null
+})
+document.getElementById('vunlock-submit').addEventListener('click', async () => {
+  const pass = document.getElementById('vunlock-pass').value
+  setErr('vunlock-error', '')
+  const btn = document.getElementById('vunlock-submit'); btn.disabled = true; btn.textContent = 'Unlocking…'
+  try {
+    const ctx = await unlockVault(state.unlockingVaultId, pass)
+    state.ctx = ctx; state.unlocked = true; state._password = pass
+    state.vaults = await getAllVaults()  // pick up any kdfSpec changes from silent migration
+    state.docs = await getAllDocs(state.ctx)
+    await rebuildSearchIndexFromVault(state.ctx)
+    if (state.docs.length) await selectDoc(state.docs[0].id)
+    hide('vault-unlock-modal')
+    const after = state._afterUnlock; state._afterUnlock = null; state.unlockingVaultId = null
+    if (after) { after(); renderSidebar() }
+    else renderApp()
+    await autoSnapRestoreOnUnlock()
+    resetAutoLockTimer()
+  } catch { setErr('vunlock-error', 'Incorrect password.') }
+  btn.disabled = false; btn.textContent = 'Unlock'
+})
+document.getElementById('vunlock-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('vunlock-submit').click()
+})
+
+// Vault screen — import from snapshot (creates new vault)
+document.getElementById('vault-import-btn').addEventListener('click', () => {
+  document.getElementById('vsnap-name').value = ''
+  document.getElementById('vsnap-pass').value = ''
+  document.getElementById('vsnap-file').value = ''
+  setErr('vsnap-error', '')
+  show('vault-snap-modal')
+})
+document.getElementById('vsnap-cancel').addEventListener('click', () => hide('vault-snap-modal'))
+document.getElementById('vsnap-submit').addEventListener('click', async () => {
+  const name = document.getElementById('vsnap-name').value.trim()
+  const pass = document.getElementById('vsnap-pass').value
+  const file = document.getElementById('vsnap-file').files?.[0]
+  setErr('vsnap-error', '')
+  if (!file) { setErr('vsnap-error', 'Select a snapshot file.'); return }
+  if (!pass) { setErr('vsnap-error', 'Enter the snapshot password.'); return }
+  const btn = document.getElementById('vsnap-submit'); btn.disabled = true; btn.textContent = 'Importing…'
+  try {
+    const json = await file.text()
+    const newCtx = await importSnapshot(json, pass, name)
+    state.vaults = await getAllVaults()
+    hide('vault-snap-modal')
+    // auto-open the newly imported vault
+    state.ctx = newCtx; state.unlocked = true; state._password = pass
+    state.docs = await getAllDocs(state.ctx)
+    await rebuildSearchIndexFromVault(state.ctx)
+    if (state.docs.length) await selectDoc(state.docs[0].id)
+    renderApp()
+    await autoSnapRestoreOnUnlock()
+    resetAutoLockTimer()
+  } catch (e) { setErr('vsnap-error', String(e)) }
+  btn.disabled = false; btn.textContent = 'Import'
+})
+
+// Vault screen — delete vault
+async function confirmDeleteVault(vault) {
+  if (!confirm(`Permanently delete vault "${vault.name}" and all its data?`)) return
+  await deleteVault(vault.id)
+  state.vaults = await getAllVaults()
+  if (state.ctx?.vaultId === vault.id) lockVault()
+  renderVaultScreen()
+}
+
+// Back to vault screen
+document.getElementById('back-to-vaults-btn').addEventListener('click', () => {
+  lockVault(); renderApp()
+})
+
+// Tag filter — clear button
+document.getElementById('tags-clear-btn').addEventListener('click', () => {
+  state.activeTagFilter = null
+  renderTagList()
+  renderTree()
+})
+
+// Today button + month calendar
+document.getElementById('today-btn').addEventListener('click', () => {
+  state.calendarOffset = 0
+  openOrCreateDailyDoc(todayLocalIso())
+})
+document.getElementById('cal-prev').addEventListener('click', () => {
+  state.calendarOffset -= 1
+  renderCalendar()
+})
+document.getElementById('cal-next').addEventListener('click', () => {
+  state.calendarOffset += 1
+  renderCalendar()
+})
+document.getElementById('calendar').addEventListener('click', e => {
+  const btn = e.target.closest('.cal-day[data-iso]')
+  if (!btn) return
+  openOrCreateDailyDoc(btn.dataset.iso)
+})
+
+// Collapseable sidebar
+document.getElementById('sidebar-toggle').addEventListener('click', () => {
+  const collapsed = document.getElementById('sidebar').classList.toggle('collapsed')
+  document.getElementById('sidebar-toggle').textContent = collapsed ? '›' : '‹'
+  localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0')
+})
+
+// Change vault password
+let _chpassVaultId = null
+function openChpassModal(vault) {
+  _chpassVaultId = vault?.id ?? state.ctx?.vaultId ?? null
+  const v = state.vaults.find(v => v.id === _chpassVaultId)
+  document.getElementById('vchpass-title').textContent = `Change Password — ${v?.name ?? 'Vault'}`
+  document.getElementById('vchpass-current').value = ''
+  document.getElementById('vchpass-new').value = ''
+  document.getElementById('vchpass-confirm').value = ''
+  setErr('vchpass-error', '')
+  show('vault-chpass-modal')
+  setTimeout(() => document.getElementById('vchpass-current').focus(), 50)
+}
+document.getElementById('chpass-btn').addEventListener('click', () => openChpassModal(null))
+document.getElementById('theme-btn').addEventListener('click', toggleTheme)
+document.getElementById('auto-snap-btn').addEventListener('click', autoSnapEnableClicked)
+document.getElementById('vchpass-cancel').addEventListener('click', () => {
+  hide('vault-chpass-modal'); _chpassVaultId = null
+})
+document.getElementById('vchpass-submit').addEventListener('click', async () => {
+  const current = document.getElementById('vchpass-current').value
+  const next = document.getElementById('vchpass-new').value
+  const confirm = document.getElementById('vchpass-confirm').value
+  setErr('vchpass-error', '')
+  if (!current) { setErr('vchpass-error', 'Enter your current password.'); return }
+  if (next.length < 8) { setErr('vchpass-error', 'New password must be at least 8 characters.'); return }
+  if (next !== confirm) { setErr('vchpass-error', 'Passwords do not match.'); return }
+  const btn = document.getElementById('vchpass-submit'); btn.disabled = true; btn.textContent = 'Saving…'
+  try {
+    await changeVaultPassword(_chpassVaultId, current, next)
+    if (state.unlocked && state.ctx?.vaultId === _chpassVaultId) state._password = next
+    hide('vault-chpass-modal'); _chpassVaultId = null
+  } catch (e) { setErr('vchpass-error', e.message) }
+  btn.disabled = false; btn.textContent = 'Change password'
+})
+document.getElementById('vchpass-confirm').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('vchpass-submit').click()
+})
+
+// New doc
+document.getElementById('new-doc-btn').addEventListener('click', newDoc)
+
+// Doc title edit
+document.getElementById('doc-title-input').addEventListener('blur', async () => {
+  const title = document.getElementById('doc-title-input').value.trim() || 'Untitled'
+  const doc = state.docs.find(d => d.id === state.activeDocId); if (!doc) return
+  if (doc.title === title) return
+  const updated = { ...doc, title, updatedAt: now() }
+  await putDoc(updated, state.ctx)
+  state.docs = state.docs.map(d => d.id === doc.id ? updated : d)
+  renderSidebar()
+})
+
+// Title input: Enter jumps into outline (creates first node if empty)
+document.getElementById('doc-title-input').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return
+  e.preventDefault()
+  if (!state.activeDocId) return
+  const parentId = state.zoomedId ?? null
+  const visibleNodes = sortedChildren(state.nodes, parentId, state.activeDocId)
+  if (visibleNodes.length === 0) {
+    document.getElementById('add-text-btn').click()
+  } else {
+    focusNode(visibleNodes[0].id)
+  }
+})
+
+
+// Add nodes
+document.getElementById('add-text-btn').addEventListener('click', () => {
+  if (!state.activeDocId) return
+  const parentId = state.zoomedId ?? null
+  try {
+    const last = sortedChildren(state.nodes, parentId, state.activeDocId).slice(-1)[0] ?? null
+    const result = opInsert(state.nodes, state.activeDocId, parentId, last, 'text')
+    applyOp(result); focusNode(result.newId)
+  } catch (err) {
+    console.error('add-text-btn error:', err)
+    alert('Could not add node: ' + err.message)
+  }
+})
+document.getElementById('add-code-btn').addEventListener('click', () => {
+  if (!state.activeDocId) return
+  const parentId = state.zoomedId ?? null
+  try {
+    const last = sortedChildren(state.nodes, parentId, state.activeDocId).slice(-1)[0] ?? null
+    const result = opInsert(state.nodes, state.activeDocId, parentId, last, 'code')
+    state.nodes = applyPatch(result.nodes, [{ ...result.nodes.find(n => n.id === result.newId), content: 'typescript' }])
+    putNodes(result.delta.map(n => n.id === result.newId ? { ...n, content: 'typescript' } : n), state.ctx)
+    renderTree()
+  } catch (err) {
+    console.error('add-code-btn error:', err)
+    alert('Could not add code block: ' + err.message)
+  }
+})
+
+// Export modal
+let expMode = 'snapshot'
+const EXP_TABS = {
+  snapshot: { tab: 'exp-tab-snap',  section: 'exp-snapshot-section', submit: 'Export'         },
+  markdown: { tab: 'exp-tab-md',    section: 'exp-markdown-section', submit: 'Export'         },
+  html:     { tab: 'exp-tab-html',  section: 'exp-html-section',     submit: 'Export'         },
+  print:    { tab: 'exp-tab-print', section: 'exp-print-section',    submit: 'Print / Save as PDF' },
+}
+function selectExpTab(mode) {
+  expMode = mode
+  for (const [k, v] of Object.entries(EXP_TABS)) {
+    document.getElementById(v.tab).classList.toggle('active', k === mode)
+    document.getElementById(v.section).classList.toggle('hidden', k !== mode)
+  }
+  document.getElementById('exp-submit').textContent = EXP_TABS[mode].submit
+}
+document.getElementById('export-btn').addEventListener('click', () => { selectExpTab('snapshot'); show('export-modal') })
+document.getElementById('exp-cancel').addEventListener('click', () => hide('export-modal'))
+for (const [mode, cfg] of Object.entries(EXP_TABS)) {
+  document.getElementById(cfg.tab).addEventListener('click', () => selectExpTab(mode))
+}
+document.getElementById('exp-submit').addEventListener('click', async () => {
+  setErr('exp-error', '')
+  const btn = document.getElementById('exp-submit'); const origLabel = EXP_TABS[expMode].submit
+  btn.disabled = true; btn.textContent = expMode === 'print' ? 'Opening…' : 'Exporting…'
+  try {
+    if (expMode === 'snapshot') {
+      const pass = document.getElementById('exp-pass').value
+      if (!pass) { setErr('exp-error', 'Enter your vault password.'); return }
+      const json = await exportSnapshot(pass, state.ctx)
+      dlText(json, `outline-snapshot-${now()}.json`, 'application/json')
+      hide('export-modal')
+    } else if (expMode === 'markdown') {
+      if (!state.activeDocId) { setErr('exp-error', 'No active document.'); return }
+      const doc = state.docs.find(d => d.id === state.activeDocId)
+      const md = exportMarkdown(doc, state.nodes)
+      dlText(md, `${doc.title || 'outline'}.md`, 'text/markdown')
+      hide('export-modal')
+    } else if (expMode === 'html') {
+      if (!state.activeDocId) { setErr('exp-error', 'No active document.'); return }
+      const doc = state.docs.find(d => d.id === state.activeDocId)
+      const html = await exportHtml(doc, state.nodes, state.ctx)
+      dlText(html, `${doc.title || 'outline'}.html`, 'text/html')
+      hide('export-modal')
+    } else if (expMode === 'print') {
+      if (!state.activeDocId) { setErr('exp-error', 'No active document.'); return }
+      hide('export-modal')
+      setTimeout(() => window.print(), 50)  // let the overlay finish hiding first
+    }
+  } catch (e) { setErr('exp-error', String(e)) }
+  btn.disabled = false; btn.textContent = origLabel
+})
+
+// Import modal (Markdown only)
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('imp-file').value = ''
+  setErr('imp-error', '')
+  show('import-modal')
+})
+document.getElementById('imp-cancel').addEventListener('click', () => hide('import-modal'))
+document.getElementById('imp-submit').addEventListener('click', async () => {
+  setErr('imp-error', '')
+  const file = document.getElementById('imp-file').files?.[0]
+  if (!file) { setErr('imp-error', 'Select a file.'); return }
+  const btn = document.getElementById('imp-submit'); btn.disabled = true; btn.textContent = 'Importing…'
+  try {
+    const text = await file.text()
+    const { doc, nodes } = importMarkdown(text)
+    await putDoc(doc, state.ctx)
+    await putNodes(nodes, state.ctx)
+    state.docs = await getAllDocs(state.ctx)
+    await selectDoc(doc.id)
+    hide('import-modal')
+  } catch (e) { setErr('imp-error', String(e)) }
+  btn.disabled = false; btn.textContent = 'Import'
+})
+
+// =====================================================================
+// MULTI-SELECT  (Shift-click range, Ctrl/Cmd-click toggle)
+// =====================================================================
+
+// Flat list of currently visible node ids — read from the DOM so the order
+// reflects whatever is actually rendered (respecting collapse and tag filter).
+function getVisibleNodeIds() {
+  return Array.from(document.querySelectorAll('#outline-tree .node-row[data-node-id]'))
+    .map(r => r.dataset.nodeId)
+}
+
+function refreshSelectedClasses() {
+  for (const r of document.querySelectorAll('#outline-tree .node-row')) {
+    if (state.selectedIds.has(r.dataset.nodeId)) r.classList.add('selected')
+    else r.classList.remove('selected')
+  }
+}
+
+function clearMultiSelect() {
+  if (!state.selectedIds.size) return
+  state.selectedIds.clear()
+  refreshSelectedClasses()
+}
+
+function extendSelection(nodeId) {
+  const visible = getVisibleNodeIds()
+  const anchor = state.selectedId && visible.includes(state.selectedId) ? state.selectedId : nodeId
+  const i1 = visible.indexOf(anchor)
+  const i2 = visible.indexOf(nodeId)
+  if (i1 < 0 || i2 < 0) return
+  const [lo, hi] = i1 < i2 ? [i1, i2] : [i2, i1]
+  state.selectedIds = new Set(visible.slice(lo, hi + 1))
+  refreshSelectedClasses()
+}
+
+function toggleSelection(nodeId) {
+  if (state.selectedIds.has(nodeId)) state.selectedIds.delete(nodeId)
+  else state.selectedIds.add(nodeId)
+  state.selectedId = nodeId
+  refreshSelectedClasses()
+}
+
+// =====================================================================
+// DRAG-AND-DROP REORDERING
+// =====================================================================
+
+// True if nodeId is in ancestorIds, or descends from any of them. Used to
+// reject drops that would move a node into its own subtree.
+function isSelfOrDescendantOfAny(nodeId, ancestorIds) {
+  if (ancestorIds.includes(nodeId)) return true
+  const map = new Map(state.nodes.map(n => [n.id, n]))
+  let cur = map.get(nodeId)
+  while (cur && cur.parentId) {
+    if (ancestorIds.includes(cur.parentId)) return true
+    cur = map.get(cur.parentId)
+  }
+  return false
+}
+
+function clearDropIndicators() {
+  for (const r of document.querySelectorAll('#outline-tree .node-row.drop-before, #outline-tree .node-row.drop-after, #outline-tree .node-row.drop-child')) {
+    r.classList.remove('drop-before', 'drop-after', 'drop-child')
+  }
+}
+
+function cleanupDrag() {
+  for (const r of document.querySelectorAll('#outline-tree .node-row.dragging')) r.classList.remove('dragging')
+  clearDropIndicators()
+  dragState.ids = []
+  dragState.target = null
+}
+
+document.getElementById('outline-tree').addEventListener('dragstart', e => {
+  const row = e.target.closest('.node-row')
+  if (!row || !row.dataset.nodeId) return
+  const nodeId = row.dataset.nodeId
+  // If the dragged row is part of an active multi-selection, drag the whole
+  // selection. Otherwise drag only this node (and update selection to it).
+  let ids
+  if (state.selectedIds.has(nodeId) && state.selectedIds.size > 1) {
+    ids = Array.from(state.selectedIds)
+  } else {
+    ids = [nodeId]
+    state.selectedIds = new Set([nodeId])
+    refreshSelectedClasses()
+  }
+  // Sort by visible (document) order so sequential moves preserve relative order.
+  const visible = getVisibleNodeIds()
+  ids.sort((a, b) => visible.indexOf(a) - visible.indexOf(b))
+  dragState.ids = ids
+  dragState.target = null
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', ids.join(','))
+  for (const id of ids) {
+    const el = document.querySelector(`#outline-tree .node-row[data-node-id="${id}"]`)
+    if (el) el.classList.add('dragging')
+  }
+})
+
+document.getElementById('outline-tree').addEventListener('dragover', e => {
+  if (!dragState.ids.length) return
+  const row = e.target.closest('.node-row')
+  if (!row || !row.dataset.nodeId) return
+  const overId = row.dataset.nodeId
+  if (isSelfOrDescendantOfAny(overId, dragState.ids)) { clearDropIndicators(); dragState.target = null; return }
+
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'move'
+
+  const rect = row.getBoundingClientRect()
+  const offsetY = e.clientY - rect.top
+  const offsetX = e.clientX - rect.left
+  const after = offsetY > rect.height / 2
+  // X past the bullet/checkbox area means "drop as child of this row".
+  const childThreshold = 40
+  let position
+  if (!after) position = 'before'
+  else if (offsetX > childThreshold) position = 'child'
+  else position = 'after'
+
+  clearDropIndicators()
+  row.classList.add('drop-' + position)
+  dragState.target = { nodeId: overId, position }
+})
+
+document.getElementById('outline-tree').addEventListener('drop', e => {
+  e.preventDefault()
+  if (!dragState.ids.length || !dragState.target) { cleanupDrag(); return }
+  const { nodeId: targetId, position } = dragState.target
+  const target = state.nodes.find(n => n.id === targetId)
+  if (!target) { cleanupDrag(); return }
+
+  let parentId, afterNode
+  if (position === 'before') {
+    parentId = target.parentId
+    const sibs = sortedChildren(state.nodes, parentId, target.documentId).filter(s => !dragState.ids.includes(s.id))
+    const idx = sibs.findIndex(s => s.id === targetId)
+    afterNode = idx > 0 ? sibs[idx - 1] : null
+  } else if (position === 'after') {
+    parentId = target.parentId
+    afterNode = target
+  } else { // 'child'
+    parentId = targetId
+    afterNode = null
+  }
+
+  const before = state.nodes
+  let workingNodes = state.nodes
+  let cursor = afterNode
+  for (const id of topLevelOf(dragState.ids)) {
+    const result = opMove(workingNodes, id, parentId, cursor)
+    if (!result) continue
+    workingNodes = result.nodes
+    cursor = workingNodes.find(n => n.id === id)
+  }
+  if (workingNodes === before) { cleanupDrag(); return }
+
+  pushHistory(before, workingNodes)
+  state.nodes = workingNodes
+  const beforeMap = new Map(before.map(n => [n.id, n]))
+  const changed = workingNodes.filter(n => beforeMap.get(n.id) !== n)
+  for (const n of changed) indexNode(n)
+  putNodes(changed, state.ctx)
+  renderTree()
+  renderTagList()
+  cleanupDrag()
+})
+
+document.getElementById('outline-tree').addEventListener('dragend', cleanupDrag)
+
+// =====================================================================
+// BULK OPERATIONS  (multi-select indent/outdent/delete)
+// =====================================================================
+
+function orderByVisible(ids) {
+  const visible = getVisibleNodeIds()
+  return ids.slice().sort((a, b) => visible.indexOf(a) - visible.indexOf(b))
+}
+
+// Keep only ids that aren't descendants of another id in the set. Descendants
+// move/indent with their ancestor naturally, so explicit ops on them would
+// either duplicate work or produce surprising structure.
+function topLevelOf(ids) {
+  const set = new Set(ids)
+  const map = new Map(state.nodes.map(n => [n.id, n]))
+  return ids.filter(id => {
+    let cur = map.get(id)
+    while (cur && cur.parentId) {
+      if (set.has(cur.parentId)) return false
+      cur = map.get(cur.parentId)
+    }
+    return true
+  })
+}
+
+function commitBulk(before, after) {
+  if (before === after) return
+  pushHistory(before, after)
+  state.nodes = after
+  const beforeMap = new Map(before.map(n => [n.id, n]))
+  const changed = after.filter(n => beforeMap.get(n.id) !== n)
+  for (const n of changed) indexNode(n)
+  putNodes(changed, state.ctx)
+  renderTree()
+  renderTagList()
+}
+
+function bulkIndent(ids) {
+  const before = state.nodes
+  let working = before
+  for (const id of orderByVisible(topLevelOf(ids))) {
+    const r = opIndent(working, id)
+    if (r) working = r.nodes
+  }
+  commitBulk(before, working)
+}
+
+function bulkOutdent(ids) {
+  const before = state.nodes
+  let working = before
+  for (const id of orderByVisible(topLevelOf(ids))) {
+    const r = opOutdent(working, id)
+    if (r) working = r.nodes
+  }
+  commitBulk(before, working)
+}
+
+function bulkDelete(ids) {
+  const all = new Set()
+  for (const id of ids) {
+    all.add(id)
+    for (const d of getDescendants(state.nodes, id)) all.add(d.id)
+  }
+  if (!all.size) return
+  const before = state.nodes
+  const after = before.filter(n => !all.has(n.id))
+  pushHistory(before, after)
+  state.nodes = after
+  for (const id of all) { destroyCM(id); unindexNode(id) }
+  deleteNodes(Array.from(all))
+  state.selectedIds.clear()
+  renderTree()
+  renderTagList()
+}
+
+// Tree event delegation
+document.getElementById('outline-tree').addEventListener('click', e => {
+  const colBtn = e.target.closest('[data-action="collapse"]')
+  if (colBtn) { applyOp(opToggleCollapse(state.nodes, colBtn.dataset.nodeId)); return }
+
+  const zoomBtn = e.target.closest('[data-action="zoom"]')
+  if (zoomBtn && e.detail === 2) {
+    const id = zoomBtn.dataset.nodeId
+    state.zoomedId = state.zoomedId === id ? null : id
+    renderEditor(); return
+  }
+
+  const kindBtn = e.target.closest('[data-action="kindmenu"]')
+  if (kindBtn) {
+    e.stopPropagation()
+    const rect = kindBtn.getBoundingClientRect()
+    openCtxMenu(kindBtn.dataset.nodeId, rect.left, rect.bottom + 4)
+    return
+  }
+
+  // Multi-select. Shift extends from anchor; Ctrl/Cmd toggles. Plain clicks
+  // outside the existing selection clear it (so editing a fresh node resets).
+  const row = e.target.closest('.node-row[data-node-id]')
+  if (!row) return
+  const nodeId = row.dataset.nodeId
+  if (e.shiftKey) {
+    e.preventDefault()
+    window.getSelection()?.removeAllRanges()
+    extendSelection(nodeId)
+    state.selectedId = nodeId
+  } else if (e.ctrlKey || e.metaKey) {
+    e.preventDefault()
+    toggleSelection(nodeId)
+  } else {
+    if (state.selectedIds.size && !state.selectedIds.has(nodeId)) clearMultiSelect()
+    state.selectedId = nodeId
+  }
+})
+
+document.getElementById('outline-tree').addEventListener('contextmenu', e => {
+  const row = e.target.closest('.node-row')
+  if (!row) return
+  e.preventDefault()
+  const wrap = row.closest('.node-wrap')
+  if (wrap) openCtxMenu(wrap.dataset.nodeId, e.clientX, e.clientY)
+})
+
+document.getElementById('outline-tree').addEventListener('change', e => {
+  if (e.target.dataset.action === 'check') applyOp(opToggleCheck(state.nodes, e.target.dataset.nodeId))
+})
+
+document.getElementById('outline-tree').addEventListener('keydown', e => {
+  const el = e.target.closest('[data-node-id].node-text')
+  if (!el) return
+  const nodeId = el.dataset.nodeId
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) return
+
+  const multi = state.selectedIds.size > 1 && state.selectedIds.has(nodeId)
+
+  if (e.key === 'Tab' && !e.shiftKey) {
+    e.preventDefault(); flushNodeText(el)
+    if (multi) bulkIndent(Array.from(state.selectedIds))
+    else applyOp(opIndent(state.nodes, nodeId))
+    focusNode(nodeId)
+  } else if (e.key === 'Tab' && e.shiftKey) {
+    e.preventDefault(); flushNodeText(el)
+    if (multi) bulkOutdent(Array.from(state.selectedIds))
+    else applyOp(opOutdent(state.nodes, nodeId))
+    focusNode(nodeId)
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    flushNodeText(el)
+    const result = opInsert(state.nodes, node.documentId, node.parentId, node, 'text')
+    applyOp(result); focusNode(result.newId)
+  } else if (e.key === 'Backspace' && el.textContent === '') {
+    e.preventDefault()
+    const siblings = sortedChildren(state.nodes, node.parentId, node.documentId)
+    const idx = siblings.findIndex(s => s.id === nodeId)
+    const prevId = idx > 0 ? siblings[idx - 1].id : node.parentId
+    applyOp(opDelete(state.nodes, nodeId))
+    if (prevId) focusNode(prevId)
+  } else if (e.ctrlKey && e.key === 'ArrowUp') {
+    e.preventDefault()
+    flushNodeText(el)
+    const siblings = sortedChildren(state.nodes, node.parentId, node.documentId)
+    const idx = siblings.findIndex(s => s.id === nodeId)
+    if (idx > 0) { applyOp(opMove(state.nodes, nodeId, node.parentId, idx > 1 ? siblings[idx - 2] : null)); focusNode(nodeId) }
+  } else if (e.ctrlKey && e.key === 'ArrowDown') {
+    e.preventDefault()
+    flushNodeText(el)
+    const siblings = sortedChildren(state.nodes, node.parentId, node.documentId)
+    const idx = siblings.findIndex(s => s.id === nodeId)
+    if (idx < siblings.length - 1) { applyOp(opMove(state.nodes, nodeId, node.parentId, siblings[idx + 1])); focusNode(nodeId) }
+  } else if (e.ctrlKey && !e.shiftKey && e.key === '.') {
+    e.preventDefault(); applyOp(opToggleCollapse(state.nodes, nodeId)); focusNode(nodeId)
+  } else if (e.ctrlKey && e.shiftKey && e.key === '.') {
+    e.preventDefault(); applyOp(opExpandAll(state.nodes, nodeId)); focusNode(nodeId)
+  } else if (e.ctrlKey && e.key === ']') {
+    e.preventDefault(); state.zoomedId = nodeId; renderEditor()
+  } else if (e.ctrlKey && e.shiftKey && e.key === 'Backspace') {
+    e.preventDefault()
+    if (multi) {
+      bulkDelete(Array.from(state.selectedIds))
+    } else {
+      const siblings = sortedChildren(state.nodes, node.parentId, node.documentId)
+      const idx = siblings.findIndex(s => s.id === nodeId)
+      const prevId = idx > 0 ? siblings[idx - 1].id : node.parentId
+      applyOp(opDelete(state.nodes, nodeId))
+      if (prevId) focusNode(prevId)
+    }
+  } else if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+    e.preventDefault(); applyOp(opChangeKind(state.nodes, nodeId, 'checkbox')); focusNode(nodeId)
+  } else if (e.ctrlKey && !e.shiftKey && e.key === '/') {
+    e.preventDefault(); applyOp(opToggleCheck(state.nodes, nodeId)); focusNode(nodeId)
+  } else if (e.ctrlKey && e.shiftKey && e.key === 'X') {
+    e.preventDefault(); applyOp(opNumberChildren(state.nodes, nodeId)); focusNode(nodeId)
+  }
+})
+
+// =====================================================================
+// WIKI LINK AUTOCOMPLETE  ([[ trigger → doc-title fuzzy matcher)
+// =====================================================================
+
+const wac = { open: false, items: [], activeIdx: 0, el: null }
+
+// Caret offset in plaintext-equivalent of `el` (which when focused contains
+// only a single text node — see the focus handler that swaps rich HTML back).
+function caretOffsetIn(el) {
+  const sel = window.getSelection()
+  if (!sel.rangeCount) return -1
+  const range = sel.getRangeAt(0)
+  if (!range.collapsed) return -1
+  if (!el.contains(range.endContainer)) return -1
+  const pre = document.createRange()
+  pre.selectNodeContents(el)
+  pre.setEnd(range.endContainer, range.endOffset)
+  return pre.toString().length
+}
+
+// Detect `[[<query>` with cursor right after, no closing `]]` yet.
+function getWikiTrigger(el) {
+  const pos = caretOffsetIn(el)
+  if (pos < 0) return null
+  const before = (el.textContent || '').slice(0, pos)
+  const lastOpen = before.lastIndexOf('[[')
+  if (lastOpen < 0) return null
+  const afterOpen = before.slice(lastOpen + 2)
+  if (afterOpen.includes(']]') || afterOpen.includes('\n')) return null
+  return { query: afterOpen, openPos: lastOpen, caretPos: pos }
+}
+
+function positionWacPopup() {
+  const sel = window.getSelection()
+  if (!sel.rangeCount) return
+  const rect = sel.getRangeAt(0).getBoundingClientRect()
+  const popup = document.getElementById('wiki-autocomplete')
+  const top = rect.bottom + 4
+  const left = rect.left
+  popup.style.left = Math.max(4, Math.min(left, window.innerWidth - 360)) + 'px'
+  popup.style.top = Math.min(top, window.innerHeight - 250) + 'px'
+}
+
+function renderWacList() {
+  const popup = document.getElementById('wiki-autocomplete')
+  if (!wac.items.length) {
+    popup.innerHTML = '<li class="wac-empty">No matching docs</li>'
+    return
+  }
+  popup.innerHTML = wac.items.map((d, i) =>
+    `<li data-idx="${i}" class="${i === wac.activeIdx ? 'active' : ''}">${escapeHtml(d.title || 'Untitled')}</li>`
+  ).join('')
+}
+
+function openWikiAutocomplete(el, query) {
+  const q = query.toLowerCase().trim()
+  let items = state.docs.filter(d => (d.title || '').toLowerCase().includes(q))
+  items.sort((a, b) => {
+    const at = (a.title || '').toLowerCase(), bt = (b.title || '').toLowerCase()
+    const ap = at.startsWith(q) ? 0 : 1, bp = bt.startsWith(q) ? 0 : 1
+    return ap - bp || at.localeCompare(bt)
+  })
+  wac.items = items.slice(0, 8)
+  wac.activeIdx = 0
+  wac.el = el
+  wac.open = true
+  const popup = document.getElementById('wiki-autocomplete')
+  popup.classList.remove('hidden')
+  renderWacList()
+  positionWacPopup()
+}
+
+function closeWikiAutocomplete() {
+  wac.open = false; wac.items = []; wac.activeIdx = 0; wac.el = null
+  document.getElementById('wiki-autocomplete')?.classList.add('hidden')
+}
+
+function applyWikiCompletion(el, title) {
+  const trig = getWikiTrigger(el); if (!trig) { closeWikiAutocomplete(); return }
+  const text = el.textContent || ''
+  const insertion = title + ']]'
+  const newText = text.slice(0, trig.openPos + 2) + insertion + text.slice(trig.caretPos)
+  el.textContent = newText
+  const target = el.firstChild
+  if (target) {
+    const caret = trig.openPos + 2 + insertion.length
+    const sel = window.getSelection()
+    const range = document.createRange()
+    range.setStart(target, Math.min(caret, target.textContent.length))
+    range.collapse(true)
+    sel.removeAllRanges(); sel.addRange(range)
+  }
+  closeWikiAutocomplete()
+  // Trigger save: dispatch input so any downstream listeners (and our own
+  // blur-driven save) treat the text as edited.
+  el.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+// Trigger detection on input. Skipped when text is not yet single-text-node
+// (e.g. while richly rendered) — focus handler clears that before edits.
+document.getElementById('outline-tree').addEventListener('input', e => {
+  const el = e.target.closest('[data-node-id].node-text')
+  if (!el) return
+  const trig = getWikiTrigger(el)
+  if (trig) openWikiAutocomplete(el, trig.query)
+  else if (wac.open) closeWikiAutocomplete()
+})
+
+// Capture-phase keydown: when popup is open, intercept nav keys before the
+// outline's standard handler (which would otherwise create a node on Enter).
+document.getElementById('outline-tree').addEventListener('keydown', e => {
+  if (!wac.open) return
+  if (e.key === 'ArrowDown') {
+    e.preventDefault(); e.stopPropagation()
+    if (wac.items.length) { wac.activeIdx = (wac.activeIdx + 1) % wac.items.length; renderWacList() }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault(); e.stopPropagation()
+    if (wac.items.length) { wac.activeIdx = (wac.activeIdx - 1 + wac.items.length) % wac.items.length; renderWacList() }
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    if (!wac.items.length) { closeWikiAutocomplete(); return }
+    e.preventDefault(); e.stopPropagation()
+    const item = wac.items[wac.activeIdx]
+    applyWikiCompletion(wac.el, (item.title || '').trim())
+  } else if (e.key === 'Escape') {
+    e.preventDefault(); e.stopPropagation()
+    closeWikiAutocomplete()
+  }
+}, true)
+
+// Mouse click on a popup item — preventDefault keeps focus in the editable
+// so the caret survives the insertion.
+document.getElementById('wiki-autocomplete').addEventListener('mousedown', e => {
+  const li = e.target.closest('li[data-idx]'); if (!li) return
+  e.preventDefault()
+  const idx = +li.dataset.idx
+  if (wac.items[idx] && wac.el) applyWikiCompletion(wac.el, (wac.items[idx].title || '').trim())
+})
+
+// Close popup when clicking outside its scope.
+document.addEventListener('mousedown', e => {
+  if (!wac.open) return
+  if (e.target.closest('#wiki-autocomplete')) return
+  if (wac.el && e.target.closest('[data-node-id].node-text') === wac.el) return
+  closeWikiAutocomplete()
+})
+
+// Restore raw text when a math- or link-rendered node is focused for editing.
+// Mirrors the swap-back pattern so contentEditable cursor behavior stays correct.
+document.getElementById('outline-tree').addEventListener('focus', e => {
+  const el = e.target.closest('[data-node-id].node-text')
+  if (!el || (!el.classList.contains('has-math') && !el.classList.contains('has-links'))) return
+  const node = state.nodes.find(n => n.id === el.dataset.nodeId)
+  if (!node) return
+  el.textContent = node.content
+  el.classList.remove('has-math')
+  el.classList.remove('has-links')
+}, true)
+
+document.getElementById('outline-tree').addEventListener('blur', e => {
+  const el = e.target.closest('[data-node-id].node-text')
+  if (!el) return
+  if (wac.open && wac.el === el) closeWikiAutocomplete()
+  const nodeId = el.dataset.nodeId
+  const node = state.nodes.find(n => n.id === nodeId); if (!node) return
+  const content = el.textContent ?? ''
+  let contentChanged = false
+  if (node.content !== content) {
+    const updated = { ...node, content, updatedAt: now() }
+    state.nodes = applyPatch(state.nodes, [updated])
+    indexNode(updated)
+    putNode(updated, state.ctx)
+    contentChanged = true
+  }
+  applyRichRender(el, content)
+  if (contentChanged) { renderTagList(); renderBacklinks() }
+}, true)
+
+// Inline link clicks: open in a new tab. mousedown preventDefault stops the
+// click from focusing the contentEditable (which would swap the link back to
+// plain text and prevent navigation). Same pattern dispatches wiki/node
+// internal links to the focus-toggle navigation helpers.
+document.getElementById('outline-tree').addEventListener('mousedown', e => {
+  const wikiA = e.target.closest('a.wiki-link')
+  if (wikiA) {
+    e.preventDefault()
+    if (!wikiA.classList.contains('broken')) openWikiTarget(wikiA.dataset.wikiTitle)
+    return
+  }
+  const nodeA = e.target.closest('a.node-link')
+  if (nodeA) {
+    e.preventDefault()
+    if (!nodeA.classList.contains('broken')) openNodeRef(nodeA.dataset.noderef)
+    return
+  }
+  const a = e.target.closest('a.inline-link')
+  if (!a) return
+  e.preventDefault()
+  window.open(a.href, '_blank', 'noopener')
+})
+
+// Image paste
+document.getElementById('outline-tree').addEventListener('paste', async e => {
+  if (!state.activeDocId) return
+  const item = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith('image/'))
+  if (!item) return
+  e.preventDefault()
+  const blob = item.getAsFile(); if (!blob) return
+  if (blob.size > 5 * 1024 * 1024) { alert('Image exceeds 5 MB limit.'); return }
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  const assetId = genId()
+  await putAsset(assetId, blob.type, bytes, state.ctx)
+  const anchor = state.nodes.find(n => n.id === state.selectedId) ?? null
+  const result = opInsert(state.nodes, state.activeDocId, anchor?.parentId ?? null, anchor, 'image')
+  const imgNode = { ...result.nodes.find(n => n.id === result.newId), assetId, content: blob.type }
+  state.nodes = applyPatch(result.nodes, [imgNode])
+  await putNode(imgNode, state.ctx)
+  renderTree()
+})
+
+// Context menu — close on outside click or Escape
+document.addEventListener('click', e => {
+  if (!document.getElementById('node-ctx-menu').classList.contains('hidden') &&
+      !e.target.closest('#node-ctx-menu')) closeCtxMenu()
+})
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('node-ctx-menu').classList.contains('hidden')) {
+    closeCtxMenu()
+  }
+}, true)
+
+// Help overlay + global undo/redo
+function isEditableTarget(target) {
+  const el = target instanceof Element ? target : document.activeElement
+  if (!el) return false
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return true
+  if (el.isContentEditable) return true
+  return false
+}
+function isInCodeMirror(target) {
+  const el = target instanceof Element ? target : document.activeElement
+  return !!(el && el.closest && el.closest('.cm-editor'))
+}
+function openHelp() {
+  const grid = document.getElementById('help-grid')
+  grid.innerHTML = Object.values(SHORTCUTS).map(s =>
+    `<div class="sc-keys">${s.keys}</div><div class="sc-label">${s.label}</div>`
+  ).join('')
+  document.getElementById('help-overlay').classList.remove('hidden')
+}
+function closeHelp() {
+  document.getElementById('help-overlay').classList.add('hidden')
+}
+document.getElementById('help-close-btn').addEventListener('click', closeHelp)
+document.getElementById('help-overlay').addEventListener('click', e => {
+  if (e.target.id === 'help-overlay') closeHelp()
+})
+
+document.addEventListener('keydown', e => {
+  const helpOpen = !document.getElementById('help-overlay').classList.contains('hidden')
+  if (helpOpen && e.key === 'Escape') { e.preventDefault(); closeHelp(); return }
+  if (e.key === '?' && !isEditableTarget(e.target)) {
+    e.preventDefault()
+    if (helpOpen) closeHelp(); else openHelp()
+    return
+  }
+  if (!state.unlocked) return
+  if (e.ctrlKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault()
+    if (palette.open) closePalette(); else openPalette()
+    return
+  }
+  if (e.ctrlKey && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+    e.preventDefault()
+    if (searchView.open) closeSearchView(); else openSearchView()
+    return
+  }
+  if (isInCodeMirror(e.target)) return
+  if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo() }
+  else if (e.ctrlKey && e.shiftKey && e.key === 'Z') { e.preventDefault(); redo() }
+}, true)
+
+// =====================================================================
+// SEARCH VIEW  (Ctrl+Shift+F — full-text panel with scope filters)
+// =====================================================================
+//
+// Backend reuses the existing inverted index (searchIndex.postings + nodeMeta
+// from indexNode()). The free-text query is fed through searchNodes(); filter
+// tokens (in:, kind:, has:, is:) are pulled out first and applied as a
+// post-filter on the scored results. Snippets bold matched tokens inline.
+// History is kept in memory only — it contains content fragments, which would
+// be sensitive at rest; we clear it on vault lock.
+
+const SEARCH_KINDS = new Set(['text', 'checkbox', 'code', 'image'])
+
+const searchView = {
+  open: false,
+  query: '',
+  results: [],
+  activeIdx: 0,
+  history: [],
+  showHistory: false,
+}
+
+// Strip a regex special-char escape so we can build a highlight regex from
+// arbitrary user tokens without injecting metacharacters.
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+
+// Parse the search input into a filter spec + free-text query. Recognized
+// tokens: in:"Doc Name" / in:foo, kind:text|checkbox|code|image, has:#tag,
+// is:checked|unchecked. Unknown filter-like tokens fall through to the free
+// query. Returns { text, tokens, filters } where filters fields are null
+// when not specified.
+function parseSearchQuery(raw) {
+  const filters = { docIds: null, kinds: null, hasTags: null, isChecked: null }
+  let rest = raw
+  const consume = (re, fn) => {
+    rest = rest.replace(re, (...m) => { fn(...m); return ' ' })
+  }
+  // in:"quoted title"  or  in:bare
+  consume(/\bin:"([^"]+)"/gi, (_, title) => {
+    if (!filters.docIds) filters.docIds = new Set()
+    const t = title.trim().toLowerCase()
+    for (const d of state.docs) {
+      if ((d.title || '').trim().toLowerCase() === t) filters.docIds.add(d.id)
+    }
+  })
+  consume(/\bin:(\S+)/gi, (_, title) => {
+    if (!filters.docIds) filters.docIds = new Set()
+    const t = title.trim().toLowerCase()
+    for (const d of state.docs) {
+      if ((d.title || '').trim().toLowerCase() === t) filters.docIds.add(d.id)
+    }
+  })
+  consume(/\bkind:(\w+)/gi, (_, kind) => {
+    const k = kind.toLowerCase()
+    if (!SEARCH_KINDS.has(k)) return
+    if (!filters.kinds) filters.kinds = new Set()
+    filters.kinds.add(k)
+  })
+  consume(/\bhas:(#[\p{L}\p{N}_-]+)/giu, (_, tag) => {
+    if (!filters.hasTags) filters.hasTags = new Set()
+    filters.hasTags.add(tag.toLowerCase())
+  })
+  consume(/\bis:(checked|unchecked)/gi, (_, v) => {
+    filters.isChecked = v.toLowerCase() === 'checked'
+  })
+  const text = rest.trim().replace(/\s+/g, ' ')
+  const tokens = tokenizeWords(text)
+  return { text, tokens, filters }
+}
+
+// Apply filters to an array of {id, score, meta} hits from searchNodes().
+function applySearchFilters(hits, filters) {
+  const { docIds, kinds, hasTags, isChecked } = filters
+  if (!docIds && !kinds && !hasTags && isChecked === null) return hits
+  return hits.filter(h => {
+    if (docIds && !docIds.has(h.meta.docId)) return false
+    if (kinds && !kinds.has(h.meta.kind)) return false
+    if (isChecked !== null) {
+      if (h.meta.kind !== 'checkbox') return false
+      if (!!h.meta.checked !== isChecked) return false
+    }
+    if (hasTags) {
+      const nodeTokens = searchIndex.nodeTokens.get(h.id)
+      if (!nodeTokens) return false
+      for (const t of hasTags) if (!nodeTokens.has(t)) return false
+    }
+    return true
+  })
+}
+
+// When the free-text portion is empty but filters are present, surface every
+// node that satisfies the filters (sorted by recency). This makes
+// "kind:checkbox is:unchecked" useful on its own as a task list view.
+function filteredOnlySearch(filters, limit) {
+  const { docIds, kinds, hasTags, isChecked } = filters
+  let candidate = null
+  if (hasTags && hasTags.size) {
+    for (const t of hasTags) {
+      const ids = searchIndex.postings.get(t) ?? new Set()
+      if (candidate === null) candidate = new Set(ids)
+      else for (const id of candidate) if (!ids.has(id)) candidate.delete(id)
+    }
+  }
+  const out = []
+  const consider = (id, meta) => {
+    if (!meta) return
+    if (docIds && !docIds.has(meta.docId)) return
+    if (kinds && !kinds.has(meta.kind)) return
+    if (isChecked !== null) {
+      if (meta.kind !== 'checkbox') return
+      if (!!meta.checked !== isChecked) return
+    }
+    out.push({ id, meta, score: meta.updatedAt || 0 })
+  }
+  if (candidate) {
+    for (const id of candidate) consider(id, searchIndex.nodeMeta.get(id))
+  } else {
+    for (const [id, meta] of searchIndex.nodeMeta) consider(id, meta)
+  }
+  out.sort((a, b) => b.score - a.score)
+  return out.slice(0, limit)
+}
+
+// Build a one-line snippet centered on the first matched token, with all
+// token occurrences wrapped in <mark>. Falls back to a leading slice when
+// there are no matches (filter-only mode). Returns safe HTML — we escape the
+// snippet text before injecting <mark>.
+function buildSnippet(content, tokens, width = 140) {
+  const text = (content || '').replace(/\s+/g, ' ').trim()
+  if (!text) return ''
+  const lc = text.toLowerCase()
+  let firstIdx = -1
+  for (const t of tokens) {
+    if (!t) continue
+    const i = lc.indexOf(t)
+    if (i !== -1 && (firstIdx === -1 || i < firstIdx)) firstIdx = i
+  }
+  let start = 0
+  if (firstIdx !== -1) start = Math.max(0, firstIdx - Math.floor(width / 4))
+  let slice = text.slice(start, start + width)
+  const prefix = start > 0 ? '…' : ''
+  const suffix = start + width < text.length ? '…' : ''
+  // Escape, then wrap matches.
+  let safe = escapeHtml(slice)
+  if (tokens.length) {
+    const pattern = tokens.filter(Boolean).map(escapeRegex).join('|')
+    if (pattern) {
+      const re = new RegExp('(' + pattern + ')', 'gi')
+      safe = safe.replace(re, '<mark>$1</mark>')
+    }
+  }
+  return prefix + safe + suffix
+}
+
+function filtersSummary(filters) {
+  const parts = []
+  if (filters.docIds) {
+    if (filters.docIds.size === 0) parts.push('in: (no matching doc)')
+    else if (filters.docIds.size === 1) {
+      const id = [...filters.docIds][0]
+      const doc = state.docs.find(d => d.id === id)
+      parts.push(`in: ${doc?.title || '(deleted)'}`)
+    } else parts.push(`in: ${filters.docIds.size} docs`)
+  }
+  if (filters.kinds) parts.push(`kind: ${[...filters.kinds].join('|')}`)
+  if (filters.hasTags) parts.push(`has: ${[...filters.hasTags].join(' ')}`)
+  if (filters.isChecked !== null) parts.push(`is: ${filters.isChecked ? 'checked' : 'unchecked'}`)
+  return parts.join('  ·  ')
+}
+
+function openSearchView() {
+  if (!state.unlocked) return
+  searchView.open = true
+  document.getElementById('search-overlay').classList.remove('hidden')
+  const input = document.getElementById('search-input')
+  input.value = searchView.query || ''
+  searchView.showHistory = !input.value.trim() && searchView.history.length > 0
+  updateSearchView(input.value)
+  setTimeout(() => { input.focus(); input.select() }, 0)
+}
+
+function closeSearchView() {
+  searchView.open = false
+  document.getElementById('search-overlay')?.classList.add('hidden')
+}
+
+function recordSearchHistory(q) {
+  const trimmed = q.trim()
+  if (!trimmed) return
+  searchView.history = [trimmed, ...searchView.history.filter(h => h !== trimmed)].slice(0, 10)
+}
+
+function updateSearchView(query) {
+  searchView.query = query
+  const parsed = parseSearchQuery(query)
+  const hasFilters = parsed.filters.docIds || parsed.filters.kinds || parsed.filters.hasTags || parsed.filters.isChecked !== null
+  // in:"foo" with no doc match → short-circuit to empty.
+  if (parsed.filters.docIds && parsed.filters.docIds.size === 0) {
+    searchView.results = []
+  } else if (parsed.tokens.length) {
+    const base = searchNodes(parsed.text, 500)
+    const filtered = applySearchFilters(base, parsed.filters)
+    searchView.results = filtered.slice(0, 200)
+  } else if (hasFilters) {
+    searchView.results = filteredOnlySearch(parsed.filters, 200)
+  } else {
+    searchView.results = []
+  }
+  searchView.activeIdx = 0
+  searchView.showHistory = !query.trim() && searchView.history.length > 0
+  // Status bar
+  const sf = document.getElementById('ss-filters')
+  const sc = document.getElementById('ss-count')
+  sf.textContent = filtersSummary(parsed.filters)
+  if (parsed.tokens.length || hasFilters) {
+    sc.textContent = `${searchView.results.length} result${searchView.results.length === 1 ? '' : 's'}`
+  } else sc.textContent = ''
+  renderSearchHistory()
+  renderSearchResults(parsed.tokens)
+}
+
+function renderSearchHistory() {
+  const ul = document.getElementById('search-history')
+  if (!searchView.showHistory) { ul.classList.add('hidden'); ul.innerHTML = ''; return }
+  ul.classList.remove('hidden')
+  ul.innerHTML = ''
+  if (!searchView.history.length) {
+    const li = document.createElement('li')
+    li.className = 'sh-empty'
+    li.textContent = 'No recent searches'
+    ul.appendChild(li); return
+  }
+  searchView.history.forEach((q, i) => {
+    const li = document.createElement('li')
+    li.dataset.idx = String(i)
+    li.innerHTML = '<span class="sh-icon">↻</span><span></span>'
+    li.lastChild.textContent = q
+    li.addEventListener('mousedown', e => {
+      e.preventDefault()
+      const input = document.getElementById('search-input')
+      input.value = q
+      updateSearchView(q)
+      input.focus()
+    })
+    ul.appendChild(li)
+  })
+}
+
+function renderSearchResults(tokens) {
+  const container = document.getElementById('search-results')
+  container.innerHTML = ''
+  if (!searchView.results.length) {
+    const div = document.createElement('div')
+    div.className = 'sr-empty'
+    div.textContent = !searchView.query.trim() ? 'Type to search across all documents.' : 'No matches.'
+    container.appendChild(div)
+    return
+  }
+  // Group by doc, preserve scored order — first occurrence of each docId wins
+  // its position.
+  const groups = new Map()
+  for (const r of searchView.results) {
+    const did = r.meta.docId
+    if (!groups.has(did)) groups.set(did, [])
+    groups.get(did).push(r)
+  }
+  let flatIdx = 0
+  for (const [docId, items] of groups) {
+    const doc = state.docs.find(d => d.id === docId)
+    const group = document.createElement('div')
+    group.className = 'search-group'
+    const head = document.createElement('div')
+    head.className = 'search-group-head'
+    head.textContent = (doc?.title || 'Untitled') + `  ·  ${items.length}`
+    group.appendChild(head)
+    for (const r of items) {
+      const li = document.createElement('div')
+      li.className = 'search-result'
+      li.dataset.idx = String(flatIdx)
+      if (flatIdx === searchView.activeIdx) li.classList.add('active')
+      const snip = document.createElement('div')
+      snip.className = 'sr-snippet'
+      const source = (r.meta.kind === 'code' ? (r.meta.excerpt || '') : (r.meta.content || '')).trim()
+      const label = source ||
+        (r.meta.kind === 'code' ? '(code block)' :
+         r.meta.kind === 'image' ? '(image)' : '(empty)')
+      snip.innerHTML = buildSnippet(label, tokens)
+      const meta = document.createElement('div')
+      meta.className = 'sr-meta'
+      const kindLabel = r.meta.kind === 'checkbox'
+        ? (r.meta.checked ? '☑ done' : '☐ task')
+        : r.meta.kind
+      const kindEl = document.createElement('span')
+      kindEl.className = 'sr-kind' + (r.meta.kind === 'checkbox' && r.meta.checked ? ' checked' : '')
+      kindEl.textContent = kindLabel
+      meta.appendChild(kindEl)
+      li.appendChild(snip)
+      li.appendChild(meta)
+      li.addEventListener('mousedown', e => { e.preventDefault(); activateSearchResult(li.dataset.idx | 0) })
+      group.appendChild(li)
+      flatIdx++
+    }
+    container.appendChild(group)
+  }
+}
+
+function moveSearchActive(delta) {
+  if (!searchView.results.length) return
+  const n = searchView.results.length
+  searchView.activeIdx = (searchView.activeIdx + delta + n) % n
+  // Re-render minimally — just toggle .active class
+  const rows = document.querySelectorAll('#search-results .search-result')
+  rows.forEach(r => r.classList.toggle('active', (r.dataset.idx | 0) === searchView.activeIdx))
+  const active = document.querySelector('#search-results .search-result.active')
+  active?.scrollIntoView({ block: 'nearest' })
+}
+
+async function activateSearchResult(idx) {
+  const r = searchView.results[idx]
+  if (!r) return
+  recordSearchHistory(searchView.query)
+  closeSearchView()
+  await openNodeRef(r.id)
+}
+
+document.getElementById('search-input').addEventListener('input', e => {
+  updateSearchView(e.target.value)
+})
+document.getElementById('search-input').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); closeSearchView() }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); moveSearchActive(1) }
+  else if (e.key === 'ArrowUp')   { e.preventDefault(); moveSearchActive(-1) }
+  else if (e.key === 'Enter') {
+    e.preventDefault()
+    if (searchView.results.length) activateSearchResult(searchView.activeIdx)
+  }
+})
+document.getElementById('search-overlay').addEventListener('mousedown', e => {
+  if (e.target.id === 'search-overlay') closeSearchView()
+})
+document.getElementById('search-close').addEventListener('click', closeSearchView)
+document.getElementById('search-btn').addEventListener('click', openSearchView)
+
+// =====================================================================
+// COMMAND PALETTE  (Ctrl+K — search nodes; ">" prefix = command mode)
+// =====================================================================
+
+const palette = {
+  open: false,
+  mode: 'search',  // 'search' | 'command'
+  results: [],
+  activeIdx: 0,
+}
+
+// Apply a non-tag filter (e.g. @due:today) to the outline view. If the
+// active doc has no matches, jump to one that does so the user actually sees
+// results — mirrors toggleTagFilter's cross-doc routing for #tags.
+function setDueFilter(token) {
+  const ids = searchIndex.postings.get(token) ?? new Set()
+  state.activeTagFilter = token
+  if (!ids.size) { renderTagList(); renderTree(); return }
+  const hasInActiveDoc = state.nodes.some(n => ids.has(n.id))
+  if (!hasInActiveDoc) {
+    let targetDocId = null
+    for (const id of ids) {
+      const meta = searchIndex.nodeMeta.get(id)
+      if (meta) { targetDocId = meta.docId; break }
+    }
+    if (targetDocId && targetDocId !== state.activeDocId) {
+      selectDoc(targetDocId).then(() => { renderTagList() })
+      return
+    }
+  }
+  renderTagList()
+  renderTree()
+}
+
+const PALETTE_COMMANDS = [
+  { id: 'today-tasks',    label: "Today's tasks",  run: () => setDueFilter('@due:today') },
+  { id: 'overdue-tasks',  label: 'Overdue tasks',  run: () => setDueFilter('@due:overdue') },
+  { id: 'thisweek-tasks', label: "This week's tasks", run: () => setDueFilter('@due:thisweek') },
+  { id: 'open-today',     label: 'Open today\'s daily note', run: () => { state.calendarOffset = 0; openOrCreateDailyDoc(todayLocalIso()) } },
+  { id: 'lock-vault',     label: 'Lock vault',    run: () => { lockVault(); renderApp() } },
+  { id: 'toggle-sidebar', label: 'Toggle sidebar', run: () => document.getElementById('sidebar-toggle')?.click() },
+]
+
+function openPalette() {
+  if (!state.unlocked) return
+  palette.open = true
+  document.getElementById('palette-overlay').classList.remove('hidden')
+  const input = document.getElementById('palette-input')
+  input.value = ''
+  updatePaletteResults('')
+  setTimeout(() => input.focus(), 0)
+}
+
+function closePalette() {
+  palette.open = false
+  palette.results = []
+  document.getElementById('palette-overlay')?.classList.add('hidden')
+}
+
+function updatePaletteResults(query) {
+  const isCmd = query.startsWith('>')
+  palette.mode = isCmd ? 'command' : 'search'
+  document.getElementById('palette-mode').textContent = isCmd ? 'Commands' : 'Search'
+  if (isCmd) {
+    const q = query.slice(1).trim().toLowerCase()
+    palette.results = PALETTE_COMMANDS
+      .filter(c => !q || c.label.toLowerCase().includes(q))
+      .map(c => ({ kind: 'command', label: c.label, run: c.run }))
+  } else {
+    const q = query.trim()
+    if (!q) { palette.results = []; }
+    else {
+      const matches = searchNodes(q, 30)
+      palette.results = matches.map(m => {
+        const doc = state.docs.find(d => d.id === m.meta.docId)
+        const label = (m.meta.content || '').trim() || (m.meta.kind === 'code' ? '(code block)' : '(empty)')
+        return {
+          kind: 'node',
+          nodeId: m.id,
+          docId: m.meta.docId,
+          label,
+          sub: doc?.title || 'Untitled',
+        }
+      })
+    }
+  }
+  palette.activeIdx = 0
+  renderPaletteResults()
+}
+
+function renderPaletteResults() {
+  const ul = document.getElementById('palette-results')
+  ul.innerHTML = ''
+  if (!palette.results.length) {
+    const li = document.createElement('li')
+    li.className = 'pal-empty'
+    li.textContent = palette.mode === 'command' ? 'No matching commands' : 'Type to search'
+    ul.appendChild(li); return
+  }
+  palette.results.forEach((r, i) => {
+    const li = document.createElement('li')
+    if (i === palette.activeIdx) li.classList.add('active')
+    li.dataset.idx = String(i)
+    const title = document.createElement('div')
+    title.className = 'pal-title'
+    title.textContent = r.label.length > 120 ? r.label.slice(0, 120) + '…' : r.label
+    li.appendChild(title)
+    if (r.sub) {
+      const sub = document.createElement('div')
+      sub.className = 'pal-sub'; sub.textContent = r.sub
+      li.appendChild(sub)
+    }
+    li.addEventListener('mousedown', e => { e.preventDefault(); activatePaletteResult(i) })
+    ul.appendChild(li)
+  })
+}
+
+async function activatePaletteResult(idx) {
+  const r = palette.results[idx]; if (!r) return
+  closePalette()
+  if (r.kind === 'command') { r.run(); return }
+  if (r.kind === 'node') {
+    if (state.activeDocId !== r.docId) await selectDoc(r.docId)
+    state.zoomedId = null
+    renderEditor()
+    focusNode(r.nodeId)
+  }
+}
+
+document.getElementById('palette-input').addEventListener('input', e => {
+  updatePaletteResults(e.target.value)
+})
+document.getElementById('palette-input').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); closePalette() }
+  else if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    if (palette.results.length) {
+      palette.activeIdx = (palette.activeIdx + 1) % palette.results.length
+      renderPaletteResults()
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    if (palette.results.length) {
+      palette.activeIdx = (palette.activeIdx - 1 + palette.results.length) % palette.results.length
+      renderPaletteResults()
+    }
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    activatePaletteResult(palette.activeIdx)
+  }
+})
+document.getElementById('palette-overlay').addEventListener('mousedown', e => {
+  if (e.target.id === 'palette-overlay') closePalette()
+})
+
+// Context menu — item dispatch
+document.getElementById('node-ctx-menu').addEventListener('click', e => {
+  const item = e.target.closest('[data-action]')
+  if (!item) return
+  const nodeId = state.ctxNodeId
+  const action = item.dataset.action
+  const param = item.dataset.param
+  closeCtxMenu()
+  if (!nodeId) return
+  if (action === 'ctx-insert-below') {
+    const n = state.nodes.find(n => n.id === nodeId); if (!n) return
+    const result = opInsert(state.nodes, n.documentId, n.parentId, n, 'text')
+    applyOp(result); focusNode(result.newId)
+  }
+  else if (action === 'ctx-insert-child') {
+    const n = state.nodes.find(n => n.id === nodeId); if (!n) return
+    const last = sortedChildren(state.nodes, nodeId, n.documentId).slice(-1)[0] ?? null
+    const result = opInsert(state.nodes, n.documentId, nodeId, last, 'text')
+    applyOp(result); focusNode(result.newId)
+  }
+  else if (action === 'ctx-toggle-collapse') applyOp(opToggleCollapse(state.nodes, nodeId))
+  else if (action === 'ctx-expand-all') applyOp(opExpandAll(state.nodes, nodeId))
+  else if (action === 'ctx-expand-level') applyOp(opExpandToLevel(state.nodes, nodeId, +param))
+  else if (action === 'ctx-expand-siblings') applyOp(opExpandSiblings(state.nodes, nodeId))
+  else if (action === 'ctx-zoom') { state.zoomedId = nodeId; renderEditor() }
+  else if (action === 'ctx-delete') {
+    const node = state.nodes.find(n => n.id === nodeId)
+    if (!node) return
+    const siblings = sortedChildren(state.nodes, node.parentId, node.documentId)
+    const idx = siblings.findIndex(s => s.id === nodeId)
+    const prevId = idx > 0 ? siblings[idx - 1].id : node.parentId
+    applyOp(opDelete(state.nodes, nodeId))
+    if (prevId) focusNode(prevId)
+  }
+  else if (action === 'ctx-delete-checked') applyOp(opDeleteChecked(state.nodes, nodeId))
+  else if (action === 'ctx-sort') applyOp(opSortChildren(state.nodes, nodeId, param))
+  else if (action === 'ctx-move-up') {
+    const n = state.nodes.find(n => n.id === nodeId); if (!n) return
+    const sibs = sortedChildren(state.nodes, n.parentId, n.documentId)
+    const idx = sibs.findIndex(s => s.id === nodeId)
+    if (idx > 0) { applyOp(opMove(state.nodes, nodeId, n.parentId, idx > 1 ? sibs[idx - 2] : null)); focusNode(nodeId) }
+  }
+  else if (action === 'ctx-move-down') {
+    const n = state.nodes.find(n => n.id === nodeId); if (!n) return
+    const sibs = sortedChildren(state.nodes, n.parentId, n.documentId)
+    const idx = sibs.findIndex(s => s.id === nodeId)
+    if (idx < sibs.length - 1) { applyOp(opMove(state.nodes, nodeId, n.parentId, sibs[idx + 1])); focusNode(nodeId) }
+  }
+  else if (action === 'ctx-indent') { applyOp(opIndent(state.nodes, nodeId)); focusNode(nodeId) }
+  else if (action === 'ctx-add-checkbox') applyOp(opChangeKind(state.nodes, nodeId, 'checkbox'))
+  else if (action === 'ctx-children-checkbox') applyOp(opChildrenToCheckbox(state.nodes, nodeId))
+  else if (action === 'ctx-check-off') applyOp(opToggleCheck(state.nodes, nodeId))
+  else if (action === 'ctx-number-children') applyOp(opNumberChildren(state.nodes, nodeId))
+  else if (action === 'ctx-to-code') applyOp(opChangeKind(state.nodes, nodeId, 'code'))
+  else if (action === 'ctx-to-text') applyOp(opChangeKind(state.nodes, nodeId, 'text'))
+  else if (action === 'ctx-code-lang') { destroyCM(nodeId); applyOp(opChangeCodeLang(state.nodes, nodeId, param)) }
+})
+
+// =====================================================================
+// HELPERS
+// =====================================================================
+
+function dlText(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
+  URL.revokeObjectURL(url)
+}
+
+function countWords(s) {
+  if (!s) return 0
+  const trimmed = s.trim()
+  if (!trimmed) return 0
+  return trimmed.split(/\s+/).length
+}
+
+function updateStatusBar() {
+  const ncEl = document.getElementById('sb-node-count')
+  const wcEl = document.getElementById('sb-word-count')
+  if (!ncEl || !wcEl || !state.activeDocId) return
+  let nodeCount = 0, wordCount = 0
+  for (const n of state.nodes) {
+    if (n.documentId !== state.activeDocId) continue
+    nodeCount++
+    if (n.kind === 'code') wordCount += countWords(n.codeBody)
+    else if (n.kind !== 'image') wordCount += countWords(n.content)
+  }
+  ncEl.textContent = `${nodeCount} node${nodeCount === 1 ? '' : 's'}`
+  wcEl.textContent = `${wordCount} word${wordCount === 1 ? '' : 's'}`
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+
+async function init() {
+  await loadTheme()
+  await loadAutoLockSetting()
+  loadArgon2()  // warm the WASM fetch so the new-vault path doesn't pay the cost on first click
+  state.vaults = await getAllVaults()
+  state.vaults.sort((a,b) => (b.createdAt||0) - (a.createdAt||0))
+  renderApp()
+  await autoSnapMaybeShowUnsupportedNotice()
+  if (localStorage.getItem('sidebarCollapsed') === '1') {
+    document.getElementById('sidebar').classList.add('collapsed')
+    document.getElementById('sidebar-toggle').textContent = '›'
+  }
+}
+
+// Re-render math for any nodes that were rendered before KaTeX finished loading
+window._onKatexLoad = () => {
+  for (const el of document.querySelectorAll('#outline-tree [data-node-id].node-text:not(.has-math)')) {
+    const node = state.nodes.find(n => n.id === el.dataset.nodeId)
+    if (node && node.content && !el.matches(':focus')) applyRichRender(el, node.content)
+  }
+}
+if (window.katex) window._onKatexLoad()  // in case KaTeX loaded synchronously
+
+init()
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+}
+
+;(function installHint() {
+  const KEY = 'outlineInstallHintDismissed'
+  const isStandalone = () =>
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    window.navigator.standalone === true
+  const isIOS = () => {
+    const ua = navigator.userAgent || ''
+    const iOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream
+    const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+    return iOS || iPadOS
+  }
+  const isAndroid = () => /Android/i.test(navigator.userAgent || '')
+  const dismissed = () => { try { return localStorage.getItem(KEY) === '1' } catch { return false } }
+  const markDismissed = () => { try { localStorage.setItem(KEY, '1') } catch {} }
+
+  function renderBanner({ text, actionLabel, onAction }) {
+    const banner = document.createElement('div')
+    banner.className = 'install-hint'
+    banner.setAttribute('role', 'dialog')
+    banner.setAttribute('aria-label', 'Install app')
+
+    const body = document.createElement('div')
+    body.className = 'install-hint__body'
+    body.textContent = text
+    banner.appendChild(body)
+
+    const buttons = document.createElement('div')
+    buttons.className = 'install-hint__buttons'
+
+    const dismiss = () => {
+      markDismissed()
+      banner.classList.add('install-hint--leaving')
+      setTimeout(() => banner.remove(), 200)
+    }
+
+    if (actionLabel && onAction) {
+      const actionBtn = document.createElement('button')
+      actionBtn.className = 'install-hint__action'
+      actionBtn.textContent = actionLabel
+      actionBtn.addEventListener('click', () => { onAction(); dismiss() })
+      buttons.appendChild(actionBtn)
+    }
+    const closeBtn = document.createElement('button')
+    closeBtn.className = 'install-hint__close'
+    closeBtn.setAttribute('aria-label', 'Dismiss')
+    closeBtn.textContent = '×'
+    closeBtn.addEventListener('click', dismiss)
+    buttons.appendChild(closeBtn)
+    banner.appendChild(buttons)
+
+    document.body.appendChild(banner)
+  }
+
+  if (isStandalone() || dismissed()) return
+
+  if (isAndroid()) {
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault()
+      setTimeout(() => {
+        if (dismissed() || isStandalone()) return
+        renderBanner({
+          text: 'Install Local Outline for offline use and a home-screen icon.',
+          actionLabel: 'Install',
+          onAction: async () => { try { e.prompt(); await e.userChoice } catch {} }
+        })
+      }, 4000)
+    }, { once: true })
+    return
+  }
+
+  if (isIOS()) {
+    setTimeout(() => {
+      if (dismissed() || isStandalone()) return
+      renderBanner({
+        text: 'Add to Home Screen: tap the Share button, then “Add to Home Screen” for offline access.'
+      })
+    }, 4000)
+  }
+})()
+</script>
+<div id="node-ctx-menu" class="ctx-menu hidden"></div>
+<div id="help-overlay" class="hidden">
+  <div class="modal">
+    <h2>Keyboard Shortcuts</h2>
+    <div class="shortcut-grid" id="help-grid"></div>
+    <button id="help-close-btn" class="btn btn-secondary help-close">Close</button>
+  </div>
+</div>
+<div id="palette-overlay" class="hidden">
+  <div class="palette">
+    <input id="palette-input" type="text" placeholder="Search nodes…  (type &gt; for commands)" autocomplete="off" spellcheck="false">
+    <div id="palette-mode">Search</div>
+    <ul id="palette-results"></ul>
+  </div>
+</div>
+<div id="search-overlay" class="hidden">
+  <div class="search-panel">
+    <div class="search-head">
+      <input id="search-input" type="text" placeholder='Search all docs…  filters: in:"Doc" kind:checkbox is:unchecked has:#tag' autocomplete="off" spellcheck="false">
+      <button id="search-close" title="Close (Esc)">✕</button>
+    </div>
+    <div class="search-status" id="search-status">
+      <span class="ss-filters" id="ss-filters"></span>
+      <span class="ss-count" id="ss-count"></span>
+    </div>
+    <ul class="search-history hidden" id="search-history"></ul>
+    <div class="search-results" id="search-results"></div>
+  </div>
+</div>
+<ul id="wiki-autocomplete" class="hidden"></ul>
+</body>
+</html>
