@@ -1,11 +1,11 @@
 const CACHE = 'outline-v1'
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/libs/deps.js',
-  '/manifest.webmanifest',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  './',
+  './index.html',
+  './libs/deps.js',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ]
 
 self.addEventListener('install', e => {
