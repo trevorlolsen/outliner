@@ -642,7 +642,7 @@ import {
   basicSetup, EditorView,
   javascript, python, markdownLang, css, html, json, sql, rust, cpp, java,
   StreamLanguage, julia, r,
-  oneDark, Dexie, MarkdownIt, generateKeyBetween
+  oneDark, Dexie, MarkdownIt, generateKeyBetween, argon2id
 } from './libs/deps.js'
 
 // =====================================================================
@@ -693,18 +693,10 @@ db.version(2).stores({
 const PBKDF2_ITERATIONS = 600000
 const ARGON2_PARAMS = { time: 3, memory: 65536, parallelism: 1, hashLen: 32 }
 
-// Argon2 WASM loader. Resolves to the argon2-browser module, or null when
-// the module can't be loaded (e.g. offline / SW cache miss).
-let _argon2Promise = null
-let _argon2 = null
-function loadArgon2() {
-  if (_argon2) return Promise.resolve(_argon2)
-  if (_argon2Promise) return _argon2Promise
-  _argon2Promise = import('https://esm.sh/argon2-browser@1.18.0')
-    .then(mod => { _argon2 = mod.default ?? mod; return _argon2 })
-    .catch(err => { console.warn('Argon2id unavailable:', err); _argon2Promise = null; return null })
-  return _argon2Promise
-}
+// Argon2id is provided by hash-wasm, bundled into libs/deps.js. The loader is
+// kept as an async function so the silent PBKDF2→Argon2id migration path and
+// the pickKdfSpec fallback signature continue to work unchanged.
+async function loadArgon2() { return true }
 
 function kdfSpecFromMeta(meta) {
   if (meta.kdfSpec) return meta.kdfSpec
@@ -738,19 +730,17 @@ async function deriveKey(password, kdfSpec) {
   }
   const salt = typeof kdfSpec.salt === 'string' ? fromB64(kdfSpec.salt) : kdfSpec.salt
   if (kdfSpec.kind === 'argon2id') {
-    const argon2 = await loadArgon2()
-    if (!argon2) throw new Error('Argon2id KDF is required for this vault but the module is unavailable.')
-    const res = await argon2.hash({
-      pass: password,
+    const raw = await argon2id({
+      password,
       salt,
-      type: argon2.ArgonType.Argon2id,
-      time: kdfSpec.time ?? ARGON2_PARAMS.time,
-      mem: kdfSpec.memory ?? ARGON2_PARAMS.memory,
+      iterations:  kdfSpec.time        ?? ARGON2_PARAMS.time,
+      memorySize:  kdfSpec.memory      ?? ARGON2_PARAMS.memory,
       parallelism: kdfSpec.parallelism ?? ARGON2_PARAMS.parallelism,
-      hashLen: kdfSpec.hashLen ?? ARGON2_PARAMS.hashLen,
+      hashLength:  kdfSpec.hashLen     ?? ARGON2_PARAMS.hashLen,
+      outputType:  'binary',
     })
     return crypto.subtle.importKey(
-      'raw', res.hash, { name: 'AES-GCM', length: 256 }, false,
+      'raw', raw, { name: 'AES-GCM', length: 256 }, false,
       ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
     )
   }
