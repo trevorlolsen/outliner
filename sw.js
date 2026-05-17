@@ -1,4 +1,4 @@
-const CACHE = 'outline-v1'
+const CACHE = 'outline-v2'
 const PRECACHE = [
   './',
   './index.html',
