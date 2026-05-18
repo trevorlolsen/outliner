@@ -243,6 +243,8 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .collapse-btn.invisible{visibility:hidden}
 .bullet{background:none;border:none;cursor:default;color:var(--text-fainter);font-size:16px;padding:0 3px;line-height:1.4;flex-shrink:0}
 .checkbox-input{margin:4px 4px 0 0;cursor:pointer;accent-color:var(--accent);flex-shrink:0}
+.card-pill{font-size:0.75em;opacity:0.6;padding:0 4px;border-radius:4px;background:transparent;border:1px solid var(--border);margin-left:6px;cursor:pointer;font-family:inherit;color:inherit;line-height:1.4;white-space:nowrap}
+.card-pill:hover{opacity:1}
 .node-text{flex:1;outline:none;color:var(--text);font-size:14px;line-height:1.6;min-height:1.6em;white-space:pre-wrap;word-break:break-word;cursor:text;user-select:text;caret-color:var(--text);padding:0}
 .node-text.done{text-decoration:line-through;color:var(--text-fainter)}
 .node-children{margin-left:20px}
@@ -2517,6 +2519,42 @@ function renderTree() {
   }
 }
 
+// Phase 2: card decoration. Returns a `<button>` pill summarizing the card's
+// review state, or null if the node isn't a card. Pure helper used by
+// buildNodeEl during render and by refreshCardPill on blur. Raw `@card …`
+// text stays in node.content — this only adds a sibling badge to .node-meta.
+function renderCardPill(node) {
+  if (node.kind !== 'text') return null
+  const parsed = parseCard(node.content || '')
+  if (!parsed) return null
+  const btn = document.createElement('button')
+  btn.className = 'card-pill'
+  btn.dataset.action = 'card-info'
+  btn.dataset.nodeId = node.id
+  const stats = node.cardStats
+  const suspended = node.cardSuspended === true || parsed.modifiers.includes('suspend')
+  let label = '🎴'
+  let titleIso = ''
+  if (suspended) {
+    label = '🎴 💤'
+  } else if (!stats || !stats.totalReviews) {
+    label = '🎴 new'
+  } else if (stats.nextDueAt) {
+    titleIso = stats.nextDueAt
+    const ms = new Date(stats.nextDueAt).getTime() - Date.now()
+    if (Number.isFinite(ms)) {
+      if (ms <= 0) label = '🎴 due'
+      else {
+        const days = Math.round(ms / 86400000)
+        label = days <= 0 ? '🎴 today' : `🎴 ${days}d`
+      }
+    }
+  }
+  btn.textContent = label
+  if (titleIso) btn.title = `Next due: ${titleIso}`
+  return btn
+}
+
 function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
   const children = treeMap.get(node.id) ?? []
   const wrap = document.createElement('div')
@@ -2585,6 +2623,8 @@ function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
   const kindBtn = document.createElement('button'); kindBtn.title = 'Node menu'
   kindBtn.textContent = '☰'; kindBtn.dataset.action = 'kindmenu'; kindBtn.dataset.nodeId = node.id
   meta.appendChild(kindBtn)
+  const cardPill = renderCardPill(node)
+  if (cardPill) meta.appendChild(cardPill)
   row.insertBefore(meta, row.firstChild)
 
   wrap.appendChild(row)
@@ -2617,7 +2657,23 @@ function flushNodeText(el) {
     state.nodes = applyPatch(state.nodes, [updated])
     indexNode(updated)
     putNode(updated, state.ctx)
+    refreshCardPill(nodeId)
   }
+}
+
+// Phase 2: surgical DOM update for the card pill after a text edit lands.
+// The blur save path (and flushNodeText) skips renderTree(), so without this
+// the pill would lag behind state until the next full re-render.
+function refreshCardPill(nodeId) {
+  const wrap = document.querySelector(`.node-wrap[data-node-id="${nodeId}"]`)
+  if (!wrap) return
+  const meta = wrap.querySelector(':scope > .node-row > .node-meta')
+  if (!meta) return
+  meta.querySelectorAll('.card-pill').forEach(el => el.remove())
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  const pill = renderCardPill(node)
+  if (pill) meta.appendChild(pill)
 }
 
 const HISTORY_LIMIT = 200
@@ -3426,6 +3482,13 @@ document.getElementById('outline-tree').addEventListener('click', e => {
     return
   }
 
+  const cardPillBtn = e.target.closest('[data-action="card-info"]')
+  if (cardPillBtn) {
+    e.stopPropagation()
+    console.log('Card info for', cardPillBtn.dataset.nodeId)
+    return
+  }
+
   // Multi-select. Shift extends from anchor; Ctrl/Cmd toggles. Plain clicks
   // outside the existing selection clear it (so editing a fresh node resets).
   const row = e.target.closest('.node-row[data-node-id]')
@@ -3700,7 +3763,7 @@ document.getElementById('outline-tree').addEventListener('blur', e => {
     contentChanged = true
   }
   applyRichRender(el, content)
-  if (contentChanged) { renderTagList(); renderBacklinks() }
+  if (contentChanged) { renderTagList(); renderBacklinks(); refreshCardPill(nodeId) }
 }, true)
 
 // Inline link clicks: open in a new tab. mousedown preventDefault stops the
