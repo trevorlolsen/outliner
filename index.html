@@ -318,6 +318,15 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .ctx-menu li.ctx-item{padding:5px 12px;font-size:13px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;user-select:none}
 .ctx-menu li.ctx-item:hover,.ctx-menu li.ctx-item.ctx-open{background:var(--bg-3)}
 .ctx-menu li.ctx-item.ctx-disabled{color:var(--text-faintest);cursor:default;pointer-events:none}
+.due-counter{background:var(--accent,#ef4444);color:#fff;font-size:.7em;padding:1px 6px;border-radius:8px;margin-left:6px;line-height:1.4;font-weight:600;flex-shrink:0}
+#card-popover{position:fixed;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:4px 0 0;min-width:200px;z-index:550;box-shadow:var(--shadow);display:flex;flex-direction:column}
+#card-popover.hidden{display:none}
+#card-popover button{background:none;border:none;color:var(--text-muted);font:inherit;font-size:13px;text-align:left;padding:6px 14px;cursor:pointer}
+#card-popover button:hover{background:var(--bg-3);color:var(--text)}
+.card-popover-meta{padding:8px 14px 8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-faint);display:flex;flex-direction:column;gap:3px;margin-top:4px}
+.card-popover-meta .cp-stat{display:flex;justify-content:space-between;gap:12px}
+.card-popover-meta .cp-k{color:var(--text-fainter)}
+.card-popover-meta .cp-v{color:var(--text-dim);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
 .ctx-sep{height:1px;background:var(--ctx-sep);margin:3px 0}
 .ctx-shortcut{font-size:11px;color:var(--text-fainter);font-family:monospace;flex-shrink:0}
 .ctx-arrow{font-size:9px;color:var(--text-fainter);flex-shrink:0;margin-left:2px}
@@ -2640,11 +2649,58 @@ function renderSidebar() {
     delBtn.onclick = (e) => { e.stopPropagation(); removeDoc(doc) }
     actions.append(renBtn, delBtn)
     li.append(btn, actions)
+    // Phase 7: per-doc due counter, placed before .doc-actions so the badge
+    // stays stable when hover reveals the rename/delete buttons.
+    const due = dueCountForDoc(doc.id)
+    if (due > 0) {
+      const span = document.createElement('span')
+      span.className = 'due-counter'
+      span.title = `${due} card${due === 1 ? '' : 's'} due`
+      span.textContent = String(due)
+      li.insertBefore(span, actions)
+    }
     list.appendChild(li)
   }
   renderCalendar()
   renderTagList()
   autoSnapRenderButton()
+}
+
+// Phase 7 — sidebar "Due cards" counter. Derived from the @card:due postings
+// emitted by cardExtractor, intersected with each doc's nodeMeta. Cloze cards
+// contribute 1 per node (postings are per-node, not per-group).
+function dueCountForDoc(docId) {
+  const dueIds = searchIndex.postings.get('@card:due') ?? new Set()
+  let n = 0
+  for (const id of dueIds) {
+    const meta = searchIndex.nodeMeta.get(id)
+    if (meta?.docId === docId) n++
+  }
+  return n
+}
+
+// Targeted badge refresh so applyOp / applyReview don't have to re-render
+// the whole sidebar after a single grade or suspend. Adds, updates, or
+// removes the .due-counter span in place.
+function refreshDueCounter(docId) {
+  if (!docId) return
+  const li = document.querySelector(`#doc-list li[data-doc-id="${docId}"]`)
+  if (!li) return
+  let span = li.querySelector('.due-counter')
+  const n = dueCountForDoc(docId)
+  if (n > 0) {
+    if (!span) {
+      span = document.createElement('span')
+      span.className = 'due-counter'
+      const actions = li.querySelector('.doc-actions')
+      if (actions) li.insertBefore(span, actions)
+      else li.appendChild(span)
+    }
+    span.title = `${n} card${n === 1 ? '' : 's'} due`
+    span.textContent = String(n)
+  } else if (span) {
+    span.remove()
+  }
 }
 
 function renderEditor() {
@@ -2971,6 +3027,147 @@ function refreshCardPill(nodeId) {
   if (pill) meta.appendChild(pill)
 }
 
+// Phase 7 — pill popover. Single global instance anchored next to the pill
+// the user clicked. Reads node + stats fresh on each open so suspended/
+// unsuspended, fresh-grade, and reset flips all surface immediately.
+const cardPopover = { open: false, nodeId: null }
+
+function openCardPopover(nodeId, anchorEl) {
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  const parsed = parseCard(node.content || '')
+  if (!parsed) return
+  const pop = document.getElementById('card-popover')
+  pop.innerHTML = ''
+  pop.dataset.nodeId = nodeId
+
+  const suspended = node.cardSuspended === true
+
+  const studyBtn = document.createElement('button')
+  studyBtn.type = 'button'
+  studyBtn.dataset.action = 'study-one'
+  studyBtn.textContent = 'Study just this card'
+  pop.appendChild(studyBtn)
+
+  const suspendBtn = document.createElement('button')
+  suspendBtn.type = 'button'
+  suspendBtn.dataset.action = 'toggle-suspend'
+  suspendBtn.textContent = suspended ? 'Unsuspend' : 'Suspend'
+  pop.appendChild(suspendBtn)
+
+  const resetBtn = document.createElement('button')
+  resetBtn.type = 'button'
+  resetBtn.dataset.action = 'reset-stats'
+  resetBtn.textContent = 'Reset stats'
+  pop.appendChild(resetBtn)
+
+  pop.appendChild(buildCardPopoverMeta(node, parsed, suspended))
+
+  pop.classList.remove('hidden')
+  positionCardPopover(pop, anchorEl)
+
+  cardPopover.open = true
+  cardPopover.nodeId = nodeId
+}
+
+function closeCardPopover() {
+  const pop = document.getElementById('card-popover')
+  pop.classList.add('hidden')
+  cardPopover.open = false
+  cardPopover.nodeId = null
+}
+
+// Aggregate stats for the meta block. Cloze cards keep per-group stats in
+// cardClozeStats; show summed reviews, average ease, and the earliest
+// upcoming nextDueAt so a card with a 1-day group and a 30-day group
+// surfaces as "next due in 1 day".
+function buildCardPopoverMeta(node, parsed, suspended) {
+  let stats = node.cardStats
+  if (parsed.kind === 'cloze') {
+    const groupKeys = Array.from(parsed.groups.keys())
+    const perGroup = groupKeys.map(k => node.cardClozeStats?.[k]).filter(Boolean)
+    if (perGroup.length) {
+      const totalReviews = perGroup.reduce((a, s) => a + (s.totalReviews || 0), 0)
+      const easeAvg = perGroup.reduce((a, s) => a + (s.ease || 0), 0) / perGroup.length
+      const intervalAvg = perGroup.reduce((a, s) => a + (s.intervalDays || 0), 0) / perGroup.length
+      const nextDueAts = perGroup.map(s => s.nextDueAt).filter(Boolean).sort()
+      const lastSeenAts = perGroup.map(s => s.lastSeenAt).filter(Boolean).sort().reverse()
+      stats = {
+        totalReviews,
+        ease: easeAvg,
+        intervalDays: intervalAvg,
+        nextDueAt: nextDueAts[0] ?? null,
+        lastSeenAt: lastSeenAts[0] ?? null,
+      }
+    } else {
+      stats = null
+    }
+  }
+  const meta = document.createElement('div')
+  meta.className = 'card-popover-meta'
+  appendStatLine(meta, 'Total reviews', stats ? String(stats.totalReviews || 0) : '0')
+  appendStatLine(meta, 'Ease', stats?.ease ? Number(stats.ease).toFixed(2) : '—')
+  appendStatLine(meta, 'Interval', stats?.intervalDays ? `${Math.round(stats.intervalDays)} d` : '—')
+  appendStatLine(meta, 'Next due', formatNextDueAt(stats?.nextDueAt))
+  appendStatLine(meta, 'Last seen', formatRelativePast(stats?.lastSeenAt))
+  if (suspended) appendStatLine(meta, 'Status', 'Suspended')
+  return meta
+}
+
+function appendStatLine(parent, label, value) {
+  const row = document.createElement('div')
+  row.className = 'cp-stat'
+  const k = document.createElement('span'); k.className = 'cp-k'; k.textContent = label
+  const v = document.createElement('span'); v.className = 'cp-v'; v.textContent = value; v.title = value
+  row.append(k, v)
+  parent.appendChild(row)
+}
+
+function formatNextDueAt(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const ms = d.getTime() - Date.now()
+  const days = Math.round(ms / 86400000)
+  let rel
+  if (ms <= 0) rel = 'overdue'
+  else if (days <= 0) rel = 'today'
+  else if (days === 1) rel = 'tomorrow'
+  else rel = `in ${days}d`
+  return `${rel} (${iso})`
+}
+
+function formatRelativePast(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const ms = Date.now() - d.getTime()
+  if (ms < 60000) return 'just now'
+  const days = Math.floor(ms / 86400000)
+  if (days <= 0) {
+    const hours = Math.max(1, Math.round(ms / 3600000))
+    return `${hours}h ago`
+  }
+  if (days === 1) return 'yesterday'
+  return `${days}d ago`
+}
+
+function positionCardPopover(pop, anchor) {
+  const rect = anchor.getBoundingClientRect()
+  pop.style.visibility = 'hidden'
+  pop.style.left = '0px'
+  pop.style.top = '0px'
+  const pw = pop.offsetWidth, ph = pop.offsetHeight
+  const vw = window.innerWidth, vh = window.innerHeight
+  let left = rect.left
+  let top = rect.bottom + 6
+  if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8)
+  if (top + ph > vh - 8) top = Math.max(8, rect.top - ph - 6)
+  pop.style.left = left + 'px'
+  pop.style.top = top + 'px'
+  pop.style.visibility = ''
+}
+
 const HISTORY_LIMIT = 200
 const undoStack = []  // [{ before: Node[], after: Node[] }]
 const redoStack = []
@@ -3020,6 +3217,15 @@ function applyOp(result) {
   if (!result) return
   pushHistory(state.nodes, result.nodes)
   state.nodes = result.nodes
+  // Phase 7: capture affected docIds before indexing so the sidebar due
+  // counter can be refreshed. Deletion side: look up nodeMeta BEFORE
+  // unindexNode clears it.
+  const affectedDocs = new Set()
+  for (const n of result.delta) if (n.documentId) affectedDocs.add(n.documentId)
+  for (const id of result.deletedIds) {
+    const m = searchIndex.nodeMeta.get(id)
+    if (m?.docId) affectedDocs.add(m.docId)
+  }
   if (result.delta.length) {
     for (const n of result.delta) indexNode(n)
     putNodes(result.delta, state.ctx)
@@ -3030,6 +3236,7 @@ function applyOp(result) {
   }
   renderTree()
   renderTagList()
+  for (const id of affectedDocs) refreshDueCounter(id)
 }
 
 // Phase 3 — review-grade dispatcher. Same persistence/indexing pipeline as
@@ -3045,6 +3252,11 @@ function applyReview(result) {
     putNodes(result.delta, state.ctx)
     for (const n of result.delta) refreshCardPill(n.id)
   }
+  // Phase 7: a grade can flip a node into/out of @card:due — refresh the
+  // sidebar counter for the affected docs only (no full sidebar render).
+  const docs = new Set()
+  for (const n of result.delta) if (n.documentId) docs.add(n.documentId)
+  for (const id of docs) refreshDueCounter(id)
 }
 
 function focusNode(id) {
@@ -3795,7 +4007,11 @@ document.getElementById('outline-tree').addEventListener('click', e => {
   const cardPillBtn = e.target.closest('[data-action="card-info"]')
   if (cardPillBtn) {
     e.stopPropagation()
-    console.log('Card info for', cardPillBtn.dataset.nodeId)
+    if (cardPopover.open && cardPopover.nodeId === cardPillBtn.dataset.nodeId) {
+      closeCardPopover()
+    } else {
+      openCardPopover(cardPillBtn.dataset.nodeId, cardPillBtn)
+    }
     return
   }
 
@@ -4122,12 +4338,48 @@ document.getElementById('outline-tree').addEventListener('paste', async e => {
 document.addEventListener('click', e => {
   if (!document.getElementById('node-ctx-menu').classList.contains('hidden') &&
       !e.target.closest('#node-ctx-menu')) closeCtxMenu()
+  // Phase 7 — card popover dismisses on outside click. Clicks on the pill
+  // are handled by the toggle path in the outline click handler, so this
+  // ignores them too.
+  if (cardPopover.open &&
+      !e.target.closest('#card-popover') &&
+      !e.target.closest('[data-action="card-info"]')) {
+    closeCardPopover()
+  }
 })
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !document.getElementById('node-ctx-menu').classList.contains('hidden')) {
     closeCtxMenu()
   }
+  if (e.key === 'Escape' && cardPopover.open) {
+    closeCardPopover()
+  }
 }, true)
+
+// Phase 7 — popover actions. Each button routes through the existing ops:
+//   - Suspend / Unsuspend → applyOp (undoable, normal pipeline)
+//   - Reset stats        → applyOp (undoable)
+//   - Study just this card → openSession with the singleCardId option, so
+//     the queue is built from this one node (cloze expands into per-group
+//     entries; inline/question stays length 1).
+document.getElementById('card-popover').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]')
+  if (!btn) return
+  e.stopPropagation()
+  const nodeId = cardPopover.nodeId
+  if (!nodeId) { closeCardPopover(); return }
+  const action = btn.dataset.action
+  if (action === 'study-one') {
+    closeCardPopover()
+    openSession(null, { singleCardId: nodeId })
+  } else if (action === 'toggle-suspend') {
+    applyOp(opToggleCardSuspend(state.nodes, nodeId))
+    closeCardPopover()
+  } else if (action === 'reset-stats') {
+    applyOp(opResetCardStats(state.nodes, nodeId))
+    closeCardPopover()
+  }
+})
 
 // Help overlay + global undo/redo
 function isEditableTarget(target) {
@@ -4612,12 +4864,25 @@ function collectDeckCards(nodes, deckRootId) {
   return candidates.filter(n => cardIds.has(n.id) && !n.cardSuspended)
 }
 
-function openSession(deckRootId) {
+function openSession(deckRootId, opts = {}) {
   if (!state.unlocked) return
   if (session.open) closeSession()
-  if (!deckRootId) { console.warn('[study] no deck root — select a node first'); return }
 
-  const cards = collectDeckCards(state.nodes, deckRootId)
+  // Phase 7: `singleCardId` short-circuits the deck enumeration so a card's
+  // pill popover ("Study just this card") can spawn a focused 1-card session.
+  // Suspended state is intentionally bypassed here — the user explicitly
+  // chose this card, so even a 💤 card should be reviewable in this mode.
+  let cards
+  if (opts.singleCardId) {
+    const node = state.nodes.find(n => n.id === opts.singleCardId)
+    if (!node) return
+    if (!parseCard(node.content || '')) return
+    cards = [node]
+    deckRootId = deckRootId ?? opts.singleCardId
+  } else {
+    if (!deckRootId) { console.warn('[study] no deck root — select a node first'); return }
+    cards = collectDeckCards(state.nodes, deckRootId)
+  }
   // Phase 5: a single node can expand into multiple queue entries (one per
   // cloze group). Each entry gets a synthetic pseudo-card id so the
   // scheduler can order them independently — for cloze entries we feed in
@@ -5294,6 +5559,7 @@ if ('serviceWorker' in navigator) {
 })()
 </script>
 <div id="node-ctx-menu" class="ctx-menu hidden"></div>
+<div id="card-popover" class="hidden"></div>
 <div id="help-overlay" class="hidden">
   <div class="modal">
     <h2>Keyboard Shortcuts</h2>
