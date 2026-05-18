@@ -377,12 +377,36 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .search-result .sr-kind{padding:1px 5px;background:var(--bg-list-active);border-radius:3px;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.03em}
 .search-result .sr-kind.checked{color:var(--autosnap-active-text)}
 
+/* Study session overlay (Ctrl+Shift+S) — fronts/backs/grade-bar choreography */
+#study-overlay{position:fixed;inset:0;background:var(--overlay-soft);display:flex;align-items:center;justify-content:center;z-index:700}
+#study-overlay[hidden]{display:none}
+.study-modal{position:relative;width:640px;max-width:94vw;max-height:88vh;background:var(--bg-2);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-strong);display:flex;flex-direction:column;padding:18px 22px 16px;gap:14px;color:var(--text)}
+.study-progress{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;text-align:center}
+.card-face{min-height:120px;padding:18px 16px;background:var(--bg-1);border:1px solid var(--border-soft);border-radius:8px;font-size:18px;line-height:1.45;color:var(--text);overflow-y:auto;max-height:42vh;white-space:pre-wrap;word-break:break-word}
+.card-face[hidden]{display:none}
+.card-back{border-top:2px dashed var(--border-soft)}
+.study-divider{font-size:10px;color:var(--text-fainter);text-align:center;letter-spacing:.1em;text-transform:uppercase}
+.grade-bar{display:flex;gap:8px;justify-content:space-between}
+.grade-bar[hidden]{display:none}
+.grade-bar button{flex:1;padding:10px 8px;background:var(--bg-4);color:var(--text);border:1px solid var(--border-soft);border-radius:6px;font:inherit;font-size:13px;cursor:pointer;transition:background .12s}
+.grade-bar button:hover{background:var(--bg-3)}
+.grade-bar button[data-rating="again"]:hover{background:#7a2c2c;border-color:#a04444}
+.grade-bar button[data-rating="hard"]:hover{background:#7a5a2c;border-color:#a08444}
+.grade-bar button[data-rating="good"]:hover{background:#2c5a7a;border-color:#4484a0}
+.grade-bar button[data-rating="easy"]:hover{background:#2c7a4a;border-color:#44a070}
+.study-flip-hint{text-align:center;font-size:12px;color:var(--text-faint);padding:8px 0}
+.study-flip-hint[hidden]{display:none}
+.study-close{position:absolute;top:6px;right:10px;background:transparent;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;line-height:1;padding:4px 8px}
+.study-close:hover{color:var(--text)}
+.study-empty{font-size:14px;color:var(--text-muted);text-align:center;padding:16px 8px}
+.study-done{font-size:15px;color:var(--text);text-align:center;padding:18px 8px}
+
 /* Print stylesheet — hides chrome, prints the outline tree cleanly */
 @media print {
   @page { margin: 18mm 14mm; }
   body { background:#fff !important; color:#000 !important; font-size:11pt; }
   #sidebar, #editor-header, #add-bar, #status-bar,
-  #wiki-autocomplete, #node-ctx-menu, #help-overlay, #palette-overlay, #search-overlay,
+  #wiki-autocomplete, #node-ctx-menu, #help-overlay, #palette-overlay, #search-overlay, #study-overlay,
   #vault-screen, #vault-new-modal, #vault-unlock-modal,
   #export-modal, #import-modal, #vault-snap-modal, #vault-chpass-modal,
   .node-meta, .collapse-btn, .backlinks-panel { display:none !important; }
@@ -1900,6 +1924,7 @@ function lockVault() {
   clearSearchIndex()
   closePalette()
   closeSearchView()
+  closeSession()
   searchView.history = []
   for (const [id] of cmInstances) destroyCM(id)
   stopAutoLockTimer()
@@ -4029,6 +4054,37 @@ document.addEventListener('keydown', e => {
     return
   }
   if (!state.unlocked) return
+
+  // Study session — capture-phase swallow so the outline keymap doesn't see
+  // the digits / Space / Esc while the modal is up.
+  if (session.open) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSession(); return }
+    if (session.finished) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); closeSession(); return }
+      return
+    }
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault(); e.stopPropagation()
+      if (!session.flipped) flipCard()
+      return
+    }
+    if (session.flipped && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      const map = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' }
+      const rating = map[e.key]
+      if (rating) { e.preventDefault(); e.stopPropagation(); gradeAndAdvance(rating); return }
+    }
+    // Soak up anything else so outline shortcuts don't fire behind the modal.
+    if (!e.ctrlKey && !e.metaKey) { e.stopPropagation(); return }
+  }
+
+  if (e.ctrlKey && e.shiftKey && (e.key === 's' || e.key === 'S')) {
+    e.preventDefault()
+    if (session.open) { closeSession(); return }
+    const root = state.selectedId ?? state.zoomedId ?? rootOfActiveDoc()
+    if (root) openSession(root)
+    else console.warn('[study] no node selected — select a node first')
+    return
+  }
   if (e.ctrlKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
     e.preventDefault()
     if (palette.open) closePalette(); else openPalette()
@@ -4388,6 +4444,201 @@ document.getElementById('search-close').addEventListener('click', closeSearchVie
 document.getElementById('search-btn').addEventListener('click', openSearchView)
 
 // =====================================================================
+// STUDY SESSION  (Ctrl+Shift+S — flash-card review modal, Phase 4)
+// =====================================================================
+//
+// Inline cards only in Phase 4 (`@card Front :: Back`). Cloze + question
+// variants are detected but skipped with a console warning — Phase 5 adds
+// proper rendering for those. Choreography is the standard front → flip →
+// grade → advance loop; `again` grades requeue the card after the rest of
+// the queue drains. All grading flows through opGradeCard + applyReview
+// so the undo stack stays clean (per Phase 3) and the pill refreshes in
+// place. Modal is keyboard-first: Space/Enter flips, 1/2/3/4 grades,
+// Esc closes. Selection-driven: the deck root is the currently selected
+// (or zoomed) node — a doc-wide entry point is deferred to Phase 6.
+
+const session = {
+  open: false,
+  deckRootId: null,
+  queue: [],         // { nodeId, kind: 'inline', front, back }
+  index: 0,
+  failedQueue: [],
+  flipped: false,
+  settings: { targetCardCount: 20, maxNewCards: 5, includeDue: true, includeDifficult: true, includeNew: true },
+  reviewedCount: 0,
+  finished: false,
+}
+
+// Doc-wide sessions land in Phase 6. For now a Ctrl+Shift+S without a
+// selection or zoom is a no-op (returns null → caller bails). Kept as a
+// named helper so the call sites read like the master plan.
+function rootOfActiveDoc() { return null }
+
+// Walk the selected subtree (inclusive when text), intersect with the
+// `@card` posting set so we benefit from the same indexing pipeline the
+// pill and search use, and drop anything explicitly suspended.
+function collectDeckCards(nodes, deckRootId) {
+  const root = nodes.find(n => n.id === deckRootId)
+  if (!root) return []
+  const candidates = root.kind === 'text'
+    ? [root, ...getDescendants(nodes, deckRootId)]
+    : getDescendants(nodes, deckRootId)
+  const cardIds = searchIndex.postings.get('@card') ?? new Set()
+  return candidates.filter(n => cardIds.has(n.id) && !n.cardSuspended)
+}
+
+function openSession(deckRootId) {
+  if (!state.unlocked) return
+  if (session.open) closeSession()
+  if (!deckRootId) { console.warn('[study] no deck root — select a node first'); return }
+
+  const cards = collectDeckCards(state.nodes, deckRootId)
+  const entriesByNode = new Map()  // nodeId -> { nodeId, kind, front, back }
+  const pseudoCards = []
+  for (const node of cards) {
+    const parsed = parseCard(node.content || '')
+    if (!parsed) continue
+    if (parsed.kind !== 'inline') {
+      // Phase 5 will handle cloze + question variants. Surface the skip
+      // in the console so authors notice the gap without us blocking the
+      // entire deck.
+      console.warn(`[study] skipping ${parsed.kind} card (unsupported in Phase 4):`, node.id, (node.content || '').slice(0, 60))
+      continue
+    }
+    entriesByNode.set(node.id, { nodeId: node.id, kind: 'inline', front: parsed.front, back: parsed.back })
+    pseudoCards.push({ id: node.id, cardStats: node.cardStats ?? defaultCardStats() })
+  }
+
+  const ordered = buildSessionQueue(pseudoCards, session.settings, Date.now())
+  session.queue = ordered.map(c => entriesByNode.get(c.id)).filter(Boolean)
+  session.index = 0
+  session.failedQueue = []
+  session.flipped = false
+  session.deckRootId = deckRootId
+  session.reviewedCount = 0
+  session.finished = false
+  session.open = true
+
+  const overlay = document.getElementById('study-overlay')
+  overlay.hidden = false
+  if (session.queue.length === 0) renderEmptySession()
+  else renderCard()
+}
+
+function closeSession() {
+  session.open = false
+  session.flipped = false
+  session.finished = false
+  const overlay = document.getElementById('study-overlay')
+  if (overlay) overlay.hidden = true
+}
+
+// Re-pull the entry's current node text so edits made between session
+// open and now show up. If the node was deleted or the @card prefix was
+// stripped mid-session, fall back to the snapshot taken at queue build.
+function liveEntry(entry) {
+  const node = state.nodes.find(n => n.id === entry.nodeId)
+  if (!node) return entry
+  const parsed = parseCard(node.content || '')
+  if (!parsed || parsed.kind !== 'inline') return entry
+  return { ...entry, front: parsed.front, back: parsed.back }
+}
+
+function renderCard() {
+  const raw = session.queue[session.index]
+  if (!raw) return finishSession()
+  const entry = liveEntry(raw)
+  const front = document.getElementById('study-front')
+  const back = document.getElementById('study-back')
+  const grade = document.getElementById('study-grade-bar')
+  const hint = document.getElementById('study-flip-hint')
+  const divider = document.getElementById('study-divider')
+  const progress = document.getElementById('study-progress')
+
+  front.textContent = entry.front
+  applyRichRender(front, entry.front)
+  back.textContent = entry.back
+  applyRichRender(back, entry.back)
+  back.hidden = true
+  divider.hidden = true
+  grade.hidden = true
+  hint.hidden = false
+  front.hidden = false
+  progress.textContent = `${session.index + 1} / ${session.queue.length}`
+  session.flipped = false
+}
+
+function renderEmptySession() {
+  const front = document.getElementById('study-front')
+  const back = document.getElementById('study-back')
+  const grade = document.getElementById('study-grade-bar')
+  const hint = document.getElementById('study-flip-hint')
+  const divider = document.getElementById('study-divider')
+  const progress = document.getElementById('study-progress')
+  progress.textContent = ''
+  front.innerHTML = ''
+  const msg = document.createElement('div')
+  msg.className = 'study-empty'
+  msg.textContent = 'No inline cards in this deck.'
+  front.appendChild(msg)
+  back.hidden = true; divider.hidden = true; grade.hidden = true; hint.hidden = true
+}
+
+function flipCard() {
+  if (!session.open || session.flipped || session.finished) return
+  if (!session.queue.length) return
+  document.getElementById('study-back').hidden = false
+  document.getElementById('study-divider').hidden = false
+  document.getElementById('study-grade-bar').hidden = false
+  document.getElementById('study-flip-hint').hidden = true
+  session.flipped = true
+}
+
+function gradeAndAdvance(rating) {
+  if (!session.open || !session.flipped || session.finished) return
+  const entry = session.queue[session.index]
+  if (!entry) return
+  const result = opGradeCard(state.nodes, entry.nodeId, rating)
+  if (result) applyReview(result)
+  if (rating === 'again') session.failedQueue.push(entry)
+  session.reviewedCount++
+  session.index++
+  if (session.index >= session.queue.length && session.failedQueue.length) {
+    session.queue = [...session.queue, ...session.failedQueue]
+    session.failedQueue = []
+  }
+  if (session.index >= session.queue.length) finishSession()
+  else renderCard()
+}
+
+function finishSession() {
+  session.finished = true
+  const front = document.getElementById('study-front')
+  const back = document.getElementById('study-back')
+  const grade = document.getElementById('study-grade-bar')
+  const hint = document.getElementById('study-flip-hint')
+  const divider = document.getElementById('study-divider')
+  const progress = document.getElementById('study-progress')
+  progress.textContent = 'Session complete'
+  front.innerHTML = ''
+  const msg = document.createElement('div')
+  msg.className = 'study-done'
+  msg.textContent = `Done — ${session.reviewedCount} card${session.reviewedCount === 1 ? '' : 's'} reviewed. Click or press Esc to close.`
+  front.appendChild(msg)
+  back.hidden = true; divider.hidden = true; grade.hidden = true; hint.hidden = true
+}
+
+document.getElementById('study-close-btn').addEventListener('click', closeSession)
+document.getElementById('study-overlay').addEventListener('mousedown', e => {
+  if (e.target.id === 'study-overlay') closeSession()
+  else if (session.finished) closeSession()
+})
+document.getElementById('study-grade-bar').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-rating]')
+  if (btn) gradeAndAdvance(btn.dataset.rating)
+})
+
+// =====================================================================
 // COMMAND PALETTE  (Ctrl+K — search nodes; ">" prefix = command mode)
 // =====================================================================
 
@@ -4444,6 +4695,15 @@ const PALETTE_COMMANDS = [
   { id: 'grade-easy',     label: 'Grade selected card: Easy',  run: () => gradeSelected('easy') },
   { id: 'card-suspend',   label: 'Toggle suspend on selected card', run: () => { if (state.selectedId) applyOp(opToggleCardSuspend(state.nodes, state.selectedId)) } },
   { id: 'card-reset',     label: 'Reset stats on selected card',    run: () => { if (state.selectedId) applyOp(opResetCardStats(state.nodes, state.selectedId)) } },
+  {
+    id: 'study-cards',
+    label: 'Study cards under selected node',
+    run: () => {
+      const root = state.selectedId ?? state.zoomedId ?? rootOfActiveDoc()
+      if (root) openSession(root)
+      else console.warn('[study] no node selected — select a node first')
+    },
+  },
   {
     id: 'card-count-debug',
     label: 'Show card count for selected subtree (debug)',
@@ -4808,6 +5068,22 @@ if ('serviceWorker' in navigator) {
     </div>
     <ul class="search-history hidden" id="search-history"></ul>
     <div class="search-results" id="search-results"></div>
+  </div>
+</div>
+<div id="study-overlay" hidden>
+  <div class="study-modal">
+    <button class="study-close" id="study-close-btn" aria-label="Close">×</button>
+    <div class="study-progress" id="study-progress"></div>
+    <div class="card-face card-front" id="study-front"></div>
+    <div class="study-divider" id="study-divider" hidden>back</div>
+    <div class="card-face card-back" id="study-back" hidden></div>
+    <div class="grade-bar" id="study-grade-bar" hidden>
+      <button data-rating="again">Again (1)</button>
+      <button data-rating="hard">Hard (2)</button>
+      <button data-rating="good">Good (3)</button>
+      <button data-rating="easy">Easy (4)</button>
+    </div>
+    <div class="study-flip-hint" id="study-flip-hint">Space / Enter to flip</div>
   </div>
 </div>
 <ul id="wiki-autocomplete" class="hidden"></ul>
