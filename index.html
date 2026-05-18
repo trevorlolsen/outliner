@@ -1578,6 +1578,125 @@ function importMarkdown(text) {
   return { doc: { id: docId, title, createdAt: ts, updatedAt: ts }, nodes }
 }
 
+// Phase 8 — one-way migration from a flash JSON export. Converts each flash
+// card to an `@card …` text node under a fresh document, preserving
+// `cardStats` (and per-group `cardClozeStats` for cloze cards) so an
+// imported deck is immediately studyable with its full review history.
+// Lossy conversions (3+ side standards, text-memory) are logged + counted
+// and surfaced in the final alert. Suspended/deleted source cards are NOT
+// carried over (flash and outliner have different suspend semantics; the
+// user can re-suspend post-import via the pill popover).
+function flashCardToText(card, lossy) {
+  if (!card || !card.type) return null
+  if (card.type === 'standard') {
+    const sides = (card.standardCard?.sides || []).map(s => (s?.markdown || '').trim())
+    if (sides.length < 2) return null
+    const front = sides[0]
+    const back = sides.length === 2 ? sides[1] : sides.slice(1).join(' / ')
+    if (sides.length > 2) {
+      lossy.multiSide++
+      console.warn('[flash-import] standard card has', sides.length, 'sides; joined sides 2..N with " / ":', card.id)
+    }
+    if (!front && !back) return null
+    return `@card ${front} :: ${back}`
+  }
+  if (card.type === 'cloze') {
+    const text = card.clozeCard?.text || ''
+    if (!text.trim()) return null
+    return `@card ${text}`
+  }
+  if (card.type === 'text-memory') {
+    const text = card.textMemoryCard?.text || ''
+    if (!text.trim()) return null
+    lossy.textMemory++
+    console.warn('[flash-import] text-memory card converted to question card (lossy):', card.id)
+    const title = (card.title || 'Recall').trim() || 'Recall'
+    return `@card ${title} :: ${text.trim()}`
+  }
+  return null
+}
+
+async function importFlashDeck(json) {
+  if (!state.unlocked || !state.ctx) { alert('Unlock a vault first.'); return }
+  // Accept three shapes: card-only export ({decks, cards}), single-deck export
+  // ({deck, cards}), and full snapshot export ({snapshotVersion, database:
+  // {decks, cards, ...}}) — the latter is what flash's exportSnapshot produces.
+  const decks = Array.isArray(json?.decks) ? json.decks
+              : Array.isArray(json?.database?.decks) ? json.database.decks
+              : (json?.deck ? [json.deck] : [])
+  const cards = Array.isArray(json?.cards) ? json.cards
+              : Array.isArray(json?.database?.cards) ? json.database.cards
+              : []
+  if (!cards.length) { alert('No cards found in this file.'); return }
+
+  const deckName = decks[0]?.name ? String(decks[0].name).trim() : ''
+  const docTitle = deckName ? `Imported from flash: ${deckName}` : 'Imported from flash'
+  const ts = now()
+  const doc = { id: genId(), title: docTitle, createdAt: ts, updatedAt: ts }
+
+  const lossy = { multiSide: 0, textMemory: 0 }
+  const skipped = []
+  const newNodes = []
+  let prevOrder = null
+  for (const card of cards) {
+    if (!card || card.deletedAt) { if (card) skipped.push({ id: card.id, reason: 'deleted in source' }); continue }
+    const content = flashCardToText(card, lossy)
+    if (!content) { skipped.push({ id: card.id, reason: `unsupported type "${card.type}" or empty body` }); continue }
+    const order = generateKeyBetween(prevOrder, null)
+    prevOrder = order
+    const node = {
+      id: genId(),
+      parentId: null,
+      documentId: doc.id,
+      order,
+      kind: 'text',
+      content,
+      createdAt: ts,
+      updatedAt: ts,
+    }
+    if (card.cardStats && typeof card.cardStats === 'object') node.cardStats = card.cardStats
+    if (card.type === 'cloze' && card.clozeCard?.groupStats && typeof card.clozeCard.groupStats === 'object') {
+      node.cardClozeStats = card.clozeCard.groupStats
+    }
+    newNodes.push(node)
+  }
+
+  if (!newNodes.length) { alert('No importable cards in this file (all were deleted or unsupported).'); return }
+
+  await putDoc(doc, state.ctx)
+  await putNodes(newNodes, state.ctx)
+  state.docs = await getAllDocs(state.ctx)
+  await selectDoc(doc.id)
+
+  if (skipped.length) console.warn(`[flash-import] skipped ${skipped.length} cards:`, skipped)
+  const notes = []
+  if (lossy.multiSide) notes.push(`${lossy.multiSide} multi-side (joined with " / ")`)
+  if (lossy.textMemory) notes.push(`${lossy.textMemory} text-memory (converted to question)`)
+  if (skipped.length) notes.push(`${skipped.length} skipped`)
+  const suffix = notes.length ? `\n(${notes.join('; ')}; see console for details)` : ''
+  alert(`Imported ${newNodes.length} cards into "${docTitle}".${suffix}`)
+}
+
+function triggerFlashImport() {
+  if (!state.unlocked) { alert('Unlock a vault first.'); return }
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json,application/json'
+  input.onchange = async e => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text)
+      await importFlashDeck(parsed)
+    } catch (err) {
+      console.error('[flash-import] failed:', err)
+      alert(`Import failed: ${err.message}`)
+    }
+  }
+  input.click()
+}
+
 // =====================================================================
 // SEARCH INDEX  (inverted index with pluggable extractor pipeline)
 // =====================================================================
@@ -5220,6 +5339,7 @@ const PALETTE_COMMANDS = [
       else console.warn('[study] no active document')
     },
   },
+  { id: 'import-flash-deck', label: 'Import flash deck…', run: () => triggerFlashImport() },
   {
     id: 'card-count-debug',
     label: 'Show card count for selected subtree (debug)',
