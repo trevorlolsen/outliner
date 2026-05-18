@@ -1157,6 +1157,157 @@ function opChangeCodeLang(nodes, nodeId, lang) {
   return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
 }
 
+// Phase 3 — card grading. Lazily promotes a node to a card by allocating
+// cardStats / cardClozeStats[group] on first grade, mutates a *copy* of the
+// stats via the ported SM-2 scheduler, and appends a capped history entry.
+// Returned through the standard op shape but applied via applyReview (sibling
+// of applyOp) so grading never lands on the undo stack.
+function opGradeCard(nodes, nodeId, rating, clozeGroup) {
+  const node = nodes.find(n => n.id === nodeId)
+  if (!node) return null
+  const updated = { ...node, updatedAt: now() }
+  if (clozeGroup) {
+    const stats = { ...(node.cardClozeStats?.[clozeGroup] ?? defaultCardStats()) }
+    updateScheduleFor(stats, rating)
+    updated.cardClozeStats = { ...(node.cardClozeStats ?? {}), [clozeGroup]: stats }
+  } else {
+    const stats = { ...(node.cardStats ?? defaultCardStats()) }
+    updateScheduleFor(stats, rating)
+    updated.cardStats = stats
+  }
+  const history = [...(node.cardHistory ?? []), { at: new Date().toISOString(), rating, group: clozeGroup ?? null }]
+  while (history.length > 20) history.shift()
+  updated.cardHistory = history
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+// Editorially relevant (text edits should not destroy the user's intent to
+// hide a card from sessions), so this routes through applyOp — undoable.
+function opToggleCardSuspend(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const updated = { ...node, cardSuspended: !node.cardSuspended, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+// The only eraser for accumulated review history. Suspension is preserved —
+// "reset stats" is about clearing the schedule, not un-hiding the card.
+function opResetCardStats(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const { cardStats, cardClozeStats, cardHistory, ...rest } = node
+  const updated = { ...rest, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+// =====================================================================
+// SCHEDULER  (SM-2 variant — ported verbatim from flash/src/review/scheduler.js
+// and flash/src/utils/time.js. Pure functions, stats-shape driven; intentionally
+// not renamed/typed/optimized so the flash review logic can be cross-referenced.)
+// =====================================================================
+
+const DAY_MS = 86400000
+
+function addDays(date, days) {
+  return new Date(new Date(date).getTime() + days * DAY_MS)
+}
+
+function isDue(isoString) {
+  if (!isoString) return true
+  return new Date(isoString).getTime() <= Date.now()
+}
+
+function updateScheduleFor(stats, rating) {
+  if (rating === "again") {
+    stats.intervalDays = 0.25;
+    stats.ease = Math.max(1.3, stats.ease - 0.3);
+    stats.failedRecently = true;
+    stats.failedReviews = (stats.failedReviews || 0) + 1;
+  } else if (rating === "hard") {
+    stats.intervalDays = Math.max(1, (stats.intervalDays || 0) * 1.2 || 1);
+    stats.ease = Math.max(1.3, stats.ease - 0.15);
+    stats.failedRecently = false;
+    stats.successfulReviews = (stats.successfulReviews || 0) + 1;
+  } else if (rating === "good") {
+    stats.intervalDays = Math.max(1, (stats.intervalDays || 0) * stats.ease || 3);
+    stats.failedRecently = false;
+    stats.successfulReviews = (stats.successfulReviews || 0) + 1;
+  } else if (rating === "easy") {
+    stats.intervalDays = Math.max(3, (stats.intervalDays || 0) * stats.ease * 1.4 || 7);
+    stats.ease += 0.1;
+    stats.failedRecently = false;
+    stats.successfulReviews = (stats.successfulReviews || 0) + 1;
+  } else if (rating === "perfect") {
+    stats.intervalDays = Math.max(7, (stats.intervalDays || 0) * stats.ease * 1.8 || 14);
+    stats.ease += 0.15;
+    stats.failedRecently = false;
+    stats.successfulReviews = (stats.successfulReviews || 0) + 1;
+  }
+
+  stats.totalReviews = (stats.totalReviews || 0) + 1;
+  stats.lastSeenAt = new Date().toISOString();
+  stats.nextDueAt = addDays(new Date(), stats.intervalDays).toISOString();
+
+  return stats;
+}
+
+function cardPriority(card, nowMs) {
+  const stats = card.cardStats;
+  let score = 0;
+
+  const dueTime = stats.nextDueAt ? new Date(stats.nextDueAt).getTime() : 0;
+
+  if (dueTime <= nowMs) score += 100;
+
+  const daysOverdue = Math.max(0, (nowMs - dueTime) / DAY_MS);
+  score += daysOverdue * 8;
+
+  if (stats.totalReviews === 0) score += 40;
+  if (stats.failedRecently) score += 30;
+
+  score += (1 - (stats.masteryPercent || 0)) * 20;
+
+  return score;
+}
+
+function buildSessionQueue(cards, settings, nowMs) {
+  const active = cards.filter(c => !c.deletedAt);
+  const due = active.filter(c => isDue(c.cardStats.nextDueAt) && c.cardStats.totalReviews > 0);
+  const difficult = active.filter(c => c.cardStats.failedRecently);
+  const newCards = active.filter(c => c.cardStats.totalReviews === 0);
+
+  due.sort((a, b) => cardPriority(b, nowMs) - cardPriority(a, nowMs));
+  difficult.sort((a, b) => cardPriority(b, nowMs) - cardPriority(a, nowMs));
+
+  const target = settings.targetCardCount || 20;
+  const maxNew = settings.maxNewCards || 5;
+
+  const seen = new Set();
+  const queue = [];
+
+  if (settings.includeDue !== false) {
+    for (const c of due) {
+      if (queue.length >= Math.floor(target * 0.7)) break;
+      if (!seen.has(c.id)) { seen.add(c.id); queue.push(c); }
+    }
+  }
+
+  if (settings.includeDifficult !== false) {
+    for (const c of difficult) {
+      if (queue.length >= Math.floor(target * 0.9)) break;
+      if (!seen.has(c.id)) { seen.add(c.id); queue.push(c); }
+    }
+  }
+
+  if (settings.includeNew !== false) {
+    let added = 0;
+    for (const c of newCards) {
+      if (added >= maxNew || queue.length >= target) break;
+      if (!seen.has(c.id)) { seen.add(c.id); queue.push(c); added++; }
+    }
+  }
+
+  return queue;
+}
+
 // =====================================================================
 // PORTABILITY
 // =====================================================================
@@ -2658,6 +2809,14 @@ function flushNodeText(el) {
     indexNode(updated)
     putNode(updated, state.ctx)
     refreshCardPill(nodeId)
+    // One-way write-through: `@card[suspend]` in text sets cardSuspended on
+    // first save, but removing `[suspend]` later does NOT unsuspend — text
+    // edits must never destroy review intent. Use the explicit toggle command
+    // (or opToggleCardSuspend) to unsuspend.
+    const parsed = parseCard(content)
+    if (parsed && parsed.modifiers.includes('suspend') && !updated.cardSuspended) {
+      applyOp(opToggleCardSuspend(state.nodes, nodeId))
+    }
   }
 }
 
@@ -2735,6 +2894,21 @@ function applyOp(result) {
   }
   renderTree()
   renderTagList()
+}
+
+// Phase 3 — review-grade dispatcher. Same persistence/indexing pipeline as
+// applyOp, but deliberately skips pushHistory (grading shouldn't pollute the
+// 200-entry undo stack) and renderTree (a 100-card session would otherwise
+// trigger 100 full re-renders). The pill is the only thing that visually
+// reflects a grade, so we patch it in place via refreshCardPill.
+function applyReview(result) {
+  if (!result) return
+  state.nodes = result.nodes
+  if (result.delta.length) {
+    for (const n of result.delta) indexNode(n)
+    putNodes(result.delta, state.ctx)
+    for (const n of result.delta) refreshCardPill(n.id)
+  }
 }
 
 function focusNode(id) {
@@ -4247,6 +4421,16 @@ function setDueFilter(token) {
   renderTree()
 }
 
+// Phase 3 helper for the manual grading palette commands. No session UI yet —
+// these exist so the scheduler + applyReview pipeline can be exercised end to
+// end on the selected node. Phase 4 will replace these as the primary path.
+function gradeSelected(rating) {
+  if (!state.selectedId) return
+  const node = state.nodes.find(n => n.id === state.selectedId)
+  if (!node || !parseCard(node.content || '')) { console.log('Selected node is not a card'); return }
+  applyReview(opGradeCard(state.nodes, state.selectedId, rating))
+}
+
 const PALETTE_COMMANDS = [
   { id: 'today-tasks',    label: "Today's tasks",  run: () => setDueFilter('@due:today') },
   { id: 'overdue-tasks',  label: 'Overdue tasks',  run: () => setDueFilter('@due:overdue') },
@@ -4254,6 +4438,12 @@ const PALETTE_COMMANDS = [
   { id: 'open-today',     label: 'Open today\'s daily note', run: () => { state.calendarOffset = 0; openOrCreateDailyDoc(todayLocalIso()) } },
   { id: 'lock-vault',     label: 'Lock vault',    run: () => { lockVault(); renderApp() } },
   { id: 'toggle-sidebar', label: 'Toggle sidebar', run: () => document.getElementById('sidebar-toggle')?.click() },
+  { id: 'grade-again',    label: 'Grade selected card: Again', run: () => gradeSelected('again') },
+  { id: 'grade-hard',     label: 'Grade selected card: Hard',  run: () => gradeSelected('hard') },
+  { id: 'grade-good',     label: 'Grade selected card: Good',  run: () => gradeSelected('good') },
+  { id: 'grade-easy',     label: 'Grade selected card: Easy',  run: () => gradeSelected('easy') },
+  { id: 'card-suspend',   label: 'Toggle suspend on selected card', run: () => { if (state.selectedId) applyOp(opToggleCardSuspend(state.nodes, state.selectedId)) } },
+  { id: 'card-reset',     label: 'Reset stats on selected card',    run: () => { if (state.selectedId) applyOp(opResetCardStats(state.nodes, state.selectedId)) } },
   {
     id: 'card-count-debug',
     label: 'Show card count for selected subtree (debug)',
