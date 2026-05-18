@@ -398,8 +398,18 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .study-flip-hint[hidden]{display:none}
 .study-close{position:absolute;top:6px;right:10px;background:transparent;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;line-height:1;padding:4px 8px}
 .study-close:hover{color:var(--text)}
-.study-empty{font-size:14px;color:var(--text-muted);text-align:center;padding:16px 8px}
+.study-empty{font-size:14px;color:var(--text-muted);padding:8px 4px;max-width:480px;margin:0 auto;text-align:left;white-space:normal}
+.study-empty h2{margin:0 0 12px;font-size:18px;color:var(--text);text-align:center}
+.study-empty p{margin:8px 0;line-height:1.5}
+.study-empty ul{margin:8px 0 14px;padding-left:1.4em;line-height:1.9}
+.study-empty code{background:var(--bg-3,#222);color:var(--text);padding:1px 5px;border-radius:3px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em}
+.study-close-btn{display:block;margin:14px auto 0;padding:7px 18px;background:var(--bg-4);color:var(--text);border:1px solid var(--border-soft);border-radius:6px;font:inherit;cursor:pointer}
+.study-close-btn:hover{background:var(--bg-3)}
 .study-done{font-size:15px;color:var(--text);text-align:center;padding:18px 8px}
+.cloze-blank{background:var(--accent-bg,#fef3c7);color:#000;padding:0 4px;border-radius:3px}
+.cloze-revealed{background:var(--accent-bg,#fde68a);color:#000;padding:0 4px;border-radius:3px;font-weight:600}
+.answer-tree{margin:0;padding-left:1.5em}
+.answer-tree li{margin:0.25em 0}
 
 /* Print stylesheet — hides chrome, prints the outline tree cleanly */
 @media print {
@@ -1568,10 +1578,78 @@ function importMarkdown(text) {
 // optional whitespace) so prose like "notes about @card syntax" is NOT a
 // card, and the (?=\s|$) lookahead keeps "@cardiology" safe.
 // Returns one of:
-//   { kind: 'inline',   front, back,     modifiers, unknown }
-//   { kind: 'question', question,        modifiers, unknown }
-//   { kind: 'cloze',    text,            modifiers, unknown }  // groups deferred to Phase 5
+//   { kind: 'inline',   front, back,                       modifiers, unknown }
+//   { kind: 'question', question,                          modifiers, unknown }
+//   { kind: 'cloze',    text, groups, segments,            modifiers, unknown }
 //   null
+//
+// Parses Anki-style cloze deletion syntax: {{cN::content[::hint]}}.
+// Ported verbatim from flash/src/cards/clozeParser.js.
+//
+// Returns:
+//   {
+//     groups:   Map<key, { content, hint? }>,
+//     segments: Array<{ type: "text"|"cloze", value, group?, hint? }>
+//   }
+// where key is "c1", "c2", … If the same group key appears more than once,
+// the first occurrence wins for the `groups` map; every occurrence still
+// appears in `segments` so the rendered text contains every instance.
+function parseCloze(text) {
+  const groups = new Map()
+  const segments = []
+  if (!text) return { groups, segments }
+  let i = 0
+  let textBuf = ''
+  while (i < text.length) {
+    if (text[i] === '{' && text[i + 1] === '{') {
+      const closeIdx = _findClosingBraces(text, i + 2)
+      if (closeIdx === -1) { textBuf += text[i]; i++; continue }
+      const inner = text.slice(i + 2, closeIdx)
+      const match = inner.match(/^(c\d+)::([\s\S]*)$/)
+      if (!match) { textBuf += text.slice(i, closeIdx + 2); i = closeIdx + 2; continue }
+      const key = match[1]
+      const rest = match[2]
+      let content = rest
+      let hint
+      const hintSplit = rest.indexOf('::')
+      if (hintSplit !== -1) {
+        content = rest.slice(0, hintSplit)
+        hint = rest.slice(hintSplit + 2)
+      }
+      if (textBuf) { segments.push({ type: 'text', value: textBuf }); textBuf = '' }
+      segments.push({ type: 'cloze', value: content, group: key, hint })
+      if (!groups.has(key)) {
+        groups.set(key, hint !== undefined ? { content, hint } : { content })
+      }
+      i = closeIdx + 2
+    } else {
+      textBuf += text[i]
+      i++
+    }
+  }
+  if (textBuf) segments.push({ type: 'text', value: textBuf })
+  return { groups, segments }
+}
+function _findClosingBraces(text, from) {
+  let depth = 1
+  let j = from
+  while (j < text.length - 1) {
+    if (text[j] === '{' && text[j + 1] === '{') { depth++; j += 2; continue }
+    if (text[j] === '}' && text[j + 1] === '}') {
+      depth--
+      if (depth === 0) return j
+      j += 2
+      continue
+    }
+    j++
+  }
+  return -1
+}
+function clozeGroupKeys(text) {
+  const { groups } = parseCloze(text)
+  return Array.from(groups.keys()).sort((a, b) => parseInt(a.slice(1), 10) - parseInt(b.slice(1), 10))
+}
+
 const CARD_ANCHOR_RE = /^\s*@card(?:\[([^\]\n]*)\])?(?=\s|$)/
 const CLOZE_PROBE_RE = /\{\{c\d+::/
 function parseCard(content) {
@@ -1585,7 +1663,13 @@ function parseCard(content) {
   const body = content.slice(m[0].length).trim()
   if (!body) return null
   if (CLOZE_PROBE_RE.test(body)) {
-    return { kind: 'cloze', text: body, modifiers, unknown }
+    const parsed = parseCloze(body)
+    // No real {{cN::…}} groups despite a partial match — degrade gracefully
+    // to a question card rather than presenting an unusable cloze entry.
+    if (parsed.groups.size === 0) {
+      return { kind: 'question', question: body, modifiers, unknown }
+    }
+    return { kind: 'cloze', text: body, groups: parsed.groups, segments: parsed.segments, modifiers, unknown }
   }
   const sep = body.match(/\s*::\s*/)
   if (sep) {
@@ -2295,6 +2379,8 @@ function renderCtxMenu(nodeId, el) {
     ${sep()}
     ${item('ctx-zoom', 'Zoom in', SHORTCUTS['zoom'].keys)}
     ${sep()}
+    ${item('study-here', '🎴 Study cards under here')}
+    ${sep()}
     ${item('ctx-delete', 'Delete', SHORTCUTS['delete'].keys)}
     ${item('ctx-delete-checked', 'Delete checked items', '', !hasCheckedDesc)}
     ${sep()}
@@ -2707,8 +2793,33 @@ function renderCardPill(node) {
   btn.className = 'card-pill'
   btn.dataset.action = 'card-info'
   btn.dataset.nodeId = node.id
-  const stats = node.cardStats
   const suspended = node.cardSuspended === true || parsed.modifiers.includes('suspend')
+
+  // Phase 5: cloze cards stash per-group stats in cardClozeStats, not the
+  // top-level cardStats. Aggregate by picking the soonest nextDueAt across
+  // groups; if any group is overdue the whole pill goes "due". This keeps
+  // one pill per node while still surfacing the most urgent group.
+  let stats = node.cardStats
+  if (parsed.kind === 'cloze') {
+    const groupKeys = Array.from(parsed.groups.keys())
+    const perGroup = groupKeys.map(k => node.cardClozeStats?.[k]).filter(Boolean)
+    if (perGroup.length === 0) {
+      stats = null  // all groups still new
+    } else if (perGroup.length < groupKeys.length) {
+      // At least one group is still new → treat the whole pill as "new" so
+      // authors notice unreviewed groups.
+      stats = null
+    } else {
+      // All groups have stats — pick the earliest nextDueAt.
+      stats = perGroup.reduce((best, s) => {
+        if (!best) return s
+        if (!s.nextDueAt) return best
+        if (!best.nextDueAt) return s
+        return new Date(s.nextDueAt) < new Date(best.nextDueAt) ? s : best
+      }, null)
+    }
+  }
+
   let label = '🎴'
   let titleIso = ''
   if (suspended) {
@@ -4444,15 +4555,16 @@ document.getElementById('search-close').addEventListener('click', closeSearchVie
 document.getElementById('search-btn').addEventListener('click', openSearchView)
 
 // =====================================================================
-// STUDY SESSION  (Ctrl+Shift+S — flash-card review modal, Phase 4)
+// STUDY SESSION  (Ctrl+Shift+S — flash-card review modal, Phases 4–5)
 // =====================================================================
 //
-// Inline cards only in Phase 4 (`@card Front :: Back`). Cloze + question
-// variants are detected but skipped with a console warning — Phase 5 adds
-// proper rendering for those. Choreography is the standard front → flip →
-// grade → advance loop; `again` grades requeue the card after the rest of
-// the queue drains. All grading flows through opGradeCard + applyReview
-// so the undo stack stays clean (per Phase 3) and the pill refreshes in
+// Phase 4 implemented inline cards (`@card Front :: Back`). Phase 5 adds
+// cloze (`@card … {{c1::…}} … {{c2::…}}`) — one queue entry per group —
+// and question cards (`@card …` with no `::`) which render their child
+// nodes as the answer. Choreography is the standard front → flip → grade
+// → advance loop; `again` grades requeue the entry after the rest of the
+// queue drains. All grading flows through opGradeCard + applyReview so
+// the undo stack stays clean (per Phase 3) and the pill refreshes in
 // place. Modal is keyboard-first: Space/Enter flips, 1/2/3/4 grades,
 // Esc closes. Selection-driven: the deck root is the currently selected
 // (or zoomed) node — a doc-wide entry point is deferred to Phase 6.
@@ -4460,7 +4572,11 @@ document.getElementById('search-btn').addEventListener('click', openSearchView)
 const session = {
   open: false,
   deckRootId: null,
-  queue: [],         // { nodeId, kind: 'inline', front, back }
+  // Entry shapes:
+  //   { nodeId, kind: 'inline',   front, back }
+  //   { nodeId, kind: 'question', question }
+  //   { nodeId, kind: 'cloze',    text, segments, group: 'cK' }
+  queue: [],
   index: 0,
   failedQueue: [],
   flipped: false,
@@ -4469,21 +4585,30 @@ const session = {
   finished: false,
 }
 
-// Doc-wide sessions land in Phase 6. For now a Ctrl+Shift+S without a
-// selection or zoom is a no-op (returns null → caller bails). Kept as a
-// named helper so the call sites read like the master plan.
-function rootOfActiveDoc() { return null }
+// Doc-wide sessions: documents aren't nodes, so we encode "the whole
+// active doc" as a sentinel string `__doc__:<docId>` that `openSession` /
+// `collectDeckCards` recognize. Returns null when no doc is active so
+// callers (palette / keyboard) can bail gracefully.
+function rootOfActiveDoc() {
+  return state.activeDocId ? `__doc__:${state.activeDocId}` : null
+}
 
 // Walk the selected subtree (inclusive when text), intersect with the
 // `@card` posting set so we benefit from the same indexing pipeline the
-// pill and search use, and drop anything explicitly suspended.
+// pill and search use, and drop anything explicitly suspended. A
+// `__doc__:<docId>` sentinel means "every card in this document" — used
+// by the doc-wide palette command.
 function collectDeckCards(nodes, deckRootId) {
+  const cardIds = searchIndex.postings.get('@card') ?? new Set()
+  if (typeof deckRootId === 'string' && deckRootId.startsWith('__doc__:')) {
+    const docId = deckRootId.slice('__doc__:'.length)
+    return nodes.filter(n => n.documentId === docId && cardIds.has(n.id) && !n.cardSuspended)
+  }
   const root = nodes.find(n => n.id === deckRootId)
   if (!root) return []
   const candidates = root.kind === 'text'
     ? [root, ...getDescendants(nodes, deckRootId)]
     : getDescendants(nodes, deckRootId)
-  const cardIds = searchIndex.postings.get('@card') ?? new Set()
   return candidates.filter(n => cardIds.has(n.id) && !n.cardSuspended)
 }
 
@@ -4493,24 +4618,41 @@ function openSession(deckRootId) {
   if (!deckRootId) { console.warn('[study] no deck root — select a node first'); return }
 
   const cards = collectDeckCards(state.nodes, deckRootId)
-  const entriesByNode = new Map()  // nodeId -> { nodeId, kind, front, back }
+  // Phase 5: a single node can expand into multiple queue entries (one per
+  // cloze group). Each entry gets a synthetic pseudo-card id so the
+  // scheduler can order them independently — for cloze entries we feed in
+  // the per-group cardClozeStats[group] so each group's interval/ease is
+  // scheduled on its own (mirrors flash's groupStats model).
+  const entriesById = new Map()
   const pseudoCards = []
   for (const node of cards) {
     const parsed = parseCard(node.content || '')
     if (!parsed) continue
-    if (parsed.kind !== 'inline') {
-      // Phase 5 will handle cloze + question variants. Surface the skip
-      // in the console so authors notice the gap without us blocking the
-      // entire deck.
-      console.warn(`[study] skipping ${parsed.kind} card (unsupported in Phase 4):`, node.id, (node.content || '').slice(0, 60))
-      continue
+    if (parsed.kind === 'inline') {
+      const id = node.id
+      entriesById.set(id, { nodeId: node.id, kind: 'inline', front: parsed.front, back: parsed.back })
+      pseudoCards.push({ id, cardStats: node.cardStats ?? defaultCardStats() })
+    } else if (parsed.kind === 'question') {
+      const id = node.id
+      entriesById.set(id, { nodeId: node.id, kind: 'question', question: parsed.question })
+      pseudoCards.push({ id, cardStats: node.cardStats ?? defaultCardStats() })
+    } else if (parsed.kind === 'cloze') {
+      for (const groupKey of parsed.groups.keys()) {
+        const id = `${node.id}::${groupKey}`
+        entriesById.set(id, {
+          nodeId: node.id,
+          kind: 'cloze',
+          text: parsed.text,
+          segments: parsed.segments,
+          group: groupKey,
+        })
+        pseudoCards.push({ id, cardStats: node.cardClozeStats?.[groupKey] ?? defaultCardStats() })
+      }
     }
-    entriesByNode.set(node.id, { nodeId: node.id, kind: 'inline', front: parsed.front, back: parsed.back })
-    pseudoCards.push({ id: node.id, cardStats: node.cardStats ?? defaultCardStats() })
   }
 
   const ordered = buildSessionQueue(pseudoCards, session.settings, Date.now())
-  session.queue = ordered.map(c => entriesByNode.get(c.id)).filter(Boolean)
+  session.queue = ordered.map(c => entriesById.get(c.id)).filter(Boolean)
   session.index = 0
   session.failedQueue = []
   session.flipped = false
@@ -4536,12 +4678,83 @@ function closeSession() {
 // Re-pull the entry's current node text so edits made between session
 // open and now show up. If the node was deleted or the @card prefix was
 // stripped mid-session, fall back to the snapshot taken at queue build.
+// Cloze re-parse must preserve the active group so the masking stays
+// pinned to the entry the user was reviewing.
 function liveEntry(entry) {
   const node = state.nodes.find(n => n.id === entry.nodeId)
   if (!node) return entry
   const parsed = parseCard(node.content || '')
-  if (!parsed || parsed.kind !== 'inline') return entry
-  return { ...entry, front: parsed.front, back: parsed.back }
+  if (!parsed) return entry
+  if (entry.kind === 'inline' && parsed.kind === 'inline') {
+    return { ...entry, front: parsed.front, back: parsed.back }
+  }
+  if (entry.kind === 'question' && parsed.kind === 'question') {
+    return { ...entry, question: parsed.question }
+  }
+  if (entry.kind === 'cloze' && parsed.kind === 'cloze' && parsed.groups.has(entry.group)) {
+    return { ...entry, text: parsed.text, segments: parsed.segments }
+  }
+  return entry
+}
+
+// Cloze front/back renderer. Walks the parsed segments and decides what
+// gets masked (active group on the front, fully revealed on the back).
+// Other groups stay visible on both sides — only the *active* group is
+// hidden, mirroring flash/src/review/clozeReview.js.
+function renderClozeFace(el, segments, activeGroup, reveal) {
+  el.textContent = ''
+  for (const seg of segments) {
+    if (seg.type === 'text') {
+      el.appendChild(document.createTextNode(seg.value))
+    } else if (seg.type === 'cloze') {
+      if (seg.group === activeGroup) {
+        const span = document.createElement('span')
+        if (reveal) {
+          span.className = 'cloze-revealed'
+          span.textContent = seg.value
+        } else {
+          span.className = 'cloze-blank'
+          span.textContent = `[${seg.hint ?? '…'}]`
+        }
+        el.appendChild(span)
+      } else {
+        el.appendChild(document.createTextNode(seg.value))
+      }
+    }
+  }
+}
+
+// Render a question card's child nodes as a nested <ul>. Depth-capped at 3
+// to keep runaway outlines from blowing up the modal. Each li uses
+// applyRichRender so math / wiki-links / noderefs work inside answers.
+function renderChildrenAsAnswer(parentId) {
+  const parent = state.nodes.find(n => n.id === parentId)
+  if (!parent) return null
+  const docId = parent.documentId
+  const children = sortedChildren(state.nodes, parentId, docId)
+  if (!children.length) {
+    const em = document.createElement('em')
+    em.textContent = '(no answer — add a child node)'
+    return em
+  }
+  function build(parentNodeId, depth) {
+    const kids = sortedChildren(state.nodes, parentNodeId, docId)
+    if (!kids.length) return null
+    const ul = document.createElement('ul')
+    ul.className = 'answer-tree'
+    for (const c of kids) {
+      const li = document.createElement('li')
+      li.textContent = c.content
+      applyRichRender(li, c.content || '')
+      if (depth < 3) {
+        const sub = build(c.id, depth + 1)
+        if (sub) li.appendChild(sub)
+      }
+      ul.appendChild(li)
+    }
+    return ul
+  }
+  return build(parentId, 1)
 }
 
 function renderCard() {
@@ -4555,10 +4768,21 @@ function renderCard() {
   const divider = document.getElementById('study-divider')
   const progress = document.getElementById('study-progress')
 
-  front.textContent = entry.front
-  applyRichRender(front, entry.front)
-  back.textContent = entry.back
-  applyRichRender(back, entry.back)
+  if (entry.kind === 'inline') {
+    front.textContent = entry.front
+    applyRichRender(front, entry.front)
+    back.textContent = entry.back
+    applyRichRender(back, entry.back)
+  } else if (entry.kind === 'question') {
+    front.textContent = entry.question
+    applyRichRender(front, entry.question)
+    back.textContent = ''
+    const tree = renderChildrenAsAnswer(entry.nodeId)
+    if (tree) back.appendChild(tree)
+  } else if (entry.kind === 'cloze') {
+    renderClozeFace(front, entry.segments, entry.group, false)
+    renderClozeFace(back, entry.segments, entry.group, true)
+  }
   back.hidden = true
   divider.hidden = true
   grade.hidden = true
@@ -4568,6 +4792,10 @@ function renderCard() {
   session.flipped = false
 }
 
+// Empty-deck panel: instead of silently doing nothing when a node has no
+// cards beneath it, open the modal anyway and tell the user how to make
+// a card. Discoverability matters more than terseness here — this is
+// often a user's first encounter with the @card syntax.
 function renderEmptySession() {
   const front = document.getElementById('study-front')
   const back = document.getElementById('study-back')
@@ -4577,10 +4805,21 @@ function renderEmptySession() {
   const progress = document.getElementById('study-progress')
   progress.textContent = ''
   front.innerHTML = ''
-  const msg = document.createElement('div')
-  msg.className = 'study-empty'
-  msg.textContent = 'No inline cards in this deck.'
-  front.appendChild(msg)
+  const wrap = document.createElement('div')
+  wrap.className = 'study-empty'
+  wrap.innerHTML = `
+    <h2>No cards found</h2>
+    <p>This node and its descendants don't contain any cards yet.</p>
+    <p>Mark a node with <code>@card …</code> to create one:</p>
+    <ul>
+      <li><code>@card Front :: Back</code> — inline two-sided card</li>
+      <li><code>@card Question</code> — answer is on the child node</li>
+      <li><code>@card Text with {{c1::cloze}}</code> — cloze deletion</li>
+    </ul>
+    <button type="button" class="study-close-btn">Close</button>
+  `
+  wrap.querySelector('.study-close-btn').addEventListener('click', closeSession)
+  front.appendChild(wrap)
   back.hidden = true; divider.hidden = true; grade.hidden = true; hint.hidden = true
 }
 
@@ -4598,7 +4837,10 @@ function gradeAndAdvance(rating) {
   if (!session.open || !session.flipped || session.finished) return
   const entry = session.queue[session.index]
   if (!entry) return
-  const result = opGradeCard(state.nodes, entry.nodeId, rating)
+  // Cloze grades land in cardClozeStats[group] so every group schedules
+  // independently; inline/question grades use the top-level cardStats.
+  const clozeGroup = entry.kind === 'cloze' ? entry.group : null
+  const result = opGradeCard(state.nodes, entry.nodeId, rating, clozeGroup)
   if (result) applyReview(result)
   if (rating === 'again') session.failedQueue.push(entry)
   session.reviewedCount++
@@ -4702,6 +4944,15 @@ const PALETTE_COMMANDS = [
       const root = state.selectedId ?? state.zoomedId ?? rootOfActiveDoc()
       if (root) openSession(root)
       else console.warn('[study] no node selected — select a node first')
+    },
+  },
+  {
+    id: 'study-doc',
+    label: 'Study all cards in this document',
+    run: () => {
+      const root = rootOfActiveDoc()
+      if (root) openSession(root)
+      else console.warn('[study] no active document')
     },
   },
   {
@@ -4862,6 +5113,7 @@ document.getElementById('node-ctx-menu').addEventListener('click', e => {
   else if (action === 'ctx-expand-level') applyOp(opExpandToLevel(state.nodes, nodeId, +param))
   else if (action === 'ctx-expand-siblings') applyOp(opExpandSiblings(state.nodes, nodeId))
   else if (action === 'ctx-zoom') { state.zoomedId = nodeId; renderEditor() }
+  else if (action === 'study-here') { openSession(nodeId) }
   else if (action === 'ctx-delete') {
     const node = state.nodes.find(n => n.id === nodeId)
     if (!node) return
