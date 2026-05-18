@@ -656,6 +656,24 @@ function fromB64(s) { const b=atob(s); const a=new Uint8Array(b.length); for(let
 function genId() { return crypto.randomUUID() }
 function now() { return Date.now() }
 
+// Lazy initializer for per-node SRS state. Lives next to genId/now because
+// any op that first promotes a node to a card (Phase 3+) will call this to
+// allocate the stats object. Keeping it pure and parameter-free means the
+// extractor and future scheduler share a single canonical default shape.
+function defaultCardStats() {
+  return {
+    totalReviews: 0,
+    successfulReviews: 0,
+    failedReviews: 0,
+    intervalDays: 0,
+    ease: 2.5,
+    masteryPercent: 0,
+    failedRecently: false,
+    nextDueAt: null,
+    lastSeenAt: null,
+  }
+}
+
 // =====================================================================
 // DATABASE
 // =====================================================================
@@ -1368,6 +1386,39 @@ function importMarkdown(text) {
 // SEARCH INDEX  (inverted index with pluggable extractor pipeline)
 // =====================================================================
 
+// Card parser. Pure, idempotent, kind-agnostic — caller guards on
+// node.kind === 'text'. The anchor regex is anchored to start-of-line (after
+// optional whitespace) so prose like "notes about @card syntax" is NOT a
+// card, and the (?=\s|$) lookahead keeps "@cardiology" safe.
+// Returns one of:
+//   { kind: 'inline',   front, back,     modifiers, unknown }
+//   { kind: 'question', question,        modifiers, unknown }
+//   { kind: 'cloze',    text,            modifiers, unknown }  // groups deferred to Phase 5
+//   null
+const CARD_ANCHOR_RE = /^\s*@card(?:\[([^\]\n]*)\])?(?=\s|$)/
+const CLOZE_PROBE_RE = /\{\{c\d+::/
+function parseCard(content) {
+  if (typeof content !== 'string') return null
+  const m = content.match(CARD_ANCHOR_RE)
+  if (!m) return null
+  const modsRaw = (m[1] || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const known = new Set(['reverse', 'suspend'])
+  const modifiers = modsRaw.filter(s => known.has(s))
+  const unknown  = modsRaw.filter(s => !known.has(s))
+  const body = content.slice(m[0].length).trim()
+  if (!body) return null
+  if (CLOZE_PROBE_RE.test(body)) {
+    return { kind: 'cloze', text: body, modifiers, unknown }
+  }
+  const sep = body.match(/\s*::\s*/)
+  if (sep) {
+    const front = body.slice(0, sep.index).trim()
+    const back  = body.slice(sep.index + sep[0].length).trim()
+    if (front && back) return { kind: 'inline', front, back, modifiers, unknown }
+  }
+  return { kind: 'question', question: body, modifiers, unknown }
+}
+
 const searchIndex = {
   postings: new Map(),    // token -> Set<nodeId>
   nodeTokens: new Map(),  // nodeId -> Set<token>  (for clean removal)
@@ -1457,6 +1508,28 @@ function dueExtractor(node) {
   return out
 }
 registerExtractor(dueExtractor)
+
+// Card extractor — emits "@card" and refinement tokens so the existing
+// search/palette infrastructure can filter card nodes without any new
+// plumbing. Mirrors dueExtractor's shape. @card:due / @card:new go stale
+// between reindexes; session enumeration (Phase 4) does a real-time check.
+function cardExtractor(node) {
+  if (node.kind !== 'text') return []
+  const parsed = parseCard(node.content || '')
+  if (!parsed) return []
+  const out = ['@card', `@card:${parsed.kind}`]
+  const suspended = node.cardSuspended === true || parsed.modifiers.includes('suspend')
+  if (suspended) out.push('@card:suspended')
+  const stats = node.cardStats
+  if (!stats || !stats.totalReviews) {
+    out.push('@card:new')
+  } else if (stats.nextDueAt && new Date(stats.nextDueAt).getTime() <= Date.now()) {
+    out.push('@card:due')
+  }
+  if (parsed.modifiers.includes('reverse')) out.push('@card:reverse')
+  return out
+}
+registerExtractor(cardExtractor)
 
 function getAllTags() {
   const out = []
@@ -4118,6 +4191,25 @@ const PALETTE_COMMANDS = [
   { id: 'open-today',     label: 'Open today\'s daily note', run: () => { state.calendarOffset = 0; openOrCreateDailyDoc(todayLocalIso()) } },
   { id: 'lock-vault',     label: 'Lock vault',    run: () => { lockVault(); renderApp() } },
   { id: 'toggle-sidebar', label: 'Toggle sidebar', run: () => document.getElementById('sidebar-toggle')?.click() },
+  {
+    id: 'card-count-debug',
+    label: 'Show card count for selected subtree (debug)',
+    run: () => {
+      const root = state.selectedId ?? state.zoomedId ?? null
+      const cards = searchIndex.postings.get('@card') ?? new Set()
+      if (!root) {
+        if (!state.activeDocId) { console.log('[card-count] no active doc'); return }
+        const inDoc = state.nodes.filter(n => n.documentId === state.activeDocId)
+        const ids = inDoc.map(n => n.id)
+        const inDeck = ids.filter(id => cards.has(id))
+        console.log(`[card-count] no selection — scanning active doc: nodes=${ids.length}, cards=${inDeck.length}`, inDeck)
+        return
+      }
+      const ids = [root, ...getDescendants(state.nodes, root).map(n => n.id)]
+      const inDeck = ids.filter(id => cards.has(id))
+      console.log(`[card-count] deck root: ${root}, descendants: ${ids.length}, cards: ${inDeck.length}`, inDeck)
+    }
+  },
 ]
 
 function openPalette() {
