@@ -5396,17 +5396,24 @@ async function cloudRenderModal() {
   await cloudRenderVaultLists()
 }
 
+// Monotonic render id. If two cloudRenderVaultLists calls overlap (e.g.
+// modal open triggers one, the onAuthStateChanged listener kicks off a
+// second), only the newer one is allowed to write to the DOM. Without this,
+// each render appends its own items and duplicates show up everywhere.
+let _cloudRenderId = 0
 async function cloudRenderVaultLists() {
+  const myId = ++_cloudRenderId
   const localList = document.getElementById('cloud-local-vaults')
   const remoteList = document.getElementById('cloud-remote-vaults')
   const remoteEmpty = document.getElementById('cloud-remote-empty')
-  localList.innerHTML = ''
-  remoteList.innerHTML = ''
   const syncState = await cloudGetSyncState()
   const localVaults = await getAllVaults()
   let remoteVaults = []
   try { remoteVaults = await cloudListVaults() }
   catch (e) { setErr('cloud-error', 'Failed to list cloud vaults: ' + (e.message || e)) }
+  if (myId !== _cloudRenderId) return  // a newer render started — let it win
+  localList.innerHTML = ''
+  remoteList.innerHTML = ''
 
   // -- This device's vaults --
   for (const v of localVaults) {
