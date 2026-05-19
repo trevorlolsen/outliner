@@ -4,4 +4,3 @@ dist/
 Thumbs.db
 .claude/
 *.log
-cloud-config.js
