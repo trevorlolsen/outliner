@@ -164,8 +164,8 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #sidebar .app-title{font-size:12px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
 #new-doc-btn{padding:3px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);font-size:12px;cursor:pointer}
 #new-doc-btn:hover{background:var(--bg-3-hover)}
-#search-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1;flex-shrink:0}
-#search-btn:hover{color:var(--text-dim)}
+#search-btn,#help-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1;flex-shrink:0}
+#search-btn:hover,#help-btn:hover{color:var(--text-dim)}
 #doc-list{list-style:none;margin:0;padding:4px 6px;flex:1;overflow-y:auto}
 #doc-list li{display:flex;align-items:center;border-radius:4px;padding:1px 4px}
 #doc-list li.active{background:var(--bg-list-active)}
@@ -186,7 +186,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .autosnap-notice{color:var(--text-soft);font-size:11px;line-height:1.4;background:var(--bg-1);border:1px solid var(--border-soft);border-radius:4px;padding:6px 8px}
 #sidebar.collapsed{width:36px}
 #sidebar.collapsed .sidebar-top{justify-content:center;padding:14px 6px 8px}
-#sidebar.collapsed #back-to-vaults-btn,#sidebar.collapsed #active-vault-label,#sidebar.collapsed #new-doc-btn,#sidebar.collapsed #search-btn{display:none}
+#sidebar.collapsed #back-to-vaults-btn,#sidebar.collapsed #active-vault-label,#sidebar.collapsed #new-doc-btn,#sidebar.collapsed #search-btn,#sidebar.collapsed #help-btn{display:none}
 #sidebar.collapsed #doc-list{display:none}
 #sidebar.collapsed .sidebar-bottom,#sidebar.collapsed #autosnap-section{display:none}
 #sidebar-toggle{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:16px;padding:0 2px;line-height:1;flex-shrink:0}
@@ -409,6 +409,15 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #study-overlay{position:fixed;inset:0;background:var(--overlay-soft);display:flex;align-items:center;justify-content:center;z-index:700}
 #study-overlay[hidden]{display:none}
 .study-modal{position:relative;width:640px;max-width:94vw;max-height:88vh;background:var(--bg-2);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-strong);display:flex;flex-direction:column;padding:18px 22px 16px;gap:14px;color:var(--text)}
+/* Token area should scroll inside the modal so long memos don't push the
+   sticky memo-footer off-screen. */
+#study-overlay #study-front{overflow-y:auto;min-height:0}
+@media (max-width:720px){
+  /* Full-screen memo modal on phones so the sticky footer sits flush with
+     the bottom of the viewport and respects the iOS safe-area inset. */
+  .study-modal{width:100vw;max-width:100vw;height:100vh;max-height:100vh;border-radius:0;border:none;padding:14px 16px 0;gap:10px}
+  .study-modal{padding-bottom:0}
+}
 .study-progress{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em;text-align:center}
 .card-face{min-height:120px;padding:18px 16px;background:var(--bg-1);border:1px solid var(--border-soft);border-radius:8px;font-size:18px;line-height:1.45;color:var(--text);overflow-y:auto;max-height:42vh;white-space:pre-wrap;word-break:break-word}
 .card-face[hidden]{display:none}
@@ -418,19 +427,58 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .side-separator{text-align:center;color:var(--text-faintest);font-size:18px;margin:6px 0;letter-spacing:.4em}
 /* Memo review tokens — colour by visibility mode so the user can see at a
    glance which words are full / letter / blind / locked. */
-.memo-word{display:inline;border-radius:3px;padding:0 1px;transition:background .1s ease}
-.memo-word-full{color:var(--text)}
-.memo-word-letter{color:var(--text-dim)}
-.memo-word-letter .memo-word-rest{color:var(--text-faintest);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:-1px}
-.memo-word-blind{color:var(--text-faintest);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:-1px}
-.memo-word-locked{color:var(--text);background:var(--bg-list-active);padding:0 3px;border-radius:3px}
-.memo-word-clickable{cursor:pointer}
-.memo-word-clickable:hover{background:var(--bg-3)}
-.memo-word-changed{outline:1px dashed var(--accent);outline-offset:1px}
-.memo-controls{display:flex;gap:8px;justify-content:flex-end;padding:10px 0}
-.memo-controls button{padding:8px 14px;background:var(--accent);color:var(--accent-on);border:none;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;font-weight:600}
-.memo-controls button:nth-child(n+2){background:var(--bg-3);color:var(--text)}
-.memo-controls button:hover{filter:brightness(1.1)}
+/* Memo review — mirrors flash's .text-memory-body + .review-controls--sticky */
+.memo-body{font-size:17px;line-height:2}
+.memo-word{display:inline-block;padding:0 2px;border-radius:3px;transition:background .1s ease}
+.memo-word.mode-full{color:var(--text)}
+.memo-word.mode-letter{color:var(--accent);font-weight:600}
+.memo-word.mode-blind{color:var(--text-faintest);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px}
+.memo-word.mode-locked{color:var(--text);opacity:.75;background:var(--bg-list-active);padding:0 4px}
+.memo-word.mode-temp-revealed{background:rgba(74,222,128,.15);border-bottom:1px solid #4ade80}
+.memo-word.clickable{cursor:pointer}
+.memo-word.clickable:hover{background:var(--bg-3)}
+.memo-word.mode-changed{outline:1px dashed var(--accent);outline-offset:1px}
+.memo-punct{color:var(--text-soft)}
+/* Brush hover tints (only fire in customise mode via .brush-* on container) */
+.brush-full .memo-word.clickable:hover{background:rgba(34,197,94,.18)}
+.brush-letter .memo-word.clickable:hover{background:rgba(96,165,250,.18)}
+.brush-blind .memo-word.clickable:hover{background:rgba(156,163,175,.18)}
+
+/* Sticky footer pattern — always visible at the bottom of the study modal so
+   every primary action has a thumb-reachable button on mobile (the original
+   keyboard-only flow was broken on touch devices). */
+.memo-footer{position:sticky;bottom:0;background:var(--bg-1);border-top:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:8px;margin-top:auto}
+.memo-footer[hidden]{display:none}
+.memo-footer-hint{font-size:13px;color:var(--text-soft);text-align:center}
+.memo-footer-row{display:flex;gap:6px;flex-wrap:wrap}
+.memo-btn{flex:1;min-width:90px;min-height:38px;padding:8px 10px;background:var(--bg-3);color:var(--text);border:1px solid var(--border);border-radius:6px;font:inherit;font-size:13px;cursor:pointer;transition:background .12s,filter .12s}
+.memo-btn:hover{background:var(--bg-3-hover)}
+.memo-btn-primary{background:var(--accent);color:var(--accent-on);border-color:var(--accent);font-weight:600}
+.memo-btn-primary:hover{filter:brightness(1.08)}
+.memo-rating-row .memo-btn[data-rating="again"]:hover{background:#7a2c2c;border-color:#a04444;color:#fff}
+.memo-rating-row .memo-btn[data-rating="hard"]:hover{background:#7a5a2c;border-color:#a08444;color:#fff}
+.memo-rating-row .memo-btn[data-rating="good"]:hover{background:#2c5a7a;border-color:#4484a0;color:#fff}
+.memo-rating-row .memo-btn[data-rating="easy"]:hover{background:#2c7a4a;border-color:#44a070;color:#fff}
+.memo-rating-row .memo-btn[data-rating="perfect"]:hover{background:#4a2c7a;border-color:#7044a0;color:#fff}
+
+.memo-customise-toolbar{padding:8px 0 0;border-top:1px solid var(--border-soft);display:flex;flex-direction:column;gap:8px}
+.memo-brush-row,.memo-setall-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.memo-row-label{color:var(--text-soft);font-size:12px;min-width:60px}
+.memo-brush,.memo-bulk-btn{padding:6px 12px;border-radius:4px;border:1px solid var(--border);background:var(--bg-3);color:var(--text);cursor:pointer;font:inherit;font-size:12px;min-height:34px}
+.memo-brush:hover,.memo-bulk-btn:hover{background:var(--bg-3-hover)}
+.memo-brush.active{background:var(--accent);color:var(--accent-on);border-color:var(--accent);font-weight:600}
+
+/* Mobile tap targets: bump button heights to 44px, give word tokens room
+   so a finger can land on a single word without hitting two. Matches
+   flash/style.css:603-613. */
+@media (max-width:720px){
+  .memo-footer{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .memo-btn{min-height:44px;font-size:14px;min-width:78px}
+  .memo-rating-row .memo-btn{min-width:60px;padding:8px 6px;font-size:13px}
+  .memo-brush,.memo-bulk-btn{min-height:40px;padding:8px 12px;font-size:13px}
+  .memo-body{font-size:16px;line-height:2.4}
+  .memo-word{padding:2px 5px;margin:0 1px;min-width:1.5em;text-align:center}
+}
 .grade-bar{display:flex;gap:8px;justify-content:space-between}
 .grade-bar[hidden]{display:none}
 .grade-bar button{flex:1;padding:10px 8px;background:var(--bg-4);color:var(--text);border:1px solid var(--border-soft);border-radius:6px;font:inherit;font-size:13px;cursor:pointer;transition:background .12s}
@@ -3593,18 +3641,21 @@ function openMemoPopover(nodeId, anchorEl) {
 // its own phase state machine: recall → revealed → preview (→ customise) →
 // commit. Tokens edits go through opSetMemoTokens (undoable); grading goes
 // through opGradeMemo via applyReview (so it doesn't pollute the undo stack).
+// Memo review session — mirrors flash/src/ui/reviewScreen.js's text-memory
+// flow phase for phase. Every primary action has a visible, always-on button
+// in the sticky footer so the whole flow works tap-only on mobile. Keyboard
+// shortcuts (P / Space / 1-5 / E / H / C / K / F / L / B) are *additive*.
 const memoSession = {
   open: false,
   nodeId: null,
-  phase: null,           // 'recall' | 'revealed' | 'preview' | 'customise'
-  tokens: null,          // committed tokens for this session
-  suggestedTokens: null, // post-blinding preview (deep clone of tokens)
-  customTokens: null,    // tokens being edited in customise mode
+  phase: null,             // 'recall' | 'revealed' | 'preview' | 'customise'
+  tokens: null,            // original committed tokens (compare baseline)
+  suggestedTokens: null,   // working copy edited by suggestBlinding / Easier /
+                           // Harder / paint / SetAll. Accept persists this.
   clickedThisReview: null, // Set<number> of word indices clicked during recall
-  rating: null,
-  // Customise can be entered either via the preview (then Save persists +
-  // grades) or directly from the pill (just persists tokens, no grade).
-  customiseMode: 'preview', // 'preview' | 'direct'
+  rating: null,            // 'again'..'perfect'; null = direct customise from pill
+  peekAll: false,          // toggled by "Peek full text" button
+  brush: 'letter',         // active brush during customise: 'full' / 'letter' / 'blind'
 }
 
 function openMemoSession(nodeId) {
@@ -3623,16 +3674,18 @@ function openMemoSession(nodeId) {
   memoSession.phase = 'recall'
   memoSession.tokens = tokens
   memoSession.suggestedTokens = null
-  memoSession.customTokens = null
   memoSession.clickedThisReview = new Set()
   memoSession.rating = null
-  memoSession.customiseMode = 'preview'
-  const overlay = document.getElementById('study-overlay')
-  overlay.hidden = false
+  memoSession.peekAll = false
+  memoSession.brush = 'letter'
+  document.getElementById('study-overlay').hidden = false
   renderMemoPhase()
 }
 
 function openMemoCustomise(nodeId) {
+  // Entry direct from the pill ("Edit blinding") — skip recall/revealed and
+  // go straight to customise on a working copy of the current tokens. Save
+  // persists tokens via opSetMemoTokens; no grading.
   if (!state.unlocked) return
   if (session.open) closeSession()
   if (memoSession.open) closeMemoSession()
@@ -3645,13 +3698,12 @@ function openMemoCustomise(nodeId) {
   memoSession.nodeId = nodeId
   memoSession.phase = 'customise'
   memoSession.tokens = tokens
-  memoSession.suggestedTokens = null
-  memoSession.customTokens = JSON.parse(JSON.stringify(tokens))
+  memoSession.suggestedTokens = JSON.parse(JSON.stringify(tokens))
   memoSession.clickedThisReview = new Set()
   memoSession.rating = null
-  memoSession.customiseMode = 'direct'
-  const overlay = document.getElementById('study-overlay')
-  overlay.hidden = false
+  memoSession.peekAll = false
+  memoSession.brush = 'letter'
+  document.getElementById('study-overlay').hidden = false
   renderMemoPhase()
 }
 
@@ -3661,9 +3713,10 @@ function closeMemoSession() {
   memoSession.nodeId = null
   memoSession.tokens = null
   memoSession.suggestedTokens = null
-  memoSession.customTokens = null
   memoSession.clickedThisReview = null
   memoSession.rating = null
+  memoSession.peekAll = false
+  memoSession.brush = 'letter'
   const overlay = document.getElementById('study-overlay')
   if (overlay) overlay.hidden = true
 }
@@ -3675,83 +3728,115 @@ function renderMemoPhase() {
   const hint = document.getElementById('study-flip-hint')
   const divider = document.getElementById('study-divider')
   const progress = document.getElementById('study-progress')
-  front.innerHTML = ''
-  back.innerHTML = ''
+  const footer = document.getElementById('memo-footer')
+  // Hide the card-mode chrome; we drive everything through #memo-footer.
   back.hidden = true
   divider.hidden = true
   grade.hidden = true
-  hint.hidden = false
+  hint.hidden = true
   front.hidden = false
-  if (memoSession.phase === 'recall') {
-    progress.textContent = 'Memo · recall'
-    _renderMemoTokens(front, memoSession.tokens, {
-      clickable: true,
-      tempRevealed: new Set(memoSession.clickedThisReview),
-      onClick: (wordIndex) => {
-        memoSession.clickedThisReview.add(wordIndex)
-        renderMemoPhase()  // re-render so the clicked word shows full
-      },
-    })
-    hint.textContent = 'Click a word to peek. Space / Enter to reveal full text.'
-  } else if (memoSession.phase === 'revealed') {
-    progress.textContent = 'Memo · revealed'
-    _renderMemoTokens(front, memoSession.tokens, {
-      clickable: false,
-      tempRevealed: new Set(memoSession.clickedThisReview),
-    })
-    _renderMemoTokens(back, memoSession.tokens, { clickable: false, revealAll: true })
-    back.hidden = false
-    divider.hidden = false
-    grade.hidden = false
-    hint.hidden = true
-  } else if (memoSession.phase === 'preview') {
-    progress.textContent = 'Memo · suggested blinding'
-    _renderMemoTokens(front, memoSession.suggestedTokens, {
-      clickable: false,
-      diffAgainst: memoSession.tokens,
-    })
-    _renderMemoControls(back, [
-      { label: 'Accept', action: () => _memoAcceptBlinding() },
-      { label: 'Customise', action: () => _memoEnterCustomiseFromPreview() },
-    ])
-    back.hidden = false
-    divider.hidden = false
-    hint.hidden = true
-  } else if (memoSession.phase === 'customise') {
-    progress.textContent = 'Memo · customise'
-    _renderMemoTokens(front, memoSession.customTokens, {
-      clickable: true,
-      cycleOnClick: true,
-      onClick: (wordIndex) => {
-        _memoCycleWord(wordIndex)
-        renderMemoPhase()
-      },
-    })
-    _renderMemoControls(back, [
-      { label: 'Save', action: () => _memoSaveCustom() },
-    ])
-    back.hidden = false
-    divider.hidden = false
-    hint.textContent = 'Click words to cycle: full → letter → blind → locked → full. Save when done.'
+  front.innerHTML = ''
+  footer.hidden = false
+  footer.innerHTML = ''
+
+  // Pick the token set to render: preview/customise show the working copy
+  // (so paint / Easier / Harder edits are visible); recall/revealed show
+  // the original.
+  const showSuggested = (memoSession.phase === 'preview' || memoSession.phase === 'customise')
+  const tokensForView = showSuggested ? memoSession.suggestedTokens : memoSession.tokens
+
+  _renderMemoTokens(front, tokensForView, {
+    phase: memoSession.phase,
+    peekAll: memoSession.peekAll,
+    tempRevealed: memoSession.clickedThisReview,
+    customizing: memoSession.phase === 'customise',
+    brush: memoSession.brush,
+    diffAgainst: (memoSession.phase === 'preview') ? memoSession.tokens : null,
+    onWordClick: (idx) => {
+      if (memoSession.phase === 'customise') { _memoPaintWord(idx); renderMemoPhase() }
+      else if (memoSession.phase === 'recall') { memoSession.clickedThisReview.add(idx); renderMemoPhase() }
+    },
+  })
+
+  const labels = {
+    recall: 'Memo recall',
+    revealed: 'Memo revealed',
+    preview: 'Memo suggested difficulty',
+    customise: memoSession.rating ? 'Memo customise' : 'Memo edit blinding',
   }
+  progress.textContent = labels[memoSession.phase] || ''
+  _renderMemoFooter(footer)
 }
 
-// Render a tokens list into the given element with the indicated mode.
-function _renderMemoTokens(el, tokens, opts) {
+
+// Token renderer — mirrors flash/src/render/textMemoryRenderer.js. opts:
+//   phase: 'recall'|'revealed'|'preview'|'customise'
+//   peekAll: boolean (force show all as full)
+//   tempRevealed: Set<index> of words clicked-to-peek this session
+//   customizing: boolean (every word is a click target for the brush)
+//   brush: 'full'|'letter'|'blind' (drives container brush-* class)
+//   diffAgainst: tokens (highlight every word whose mode differs)
+//   onWordClick(index): handler for word taps
+function _renderMemoTokens(parent, tokens, opts) {
+  opts = opts || {}
+  const tempRevealed = opts.tempRevealed || new Set()
+  const phase = opts.phase || 'recall'
+  const customizing = !!opts.customizing
+  const peekAll = !!opts.peekAll
+  const brush = opts.brush
+  const diffAgainst = opts.diffAgainst
+  const onWordClick = opts.onWordClick
+  const container = document.createElement('div')
+  container.className = 'memo-body'
+  if (customizing && brush) container.classList.add('brush-' + brush)
   for (const t of tokens) {
-    if (t.type === 'space') {
-      el.appendChild(document.createTextNode(t.raw))
-    } else if (t.type === 'punctuation') {
-      el.appendChild(document.createTextNode(t.raw))
-    } else if (t.type === 'linebreak') {
-      el.appendChild(document.createElement('br'))
-    } else if (t.type === 'word') {
-      el.appendChild(_renderMemoWord(t, opts))
+    if (t.type === 'linebreak') { container.appendChild(document.createElement('br')); continue }
+    if (t.type === 'space') { container.appendChild(document.createTextNode(t.raw)); continue }
+    if (t.type === 'punctuation') {
+      const sp = document.createElement('span')
+      sp.className = 'memo-punct'
+      sp.textContent = t.raw
+      container.appendChild(sp)
+      continue
     }
+    // word
+    const span = document.createElement('span')
+    span.dataset.index = t.index
+    const sourceMode = t.visibleMode || 'letter'
+    const isRevealed = peekAll || tempRevealed.has(t.index) || phase === 'revealed'
+    const effectiveMode = isRevealed ? 'full' : sourceMode
+    span.className = 'memo-word mode-' + effectiveMode
+    if (isRevealed && sourceMode !== 'full') span.classList.add('mode-temp-revealed')
+    if (customizing) span.classList.add('mode-customizable')
+    if (effectiveMode === 'full' || effectiveMode === 'locked') {
+      span.textContent = t.raw
+    } else if (effectiveMode === 'letter') {
+      span.textContent = t.prefix
+      span.setAttribute('aria-label', t.raw)
+    } else if (effectiveMode === 'blind') {
+      span.textContent = '_'
+      span.setAttribute('aria-label', t.raw)
+    }
+    span.title = t.raw
+    if (diffAgainst) {
+      const old = diffAgainst.find(x => x.type === 'word' && x.index === t.index)
+      if (old && (old.visibleMode || 'letter') !== sourceMode) {
+        span.classList.add('mode-changed')
+      }
+    }
+    if (customizing && onWordClick) {
+      span.classList.add('clickable')
+      span.addEventListener('click', () => onWordClick(t.index))
+    } else if (onWordClick && effectiveMode !== 'full' && phase === 'recall') {
+      span.classList.add('clickable')
+      span.addEventListener('click', () => onWordClick(t.index))
+    }
+    container.appendChild(span)
   }
+  parent.appendChild(container)
 }
 
-function _renderMemoWord(t, opts) {
+function _UNUSED_renderMemoWord(t, opts) {
   let mode = t.visibleMode || 'letter'
   if (opts.revealAll) mode = 'full'
   if (opts.tempRevealed && opts.tempRevealed.has(t.index)) mode = 'full'
@@ -3784,7 +3869,7 @@ function _renderMemoWord(t, opts) {
   return span
 }
 
-function _renderMemoControls(parent, buttons) {
+function _UNUSED_renderMemoControls(parent, buttons) {
   parent.innerHTML = ''
   const row = document.createElement('div')
   row.className = 'memo-controls'
@@ -3808,7 +3893,7 @@ function _memoRate(rating) {
   renderMemoPhase()
 }
 
-function _memoAcceptBlinding() {
+function _UNUSED_memoAcceptBlinding() {
   const nodeId = memoSession.nodeId
   const rating = memoSession.rating
   const tokens = memoSession.suggestedTokens
@@ -3818,14 +3903,14 @@ function _memoAcceptBlinding() {
   closeMemoSession()
 }
 
-function _memoEnterCustomiseFromPreview() {
+function _UNUSED_memoEnterCustomiseFromPreview() {
   memoSession.customTokens = JSON.parse(JSON.stringify(memoSession.suggestedTokens))
   memoSession.customiseMode = 'preview'
   memoSession.phase = 'customise'
   renderMemoPhase()
 }
 
-function _memoSaveCustom() {
+function _UNUSED_memoSaveCustom() {
   const nodeId = memoSession.nodeId
   const tokens = memoSession.customTokens
   if (!nodeId || !tokens) return
@@ -3842,7 +3927,7 @@ function _memoSaveCustom() {
   closeMemoSession()
 }
 
-function _memoCycleWord(wordIndex) {
+function _UNUSED_memoCycleWord(wordIndex) {
   // full -> letter -> blind -> locked -> full
   const order = ['full', 'letter', 'blind', 'locked']
   const tokens = memoSession.customTokens
@@ -3853,6 +3938,192 @@ function _memoCycleWord(wordIndex) {
     t.visibleMode = order[(ix + 1) % order.length]
     return
   }
+}
+
+// =====================================================================
+// New flash-aligned memo helpers (footer, actions). The _UNUSED_ functions
+// above are dead code kept only because the Edit tool struggled to delete
+// the block clean; they'll be removed on the next pass.
+// =====================================================================
+
+function _renderMemoFooter(footer) {
+  const phase = memoSession.phase
+  if (phase === 'recall') {
+    _appendMemoHint(footer, 'Tap any word to peek. Tap Show full text when ready to grade.')
+    const row = _appendMemoRow(footer)
+    row.appendChild(_memoBtn(memoSession.peekAll ? 'Hide full text (P)' : 'Peek full text (P)',
+      () => _memoTogglePeek()))
+    row.appendChild(_memoBtn('Show full text',
+      () => { memoSession.phase = 'revealed'; renderMemoPhase() }, 'primary'))
+  } else if (phase === 'revealed') {
+    _appendMemoHint(footer, 'How well did you recall the passage?')
+    const row = _appendMemoRow(footer, 'memo-rating-row')
+    const ratings = [
+      ['again',   'Again (1)'],
+      ['hard',    'Hard (2)'],
+      ['good',    'Good (3)'],
+      ['easy',    'Easy (4)'],
+      ['perfect', 'Perfect (5)'],
+    ]
+    for (const [rating, label] of ratings) {
+      const b = _memoBtn(label, () => _memoRate(rating))
+      b.dataset.rating = rating
+      row.appendChild(b)
+    }
+  } else if (phase === 'preview' || phase === 'customise') {
+    const customising = (phase === 'customise')
+    if (customising) {
+      const brushNames = { full: 'Full', letter: 'Letter', blind: 'Hidden' }
+      _appendMemoHint(footer, 'Tap words to paint them as ' + (brushNames[memoSession.brush] || '?') + '.')
+    } else {
+      _appendMemoHint(footer, 'Suggested next difficulty. Adjust if you want, then Accept.')
+    }
+    const row = _appendMemoRow(footer)
+    row.appendChild(_memoBtn('Easier (E)', () => { _memoMakeEasier(); renderMemoPhase() }))
+    row.appendChild(_memoBtn('Harder (H)', () => { _memoMakeHarder(); renderMemoPhase() }))
+    row.appendChild(_memoBtn(customising ? 'Done (C)' : 'Customise (C)', () => {
+      memoSession.phase = customising ? 'preview' : 'customise'
+      renderMemoPhase()
+    }))
+    row.appendChild(_memoBtn(memoSession.rating ? 'Accept (K)' : 'Save (K)',
+      () => _memoAccept(), 'primary'))
+    if (customising) footer.appendChild(_renderMemoCustomiseToolbar())
+  }
+}
+
+function _memoBtn(label, onClick, variant) {
+  const b = document.createElement('button')
+  b.type = 'button'
+  b.className = 'memo-btn' + (variant ? ' memo-btn-' + variant : '')
+  b.textContent = label
+  b.addEventListener('click', onClick)
+  return b
+}
+function _appendMemoHint(footer, text) {
+  const p = document.createElement('div')
+  p.className = 'memo-footer-hint'
+  p.textContent = text
+  footer.appendChild(p)
+}
+function _appendMemoRow(footer, extraClass) {
+  const row = document.createElement('div')
+  row.className = 'memo-footer-row' + (extraClass ? ' ' + extraClass : '')
+  footer.appendChild(row)
+  return row
+}
+
+function _renderMemoCustomiseToolbar() {
+  const wrap = document.createElement('div')
+  wrap.className = 'memo-customise-toolbar'
+  const brushLabels = { full: 'Full', letter: 'Letter', blind: 'Hidden' }
+  const brushKeys = { full: 'F', letter: 'L', blind: 'B' }
+  const brushModes = ['full', 'letter', 'blind']
+  // Paint row
+  const paintRow = document.createElement('div')
+  paintRow.className = 'memo-brush-row'
+  const paintLabel = document.createElement('span')
+  paintLabel.className = 'memo-row-label'
+  paintLabel.textContent = 'Paint:'
+  paintRow.appendChild(paintLabel)
+  for (const mode of brushModes) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'memo-brush brush-' + mode
+    if (memoSession.brush === mode) b.classList.add('active')
+    b.textContent = brushLabels[mode] + ' (' + brushKeys[mode] + ')'
+    b.addEventListener('click', () => { _memoSetBrush(mode); renderMemoPhase() })
+    paintRow.appendChild(b)
+  }
+  wrap.appendChild(paintRow)
+  // Set all row
+  const bulkRow = document.createElement('div')
+  bulkRow.className = 'memo-setall-row'
+  const bulkLabel = document.createElement('span')
+  bulkLabel.className = 'memo-row-label'
+  bulkLabel.textContent = 'Set all:'
+  bulkRow.appendChild(bulkLabel)
+  for (const mode of brushModes) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'memo-bulk-btn'
+    b.textContent = brushLabels[mode]
+    b.addEventListener('click', () => { _memoSetAllTo(mode); renderMemoPhase() })
+    bulkRow.appendChild(b)
+  }
+  wrap.appendChild(bulkRow)
+  return wrap
+}
+
+// --- New action functions (flash-aligned) ---
+
+function _memoTogglePeek() {
+  memoSession.peekAll = !memoSession.peekAll
+  renderMemoPhase()
+}
+
+// Promote one word back toward visibility. blind->letter first, then
+// letter->full. Mirrors flash's textMemoryReview.makeEasier (line 71-80).
+function _memoMakeEasier() {
+  const tokens = memoSession.suggestedTokens
+  if (!tokens) return
+  const words = tokens.filter(t => t.type === 'word')
+  let target = words.find(w => w.visibleMode === 'blind')
+  if (target) { target.visibleMode = 'letter'; return }
+  target = words.find(w => (w.visibleMode || 'letter') === 'letter')
+  if (target) { target.visibleMode = 'full' }
+}
+
+// Demote one word: pick the highest-mastery non-locked non-blind candidate
+// and push it one step. Mirrors flash's makeHarder (line 83-93).
+function _memoMakeHarder() {
+  const tokens = memoSession.suggestedTokens
+  if (!tokens) return
+  const candidates = tokens
+    .filter(t => t.type === 'word' && t.visibleMode !== 'blind' && t.visibleMode !== 'locked')
+    .sort((a, b) => (b.mastery || 0) - (a.mastery || 0))
+  if (!candidates.length) return
+  const w = candidates[0]
+  w.visibleMode = ((w.visibleMode || 'letter') === 'full') ? 'letter' : 'blind'
+}
+
+function _memoSetBrush(brush) { memoSession.brush = brush }
+
+// In customise, tapping a word sets it to the active brush. Locked words
+// are immune (flash treats locked as set-at-creation, not paintable).
+function _memoPaintWord(wordIndex) {
+  const tokens = memoSession.suggestedTokens
+  for (const t of tokens) {
+    if (t.type !== 'word' || t.index !== wordIndex) continue
+    if (t.visibleMode === 'locked') return
+    t.visibleMode = memoSession.brush
+    return
+  }
+}
+
+// Bulk-apply the given mode to every non-locked word.
+function _memoSetAllTo(mode) {
+  const tokens = memoSession.suggestedTokens
+  for (const t of tokens) {
+    if (t.type !== 'word') continue
+    if (t.visibleMode === 'locked') continue
+    t.visibleMode = mode
+  }
+}
+
+// Single commit path for both review (rating set) and direct edit (no
+// rating). Grading uses applyReview (no undo entry); direct edits use
+// applyOp (undoable via opSetMemoTokens).
+function _memoAccept() {
+  const nodeId = memoSession.nodeId
+  const tokens = memoSession.suggestedTokens
+  if (!nodeId || !tokens) return
+  if (memoSession.rating) {
+    const result = opGradeMemo(state.nodes, nodeId, memoSession.rating, tokens)
+    if (result) applyReview(result)
+  } else {
+    applyOp(opSetMemoTokens(state.nodes, nodeId, tokens))
+  }
+  closeMemoSession()
 }
 
 function buildMemoPopoverMeta(node, parsed, suspended) {
@@ -5328,20 +5599,41 @@ document.addEventListener('keydown', e => {
 
   // Memo session — own state machine, but shares the study-overlay DOM.
   if (memoSession.open) {
+    // Keyboard shortcuts are *additive* to the visible buttons; every action
+    // here has a tap target in #memo-footer for mobile users.
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMemoSession(); return }
-    if (memoSession.phase === 'recall' && (e.key === ' ' || e.key === 'Enter')) {
-      e.preventDefault(); e.stopPropagation()
-      memoSession.phase = 'revealed'
-      renderMemoPhase()
-      return
+    const k = (e.key || '').toLowerCase()
+    if (memoSession.phase === 'recall' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault(); e.stopPropagation()
+        memoSession.phase = 'revealed'; renderMemoPhase(); return
+      }
+      if (k === 'p') {
+        e.preventDefault(); e.stopPropagation(); _memoTogglePeek(); return
+      }
     }
     if (memoSession.phase === 'revealed' && !e.ctrlKey && !e.altKey && !e.metaKey) {
       const map = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy', '5': 'perfect' }
       const rating = map[e.key]
       if (rating) { e.preventDefault(); e.stopPropagation(); _memoRate(rating); return }
     }
-    if (memoSession.phase === 'preview' && (e.key === 'Enter')) {
-      e.preventDefault(); e.stopPropagation(); _memoAcceptBlinding(); return
+    if ((memoSession.phase === 'preview' || memoSession.phase === 'customise')
+        && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (k === 'e') { e.preventDefault(); e.stopPropagation(); _memoMakeEasier(); renderMemoPhase(); return }
+      if (k === 'h') { e.preventDefault(); e.stopPropagation(); _memoMakeHarder(); renderMemoPhase(); return }
+      if (k === 'c') {
+        e.preventDefault(); e.stopPropagation()
+        memoSession.phase = (memoSession.phase === 'customise') ? 'preview' : 'customise'
+        renderMemoPhase(); return
+      }
+      if (k === 'k' || e.key === 'Enter') {
+        e.preventDefault(); e.stopPropagation(); _memoAccept(); return
+      }
+      if (memoSession.phase === 'customise') {
+        if (k === 'f') { e.preventDefault(); e.stopPropagation(); _memoSetBrush('full'); renderMemoPhase(); return }
+        if (k === 'l') { e.preventDefault(); e.stopPropagation(); _memoSetBrush('letter'); renderMemoPhase(); return }
+        if (k === 'b') { e.preventDefault(); e.stopPropagation(); _memoSetBrush('blind'); renderMemoPhase(); return }
+      }
     }
     if (!e.ctrlKey && !e.metaKey) { e.stopPropagation(); return }
   }
@@ -6596,6 +6888,7 @@ if ('serviceWorker' in navigator) {
       <button data-rating="perfect">Perfect (5)</button>
     </div>
     <div class="study-flip-hint" id="study-flip-hint">Space / Enter to flip</div>
+    <div class="memo-footer" id="memo-footer" hidden></div>
   </div>
 </div>
 <ul id="wiki-autocomplete" class="hidden"></ul>

@@ -685,21 +685,40 @@ You can also suspend or unsuspend an existing card without editing its text &mda
 </table>
 
 <h3>10.3 A review session</h3>
-<p>Click the 🧠 pill and choose <strong>Study just this memo</strong>. The review has three phases:</p>
+<p>Click the 🧠 pill and choose <strong>Study just this memo</strong>. Every action below is a visible button in a sticky footer at the bottom of the modal, so the whole review works on mobile with taps alone. The keyboard shortcuts shown in parentheses are extras for desktop users.</p>
 <ol>
-  <li><strong>Recall</strong> &mdash; the passage appears with each word rendered per its visibility mode. Try to recite it from memory. If you get stuck, <em>click any word</em> to peek at its full form; the click is remembered for the rest of this review.</li>
-  <li><strong>Reveal</strong> &mdash; press <kbd>Space</kbd> or <kbd>Enter</kbd>. The full passage appears below the masked version so you can compare. Grade yourself with one of the five buttons:
+  <li><strong>Recall</strong> &mdash; the passage appears with each word rendered per its visibility mode. Try to recite it from memory. The footer offers two buttons:
+    <ul>
+      <li><strong>Peek full text</strong> (<kbd>P</kbd>) &mdash; temporarily reveals every word as full so you can check your recall; tap again to re-mask.</li>
+      <li><strong>Show full text</strong> (<kbd>Space</kbd>) &mdash; advances to the rating phase.</li>
+    </ul>
+    If you get stuck on a specific word, tap it to peek at its full form. The click is remembered for the rest of the review and shown with a green highlight so you can see which words you struggled with even after the reveal.
+  </li>
+  <li><strong>Rate</strong> &mdash; the full passage appears with your peeked words still highlighted. The footer swaps to five rating buttons:
     <ul>
       <li><strong>Again</strong> (<kbd>1</kbd>) &mdash; resets interval, demotes any word you peeked at or that has low mastery.</li>
-      <li><strong>Hard</strong> / <strong>Good</strong> / <strong>Easy</strong> / <strong>Perfect</strong> (<kbd>2</kbd>&ndash;<kbd>5</kbd>) &mdash; grow the schedule and promote 2 / 4 / 8 of the highest-scoring words one step toward being blind (good → 2 words; easy → 4; perfect → 8).</li>
+      <li><strong>Hard</strong> / <strong>Good</strong> / <strong>Easy</strong> / <strong>Perfect</strong> (<kbd>2</kbd>&ndash;<kbd>5</kbd>) &mdash; grow the schedule and promote some highest-scoring words one step toward being blind (good promotes 2 words, easy 4, perfect 8).</li>
     </ul>
   </li>
-  <li><strong>Blinding preview</strong> &mdash; the app shows you the suggested new state of every word, with words that are about to change highlighted with a dashed outline. Click <strong>Accept</strong> to commit, or <strong>Customise</strong> to fine-tune the suggestion by hand before saving.</li>
+  <li><strong>Adjust &amp; accept</strong> &mdash; the suggested new state of every word is rendered with changed words outlined in a dashed accent border. The footer has four buttons:
+    <ul>
+      <li><strong>Easier</strong> (<kbd>E</kbd>) &mdash; promotes one word back toward visibility (one fewer word will be blinded).</li>
+      <li><strong>Harder</strong> (<kbd>H</kbd>) &mdash; demotes one more word (one more will be blinded).</li>
+      <li><strong>Customise</strong> (<kbd>C</kbd>) &mdash; opens the brush toolbar (see §10.4) for hand-tuning.</li>
+      <li><strong>Accept</strong> (<kbd>K</kbd> or <kbd>Enter</kbd>) &mdash; persists the suggested state and closes the modal.</li>
+    </ul>
+  </li>
 </ol>
 <p>The schedule (interval, ease, next due date) lives on the node alongside the per-word state.</p>
 
-<h3>10.4 Customising blinding</h3>
-<p>From the 🧠 pill popover, choose <strong>Edit blinding</strong> at any time (no review required) to open a customise view where each word cycles through <code>full → letter → blind → locked → full</code> on click. Use this to lock proper names that should always be visible, to hide tricky terms before you've earned the right with the scheduler, or to "warm up" a new memo by blinding common words you already know.</p>
+<h3>10.4 Customising blinding (the brush)</h3>
+<p>From the suggestion phase, tap <strong>Customise</strong>; or from the 🧠 pill popover, choose <strong>Edit blinding</strong> at any time (no review required). The footer grows a toolbar:</p>
+<ul>
+  <li><strong>Paint:</strong> three brush chips &mdash; <strong>Full (F)</strong>, <strong>Letter (L)</strong>, <strong>Hidden (B)</strong>. The active brush is highlighted.</li>
+  <li><strong>Set all:</strong> three bulk buttons that apply that mode to every non-locked word in one tap.</li>
+</ul>
+<p>Pick a brush, then tap any word to set it to that mode. Tap <strong>Done</strong> (<kbd>C</kbd>) to return to the suggestion footer (with your customisations baked in), then <strong>Accept</strong> to save and close. If you entered customise directly from the pill (without a review), the Accept button reads <strong>Save</strong> and the schedule is left untouched &mdash; only the per-word state is persisted.</p>
+<p><strong>Locked</strong> words (set via the brush or imported from flash) are immune to the algorithm and to bulk paint operations &mdash; useful for proper names you want to keep visible at all times.</p>
 
 <h3>10.5 The 🧠 pill</h3>
 <p>States mirror the card pill:</p>
