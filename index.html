@@ -5407,11 +5407,18 @@ async function cloudRenderVaultLists() {
   const remoteList = document.getElementById('cloud-remote-vaults')
   const remoteEmpty = document.getElementById('cloud-remote-empty')
   const syncState = await cloudGetSyncState()
-  const localVaults = await getAllVaults()
-  let remoteVaults = []
-  try { remoteVaults = await cloudListVaults() }
+  const localVaultsRaw = await getAllVaults()
+  let remoteVaultsRaw = []
+  try { remoteVaultsRaw = await cloudListVaults() }
   catch (e) { setErr('cloud-error', 'Failed to list cloud vaults: ' + (e.message || e)) }
   if (myId !== _cloudRenderId) return  // a newer render started — let it win
+
+  // De-duplicate by id before rendering. Defends against any upstream source
+  // that might return the same vault twice (Firestore listings, IndexedDB
+  // reads after partial writes, etc.) so the UI never shows phantoms.
+  const localVaults  = Array.from(new Map(localVaultsRaw .map(v  => [v.id,           v ])).values())
+  const remoteVaults = Array.from(new Map(remoteVaultsRaw.map(rv => [rv.cloudVaultId, rv])).values())
+
   localList.innerHTML = ''
   remoteList.innerHTML = ''
 
