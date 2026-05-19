@@ -1062,6 +1062,13 @@ async function deleteVault(vaultId) {
   await db.keyRecords.where('vaultId').equals(vaultId).delete()
   await db.encryptedRecords.where('vaultId').equals(vaultId).delete()
   await db.encryptedAssets.where('vaultId').equals(vaultId).delete()
+  // Clear any cloud-sync link record for this vault so the cloud-only list
+  // doesn't keep treating the deleted vault as "already on this device".
+  const cs = await getAppState('cloudSync', null)
+  if (cs?.vaults && cs.vaults[vaultId]) {
+    delete cs.vaults[vaultId]
+    await setAppState('cloudSync', cs)
+  }
 }
 
 async function getAllVaults() { return db.vaultMeta.toArray() }
