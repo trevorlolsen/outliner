@@ -1,4 +1,4 @@
-const CACHE = 'outline-v11'
+const CACHE = 'outline-v14'
 const PRECACHE = [
   './',
   './index.html',
@@ -8,6 +8,25 @@ const PRECACHE = [
   './icons/icon-192.png',
   './icons/icon-512.png',
 ]
+
+// Hosts whose responses must always go to the network — never cache.
+// Firebase SDK + API endpoints stay live so we don't pin to a stale version
+// or accidentally cache user data fetched from Firestore/Storage.
+const NETWORK_ONLY_HOSTS = [
+  'gstatic.com',
+  'googleapis.com',
+  'firebaseio.com',
+  'firebaseapp.com',
+  'identitytoolkit.googleapis.com',
+  'securetoken.googleapis.com',
+]
+
+function isNetworkOnly(url) {
+  try {
+    const host = new URL(url).host
+    return NETWORK_ONLY_HOSTS.some(h => host === h || host.endsWith('.' + h))
+  } catch { return false }
+}
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)))
@@ -22,6 +41,7 @@ self.addEventListener('activate', e => {
 })
 
 self.addEventListener('fetch', e => {
+  if (isNetworkOnly(e.request.url)) return  // let the browser handle it
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached

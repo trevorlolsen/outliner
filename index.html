@@ -8,6 +8,8 @@
 <meta name="theme-color" content="#1a1a1a">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script async src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous" onload="if(window._onKatexLoad)window._onKatexLoad()"></script>
+<!-- Optional cloud sync config. Absent → cloud-sync UI is hidden. Add via cloud-config.js (see CLOUD_SYNC_SETUP.md). -->
+<script src="cloud-config.js" onerror="window.LOCAL_OUTLINE_CLOUD=null"></script>
 <style>
 :root {
   --bg: #141414;
@@ -268,6 +270,21 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .vl-btn:hover{background:var(--bg-3-hover);color:var(--text)}
 .vl-btn.danger:hover{color:var(--danger);border-color:var(--danger)}
 .vault-import-btn{width:100%;margin-top:4px;font-size:12px}
+.cloud-modal{width:520px;max-width:95vw}
+.cloud-modal h3.cloud-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-soft);margin:18px 0 8px}
+#cloud-auth-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;border:1px solid var(--border-soft);border-radius:6px;background:var(--bg-2);margin-bottom:8px}
+#cloud-auth-row #cloud-auth-status{flex:1;margin:0;font-size:13px;color:var(--text-dim)}
+.cloud-vault-list{list-style:none;margin:0;padding:0;max-height:240px;overflow-y:auto;border:1px solid var(--vault-divider);border-radius:6px}
+.cloud-vault-list:empty{display:none}
+.cloud-vault-list li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--vault-divider);flex-wrap:wrap}
+.cloud-vault-list li:last-child{border-bottom:none}
+.cloud-vault-list .cv-name{flex:1;min-width:140px;font-size:13px;color:var(--text-muted)}
+.cloud-vault-list .cv-sub{font-size:11px;color:var(--text-fainter);width:100%;margin-top:2px}
+.cloud-vault-list .cv-linked{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);padding:1px 6px;border:1px solid var(--accent);border-radius:9px;flex-shrink:0}
+.cloud-vault-list .cv-unlinked{color:var(--text-faintest);font-size:11px;flex-shrink:0}
+.cloud-result{margin-top:10px;min-height:18px}
+.cloud-result.success{color:var(--autosnap-active-text)}
+.cloud-result.warn{color:#e0a020}
 #vault-list .vault-empty{color:var(--text-faintest);font-size:13px;padding:20px 0;text-align:center;width:100%}
 #back-to-vaults-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:15px;padding:0 5px 0 0;line-height:1;flex-shrink:0}
 #back-to-vaults-btn:hover{color:var(--text-dim)}
@@ -590,6 +607,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
     </div>
     <ul id="vault-list"></ul>
     <button id="vault-import-btn" class="btn btn-secondary vault-import-btn">Import vault from snapshot…</button>
+    <button id="vault-cloud-btn" class="btn btn-secondary vault-import-btn hidden">Cloud sync…</button>
   </div>
 </div>
 
@@ -710,6 +728,45 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
   </div>
 </div>
 
+<!-- Cloud sync -->
+<div id="cloud-modal" class="overlay hidden">
+  <div class="modal cloud-modal">
+    <h2>Cloud Sync</h2>
+    <div id="cloud-auth-row">
+      <div id="cloud-auth-status" class="hint">Loading…</div>
+      <button class="btn btn-primary hidden" id="cloud-signin-btn">Sign in with Google</button>
+      <button class="btn btn-secondary hidden" id="cloud-signout-btn">Sign out</button>
+    </div>
+    <div id="cloud-body" class="hidden">
+      <h3 class="cloud-section-title">This device's vaults</h3>
+      <ul id="cloud-local-vaults" class="cloud-vault-list"></ul>
+      <h3 class="cloud-section-title">Cloud-only vaults</h3>
+      <ul id="cloud-remote-vaults" class="cloud-vault-list"></ul>
+      <div id="cloud-remote-empty" class="hint hidden">No cloud-only vaults — every vault in your account is already on this device.</div>
+    </div>
+    <div id="cloud-result" class="hint cloud-result"></div>
+    <div class="error-msg" id="cloud-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cloud-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Password prompt for pulling a cloud-only vault -->
+<div id="cloud-pull-modal" class="overlay hidden">
+  <div class="modal">
+    <h2 id="cloud-pull-title">Pull vault from cloud</h2>
+    <p class="hint">Enter the vault password used when this vault was first created. The password never leaves your device.</p>
+    <label for="cloud-pull-pass">Vault password</label>
+    <input type="password" id="cloud-pull-pass" autocomplete="current-password">
+    <div class="error-msg" id="cloud-pull-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cloud-pull-cancel">Cancel</button>
+      <button class="btn btn-primary" id="cloud-pull-submit">Pull &amp; unlock</button>
+    </div>
+  </div>
+</div>
+
 <!-- Main app -->
 <div id="app" class="hidden">
   <aside id="sidebar">
@@ -745,6 +802,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
     <div class="sidebar-bottom">
       <button id="import-btn">Import</button>
       <button id="export-btn">Export</button>
+      <button id="cloud-btn" title="Cloud sync" class="hidden">☁︎</button>
       <button id="theme-btn" title="Toggle light/dark theme">🌙</button>
       <button id="chpass-btn" title="Change vault password">🔑</button>
     </div>
@@ -833,6 +891,15 @@ db.version(2).stores({
   }
   const v = await tx.table('vaultMeta').get('vault')
   if (v && !v.name) await tx.table('vaultMeta').put({ ...v, name: 'Default', createdAt: Date.now() })
+})
+// v3 is a no-op schema bump signaling cloud-sync presence. The cloud sync
+// state itself lives in appState under the 'cloudSync' key (see CLOUD module).
+db.version(3).stores({
+  vaultMeta:        'id',
+  keyRecords:       'id, vaultId',
+  encryptedRecords: 'id, store, vaultId, updatedAt',
+  encryptedAssets:  'id, kind, vaultId, updatedAt',
+  appState:         'key',
 })
 
 // =====================================================================
@@ -1525,6 +1592,544 @@ async function importSnapshot(json, password, vaultName) {
   await putNodes(payload.nodes, newCtx)
   for (const asset of payload.assets) await putAsset(asset.id, asset.kind, fromB64(asset.data), newCtx)
   return newCtx
+}
+
+// =====================================================================
+// CLOUD SYNC  (Firebase — opt-in, see CLOUD_SYNC_SETUP.md)
+//
+// Cloud sees only ciphertext + IVs + updatedAt + record IDs. The wrappedKey
+// and KDF spec are uploaded so a vault opens on any device with the password
+// (same trust model as the encrypted snapshot exporter above).
+//
+// Sync model: explicit Push / Pull buttons; per-vault lastSyncedAt is the
+// conflict threshold. If both local and cloud updatedAt are > lastSyncedAt
+// for the same record, the cloud version is duplicated rather than
+// overwriting local work.
+// =====================================================================
+
+const FIREBASE_SDK_VERSION = '10.13.0'
+const CLOUD_SCHEMA_VERSION = 1
+
+// Firestore caps single docs at ~1 MB. Small assets fit inline; larger ones
+// are split into ~900 KB base64 chunks stored under
+// `assets/{id}/chunks/{0..N-1}`. The hard ceiling (set well above realistic
+// clipboard images) protects the free-tier write budget if a user accidentally
+// pastes a huge file.
+const CLOUD_ASSET_INLINE_MAX_B64 = 960 * 1024
+const CLOUD_ASSET_CHUNK_B64      = 900 * 1024
+const CLOUD_ASSET_MAX_TOTAL_B64  = 20 * 1024 * 1024   // ≈ 15 MB binary
+
+const cloud = {
+  ready:    false,            // SDK loaded + app initialised
+  config:   null,             // window.LOCAL_OUTLINE_CLOUD?.firebase
+  app:      null,             // FirebaseApp
+  auth:     null,             // Auth
+  db:       null,             // Firestore
+  fbAuth:   null,             // auth namespace (signInWithPopup, etc.)
+  fbStore:  null,             // firestore namespace (doc, setDoc, …)
+  user:     null,             // currently signed-in user (or null)
+  authCb:   new Set(),        // listeners for auth state changes
+  authReady: null,            // promise resolved on first onAuthStateChanged fire
+}
+
+// Debug hatch: lets you poke at the cloud module from the browser console.
+// Safe to expose because everything in `cloud` is either auth state (already
+// visible in the SDK) or the SDK namespaces themselves.
+window.__cloud = cloud
+
+function cloudConfigured() { return !!(window.LOCAL_OUTLINE_CLOUD && window.LOCAL_OUTLINE_CLOUD.firebase) }
+
+function cloudOnAuth(cb) { cloud.authCb.add(cb); return () => cloud.authCb.delete(cb) }
+
+async function cloudEnsureLoaded() {
+  if (cloud.ready) return true
+  if (!cloudConfigured()) return false
+  const base = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`
+  const [appMod, authMod, fsMod] = await Promise.all([
+    import(`${base}/firebase-app.js`),
+    import(`${base}/firebase-auth.js`),
+    import(`${base}/firebase-firestore.js`),
+  ])
+  cloud.config   = window.LOCAL_OUTLINE_CLOUD.firebase
+  cloud.app      = appMod.initializeApp(cloud.config)
+  cloud.auth     = authMod.getAuth(cloud.app)
+  cloud.db       = fsMod.getFirestore(cloud.app)
+  cloud.fbAuth   = authMod
+  cloud.fbStore  = fsMod
+  cloud.ready    = true
+  let resolveReady
+  cloud.authReady = new Promise(r => { resolveReady = r })
+  authMod.onAuthStateChanged(cloud.auth, u => {
+    cloud.user = u || null
+    if (resolveReady) { resolveReady(); resolveReady = null }
+    for (const cb of cloud.authCb) { try { cb(cloud.user) } catch (e) { console.error(e) } }
+  })
+  return true
+}
+
+async function cloudSignIn() {
+  if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync is not configured. See CLOUD_SYNC_SETUP.md.')
+  const provider = new cloud.fbAuth.GoogleAuthProvider()
+  const result = await cloud.fbAuth.signInWithPopup(cloud.auth, provider)
+  return result.user
+}
+
+async function cloudSignOut() {
+  if (!cloud.ready) return
+  await cloud.fbAuth.signOut(cloud.auth)
+}
+
+function cloudUserUid() { return cloud.user?.uid || null }
+
+// ---- appState.cloudSync helpers -----------------------------------------
+// Shape: { vaults: { [localVaultId]: { cloudVaultId, lastPushedAt, lastPulledAt, lastSyncedAt } } }
+async function cloudGetSyncState() { return (await getAppState('cloudSync', { vaults: {} })) || { vaults: {} } }
+async function cloudSetVaultLink(localVaultId, patch) {
+  const s = await cloudGetSyncState()
+  s.vaults = s.vaults || {}
+  s.vaults[localVaultId] = { ...(s.vaults[localVaultId] || {}), ...patch }
+  await setAppState('cloudSync', s)
+  return s.vaults[localVaultId]
+}
+async function cloudGetVaultLink(localVaultId) {
+  const s = await cloudGetSyncState()
+  return s.vaults?.[localVaultId] || null
+}
+async function cloudClearVaultLink(localVaultId) {
+  const s = await cloudGetSyncState()
+  if (s.vaults && s.vaults[localVaultId]) {
+    delete s.vaults[localVaultId]
+    await setAppState('cloudSync', s)
+  }
+}
+
+// ---- Firestore path builders --------------------------------------------
+// Vault metadata lives ON the vault doc itself (not a sub-document under it),
+// so it appears in getDocs() listings — Firestore omits "virtual parent" docs
+// that only exist because something was written below them.
+function cloudVaultMetaDoc(uid, cvId) {
+  const { doc } = cloud.fbStore
+  return doc(cloud.db, 'users', uid, 'vaults', cvId)
+}
+function cloudVaultRecordsCol(uid, cvId) {
+  const { collection } = cloud.fbStore
+  return collection(cloud.db, 'users', uid, 'vaults', cvId, 'records')
+}
+function cloudVaultAssetsCol(uid, cvId) {
+  const { collection } = cloud.fbStore
+  return collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets')
+}
+
+// ---- Vault listing (across all the user's cloud-linked vaults) ----------
+async function cloudListVaults() {
+  if (!(await cloudEnsureLoaded())) return []
+  const uid = cloudUserUid(); if (!uid) return []
+  const { collection, getDocs } = cloud.fbStore
+  const vaultsCol = collection(cloud.db, 'users', uid, 'vaults')
+  const snap = await getDocs(vaultsCol)
+  const out = []
+  for (const v of snap.docs) {
+    const data = v.data()
+    // Real meta docs have a 'wrappedKey' field; virtual parent docs from older
+    // pushes (when meta lived at state/meta) have an empty data() object.
+    if (data && data.wrappedKey) out.push({ cloudVaultId: v.id, meta: data })
+  }
+  return out
+}
+
+// ---- Link a local vault to the cloud (first push) -----------------------
+// Uploads vaultMeta + wrappedKey, then performs a full push of records + assets.
+async function cloudLinkVault(localVaultId, ctx, password) {
+  if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
+  const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
+  const existing = await cloudGetVaultLink(localVaultId)
+  if (existing?.cloudVaultId) return cloudPush(localVaultId, ctx)
+  const meta = await db.vaultMeta.get(localVaultId)
+  if (!meta) throw new Error('Local vault not found.')
+  const keyRec = await db.keyRecords.get(`vaultKey-${localVaultId}-v${meta.keyVersion}`)
+  if (!keyRec) throw new Error('Key record missing.')
+  const cvId = genId()
+  const { setDoc } = cloud.fbStore
+  await setDoc(cloudVaultMetaDoc(uid, cvId), {
+    name: meta.name,
+    salt: meta.salt,
+    kdf:  meta.kdf,
+    kdfSpec: meta.kdfSpec,
+    keyVersion: meta.keyVersion,
+    wrappedKey: keyRec.wrappedKey,
+    wrapIv:     keyRec.iv,
+    createdAt:  meta.createdAt,
+    schemaVersion: CLOUD_SCHEMA_VERSION,
+    linkedAt:   now(),
+  })
+  await cloudSetVaultLink(localVaultId, { cloudVaultId: cvId, lastPushedAt: 0, lastPulledAt: 0, lastSyncedAt: 0 })
+  return cloudPush(localVaultId, ctx)
+}
+
+// ---- Pull an existing cloud vault onto this device ----------------------
+// Creates the local vaultMeta + keyRecord from the cloud-side wrappedKey,
+// validates the password by trying to unwrap, then fetches every record/asset.
+async function cloudPullNewVault(cloudVaultId, password) {
+  if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
+  const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
+  const { getDoc } = cloud.fbStore
+  const metaSnap = await getDoc(cloudVaultMetaDoc(uid, cloudVaultId))
+  if (!metaSnap.exists()) throw new Error('Cloud vault not found.')
+  const cmeta = metaSnap.data()
+  // Validate password by unwrapping the key against the cloud-side KDF spec.
+  const passwordKey = await deriveKey(password, cmeta.kdfSpec || { kind: cmeta.kdf, salt: cmeta.salt })
+  let vaultKey
+  try {
+    vaultKey = await crypto.subtle.unwrapKey(
+      'raw', fromB64(cmeta.wrappedKey), passwordKey,
+      { name: 'AES-GCM', iv: fromB64(cmeta.wrapIv) },
+      { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']
+    )
+  } catch { throw new Error('Incorrect password.') }
+  // Write the local vault record + key record. Reuse the cloud vault id so the
+  // local↔cloud mapping is trivially recoverable from local data alone.
+  const localVaultId = genId()
+  await db.vaultMeta.put({
+    id: localVaultId,
+    name: cmeta.name,
+    salt: cmeta.salt,
+    kdf:  cmeta.kdf,
+    kdfSpec: cmeta.kdfSpec,
+    keyVersion: cmeta.keyVersion || 1,
+    createdAt: cmeta.createdAt || now(),
+  })
+  await db.keyRecords.put({
+    id: `vaultKey-${localVaultId}-v${cmeta.keyVersion || 1}`,
+    vaultId: localVaultId,
+    version: cmeta.keyVersion || 1,
+    wrappedKey: cmeta.wrappedKey,
+    iv: cmeta.wrapIv,
+  })
+  const rawKey = await crypto.subtle.exportKey('raw', vaultKey)
+  const runtimeKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+  const ctx = makeCtx(runtimeKey, localVaultId)
+  await cloudSetVaultLink(localVaultId, { cloudVaultId, lastPushedAt: 0, lastPulledAt: 0, lastSyncedAt: 0 })
+  await cloudPull(localVaultId, ctx, /* fullFetch */ true)
+  return { ctx, localVaultId }
+}
+
+// ---- Cloud manifest fetch (id + updatedAt only — cheap reads) -----------
+async function cloudFetchManifest(uid, cvId) {
+  const { getDocs } = cloud.fbStore
+  const recSnap = await getDocs(cloudVaultRecordsCol(uid, cvId))
+  const assetSnap = await getDocs(cloudVaultAssetsCol(uid, cvId))
+  const records = new Map() // id -> { updatedAt, store }
+  for (const d of recSnap.docs) {
+    const data = d.data()
+    records.set(d.id, { updatedAt: data.updatedAt || 0, store: data.store })
+  }
+  const assets = new Map() // id -> { updatedAt, kind }
+  for (const d of assetSnap.docs) {
+    const data = d.data()
+    assets.set(d.id, { updatedAt: data.updatedAt || 0, kind: data.kind })
+  }
+  return { records, assets }
+}
+
+// ---- Push: upload local→cloud, detect conflicts, never overwrite newer cloud
+async function cloudPush(localVaultId, ctx) {
+  if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
+  const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
+  const link = await cloudGetVaultLink(localVaultId)
+  if (!link?.cloudVaultId) throw new Error('Vault is not linked to cloud yet.')
+  const cvId = link.cloudVaultId
+  const since = link.lastSyncedAt || 0
+  const manifest = await cloudFetchManifest(uid, cvId)
+
+  // Local records, raw rows (we re-use the encrypted ciphertext as-is).
+  const localRecs = await db.encryptedRecords.where('vaultId').equals(localVaultId).toArray()
+  const localAssets = await db.encryptedAssets.where('vaultId').equals(localVaultId).toArray()
+
+  let pushed = 0, skipped = 0, conflicts = 0
+  const conflictRecords = [] // { localRec, cloudId } for follow-up duplicate handling
+
+  // ---- records ----
+  const { setDoc, writeBatch, doc, getDoc } = cloud.fbStore
+  const batchOps = []
+  for (const lr of localRecs) {
+    const cm = manifest.records.get(lr.id)
+    const localChanged = lr.updatedAt > since
+    const cloudChanged = cm && cm.updatedAt > since
+    if (cm && cm.updatedAt === lr.updatedAt) { skipped++; continue }
+    if (localChanged && cloudChanged) {
+      conflicts++
+      conflictRecords.push({ localRec: lr })
+      continue
+    }
+    if (cm && cm.updatedAt > lr.updatedAt) { skipped++; continue } // cloud is strictly newer
+    batchOps.push({ id: lr.id, store: lr.store, ciphertext: lr.ciphertext, iv: lr.iv, updatedAt: lr.updatedAt })
+  }
+  await cloudCommitRecordWrites(uid, cvId, batchOps)
+  pushed += batchOps.length
+
+  // ---- assets ---- (inline if small, chunked into a subcollection if not)
+  let pushedAssets = 0, conflictAssets = 0, skippedAssetsTooBig = 0
+  for (const la of localAssets) {
+    const cm = manifest.assets.get(la.id)
+    const localChanged = la.updatedAt > since
+    const cloudChanged = cm && cm.updatedAt > since
+    if (cm && cm.updatedAt === la.updatedAt) continue
+    if (localChanged && cloudChanged) { conflictAssets++; continue } // node-level conflict copy is enough
+    if (cm && cm.updatedAt > la.updatedAt) continue
+    const b64 = la.ciphertext || ''
+    if (b64.length > CLOUD_ASSET_MAX_TOTAL_B64) { skippedAssetsTooBig++; continue }
+    await cloudPushAsset(uid, cvId, la)
+    pushedAssets++
+  }
+
+  // ---- resolve record conflicts by creating local duplicates ----
+  // For each conflicted record we fetch the cloud version, decrypt it, build a
+  // sibling/duplicate locally (so user sees both), then push the duplicate up.
+  const duplicateOps = []
+  for (const { localRec } of conflictRecords) {
+    const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', localRec.id))
+    if (!cSnap.exists()) continue
+    const cData = cSnap.data()
+    const cPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
+    if (cData.store === 'documents') {
+      const dup = await cloudMakeDocumentDuplicate(ctx, cPlain)
+      duplicateOps.push(...dup)
+    } else if (cData.store === 'nodes') {
+      const dup = await cloudMakeNodeDuplicate(ctx, cPlain)
+      duplicateOps.push(...dup)
+    }
+  }
+  // Push the duplicates immediately so other devices learn about them.
+  if (duplicateOps.length) await cloudCommitRecordWrites(uid, cvId, duplicateOps)
+
+  const stamp = now()
+  await cloudSetVaultLink(localVaultId, { lastPushedAt: stamp, lastSyncedAt: stamp })
+  return { pushed, pushedAssets, skipped, conflicts, conflictAssets, skippedAssetsTooBig, duplicates: duplicateOps.length }
+}
+
+// Firestore writeBatch is capped at 500 ops; chunk transparently.
+async function cloudCommitRecordWrites(uid, cvId, ops) {
+  if (!ops.length) return
+  const { writeBatch, doc } = cloud.fbStore
+  for (let i = 0; i < ops.length; i += 450) {
+    const batch = writeBatch(cloud.db)
+    for (const op of ops.slice(i, i + 450)) {
+      batch.set(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', op.id), {
+        store: op.store, ciphertext: op.ciphertext, iv: op.iv, updatedAt: op.updatedAt,
+      })
+    }
+    await batch.commit()
+  }
+}
+
+// Push one asset. Small enough → inline ciphertext on the asset doc; larger →
+// chunkCount: N with the base64 split across assets/{id}/chunks/{0..N-1}.
+async function cloudPushAsset(uid, cvId, la) {
+  const { setDoc, deleteDoc, writeBatch, doc, getDocs, collection } = cloud.fbStore
+  const b64 = la.ciphertext || ''
+  // Wipe any stale chunks from a prior version of this asset so we never end
+  // up reading a mix of old + new chunks back.
+  const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets', la.id, 'chunks')
+  const oldChunks = await getDocs(chunksCol)
+  if (oldChunks.size) {
+    for (let i = 0; i < oldChunks.docs.length; i += 450) {
+      const batch = writeBatch(cloud.db)
+      for (const d of oldChunks.docs.slice(i, i + 450)) batch.delete(d.ref)
+      await batch.commit()
+    }
+  }
+  if (b64.length <= CLOUD_ASSET_INLINE_MAX_B64) {
+    await setDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'assets', la.id), {
+      kind: la.kind, iv: la.iv, updatedAt: la.updatedAt,
+      chunkCount: 1, ciphertext: b64,
+    })
+    return
+  }
+  const chunks = []
+  for (let i = 0; i < b64.length; i += CLOUD_ASSET_CHUNK_B64) chunks.push(b64.slice(i, i + CLOUD_ASSET_CHUNK_B64))
+  // Write chunks first, then the meta doc — readers that see chunkCount can
+  // trust the chunks are all present.
+  for (let i = 0; i < chunks.length; i += 450) {
+    const batch = writeBatch(cloud.db)
+    for (let j = i; j < Math.min(i + 450, chunks.length); j++) {
+      batch.set(doc(chunksCol, String(j)), { data: chunks[j] })
+    }
+    await batch.commit()
+  }
+  await setDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'assets', la.id), {
+    kind: la.kind, iv: la.iv, updatedAt: la.updatedAt,
+    chunkCount: chunks.length,
+  })
+}
+
+// Pull one asset's ciphertext. Handles both inline and chunked layouts.
+async function cloudFetchAssetCiphertext(uid, cvId, assetId) {
+  const { getDoc, getDocs, doc, collection, query, orderBy } = cloud.fbStore
+  const metaSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'assets', assetId))
+  if (!metaSnap.exists()) return null
+  const meta = metaSnap.data()
+  if ((meta.chunkCount ?? 1) <= 1 && meta.ciphertext) return { meta, ciphertext: meta.ciphertext }
+  const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets', assetId, 'chunks')
+  const snap = await getDocs(chunksCol)
+  if (snap.size !== meta.chunkCount) {
+    throw new Error(`Asset ${assetId}: expected ${meta.chunkCount} chunks, got ${snap.size}`)
+  }
+  // Sort by numeric chunk id since Firestore returns string-ordered docs.
+  const ordered = snap.docs.map(d => ({ idx: Number(d.id), data: d.data().data || '' }))
+                            .sort((a, b) => a.idx - b.idx)
+  return { meta, ciphertext: ordered.map(c => c.data).join('') }
+}
+
+// Build a duplicate document (with all its nodes) from a decrypted cloud doc.
+// Returns the encrypted record ops to push for the duplicate.
+async function cloudMakeDocumentDuplicate(ctx, cloudDoc) {
+  const newDocId = genId()
+  const newDoc = { ...cloudDoc, id: newDocId, title: `${cloudDoc.title || 'Untitled'} (cloud conflict)`, createdAt: now(), updatedAt: now() }
+  await putDoc(newDoc, ctx)
+  // No nodes are cloned here — the duplicate is an empty conflict marker doc.
+  // Node-level conflicts handle their own dup, and that's enough for the user
+  // to recover divergent content.
+  const enc1 = await encPayload(newDoc, ctx)
+  return [{ id: newDoc.id, store: 'documents', ciphertext: enc1.ciphertext, iv: enc1.iv, updatedAt: newDoc.updatedAt }]
+}
+
+// Build a duplicate node as a sibling of the conflicted node. Marked with
+// a [conflict] prefix so the user can find them via search.
+async function cloudMakeNodeDuplicate(ctx, cloudNode) {
+  // Compute a fractional order *after* the original node among its siblings.
+  const siblings = state.ctx?.vaultId === ctx.vaultId
+    ? sortedChildren(state.nodes, cloudNode.parentId, cloudNode.documentId)
+    : []
+  const orig = siblings.find(s => s.id === cloudNode.id)
+  const idx = orig ? siblings.findIndex(s => s.id === cloudNode.id) : -1
+  const nextSib = idx >= 0 ? siblings[idx + 1] : null
+  const order = generateKeyBetween(orig?.order ?? cloudNode.order ?? null, nextSib?.order ?? null)
+  const newNode = {
+    ...cloudNode,
+    id: genId(),
+    order,
+    content: cloudNode.kind === 'text' || cloudNode.kind === 'checkbox'
+      ? `[conflict] ${cloudNode.content || ''}`
+      : cloudNode.content,
+    createdAt: now(),
+    updatedAt: now(),
+  }
+  await putNode(newNode, ctx)
+  if (state.ctx?.vaultId === ctx.vaultId) state.nodes = applyPatch(state.nodes, [newNode])
+  const enc1 = await encPayload(newNode, ctx)
+  return [{ id: newNode.id, store: 'nodes', ciphertext: enc1.ciphertext, iv: enc1.iv, updatedAt: newNode.updatedAt }]
+}
+
+// ---- Pull: download cloud→local, duplicate on conflict ------------------
+// fullFetch=true means we just pulled a vault from scratch (cloudPullNewVault)
+// and want everything regardless of timestamps.
+async function cloudPull(localVaultId, ctx, fullFetch = false) {
+  if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
+  const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
+  const link = await cloudGetVaultLink(localVaultId)
+  if (!link?.cloudVaultId) throw new Error('Vault is not linked to cloud yet.')
+  const cvId = link.cloudVaultId
+  const since = fullFetch ? -1 : (link.lastSyncedAt || 0)
+  const manifest = await cloudFetchManifest(uid, cvId)
+
+  const localRecs = await db.encryptedRecords.where('vaultId').equals(localVaultId).toArray()
+  const localMap = new Map(localRecs.map(r => [r.id, r]))
+
+  let pulled = 0, skipped = 0, conflicts = 0
+  const { getDoc, doc } = cloud.fbStore
+
+  // Process records that exist in the cloud.
+  for (const [id, cm] of manifest.records) {
+    const local = localMap.get(id)
+    const cloudChanged = cm.updatedAt > since
+    const localChanged = local && local.updatedAt > since
+    if (local && local.updatedAt === cm.updatedAt) { skipped++; continue }
+    if (cloudChanged && localChanged) {
+      // Pull cloud, then make a duplicate of the cloud version locally so
+      // both versions are visible.
+      const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', id))
+      if (!cSnap.exists()) continue
+      const cData = cSnap.data()
+      const cPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
+      if (cm.store === 'documents') await cloudMakeDocumentDuplicate(ctx, cPlain)
+      else if (cm.store === 'nodes') await cloudMakeNodeDuplicate(ctx, cPlain)
+      conflicts++
+      continue
+    }
+    if (local && local.updatedAt > cm.updatedAt) { skipped++; continue }
+    // Cloud-only or cloud-newer: download and store.
+    const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', id))
+    if (!cSnap.exists()) continue
+    const cData = cSnap.data()
+    await db.encryptedRecords.put({
+      id, store: cData.store, vaultId: localVaultId,
+      ciphertext: cData.ciphertext, iv: cData.iv, updatedAt: cData.updatedAt,
+    })
+    pulled++
+  }
+
+  // Assets — read ciphertext (inline or chunked) from the asset doc tree.
+  // Conflict handling for assets is implicit: a node-conflict copy keeps the
+  // original asset id, which is enough to preserve user work.
+  let pulledAssets = 0
+  for (const [id, cm] of manifest.assets) {
+    const localAsset = await db.encryptedAssets.get(id)
+    if (localAsset && localAsset.updatedAt >= cm.updatedAt) continue
+    const fetched = await cloudFetchAssetCiphertext(uid, cvId, id)
+    if (!fetched) continue
+    await db.encryptedAssets.put({
+      id, kind: cm.kind, vaultId: localVaultId,
+      ciphertext: fetched.ciphertext, iv: fetched.meta.iv, updatedAt: cm.updatedAt,
+    })
+    pulledAssets++
+  }
+
+  // Refresh in-memory state if the currently open vault is the one we pulled.
+  if (state.ctx?.vaultId === localVaultId) {
+    state.docs = await getAllDocs(ctx)
+    if (state.activeDocId) state.nodes = await getAllNodes(ctx)
+    await rebuildSearchIndexFromVault(ctx)
+  }
+
+  const stamp = now()
+  await cloudSetVaultLink(localVaultId, { lastPulledAt: stamp, lastSyncedAt: stamp })
+  return { pulled, pulledAssets, skipped, conflicts }
+}
+
+// ---- Unlink: remove the cloud copy of a vault and forget the link -------
+async function cloudUnlinkVault(localVaultId, { deleteRemote = false } = {}) {
+  const link = await cloudGetVaultLink(localVaultId)
+  if (!link?.cloudVaultId) { await cloudClearVaultLink(localVaultId); return }
+  if (deleteRemote && cloud.ready && cloudUserUid()) {
+    const uid = cloudUserUid()
+    const cvId = link.cloudVaultId
+    const { getDocs, writeBatch, deleteDoc, doc } = cloud.fbStore
+    // Delete records, assets (storage objects + docs), then meta + vault root.
+    const recsSnap = await getDocs(cloudVaultRecordsCol(uid, cvId))
+    for (let i = 0; i < recsSnap.docs.length; i += 450) {
+      const batch = writeBatch(cloud.db)
+      for (const d of recsSnap.docs.slice(i, i + 450)) batch.delete(d.ref)
+      await batch.commit()
+    }
+    const assetsSnap = await getDocs(cloudVaultAssetsCol(uid, cvId))
+    const { collection } = cloud.fbStore
+    for (const d of assetsSnap.docs) {
+      const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets', d.id, 'chunks')
+      const chunkSnap = await getDocs(chunksCol)
+      for (let i = 0; i < chunkSnap.docs.length; i += 450) {
+        const batch = writeBatch(cloud.db)
+        for (const cd of chunkSnap.docs.slice(i, i + 450)) batch.delete(cd.ref)
+        await batch.commit()
+      }
+    }
+    for (let i = 0; i < assetsSnap.docs.length; i += 450) {
+      const batch = writeBatch(cloud.db)
+      for (const d of assetsSnap.docs.slice(i, i + 450)) batch.delete(d.ref)
+      await batch.commit()
+    }
+    try { await deleteDoc(cloudVaultMetaDoc(uid, cvId)) } catch {}
+  }
+  await cloudClearVaultLink(localVaultId)
 }
 
 const mdParser = new MarkdownIt({ breaks: true })
@@ -4706,6 +5311,292 @@ document.getElementById('vchpass-confirm').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('vchpass-submit').click()
 })
 
+// ---------------------------------------------------------------------------
+// Cloud sync UI wiring
+// Visible only when cloud-config.js is present. Tracks auth state and renders
+// the per-vault link/push/pull controls inside #cloud-modal.
+// ---------------------------------------------------------------------------
+const cloudUI = { busy: false, pendingPull: null }  // pendingPull: { cloudVaultId, name }
+
+function cloudRevealEntryPoints() {
+  if (!cloudConfigured()) return
+  document.getElementById('cloud-btn')?.classList.remove('hidden')
+  document.getElementById('vault-cloud-btn')?.classList.remove('hidden')
+}
+
+function cloudSetResult(text, tone = '') {
+  const el = document.getElementById('cloud-result')
+  if (!el) return
+  el.textContent = text || ''
+  el.className = 'hint cloud-result' + (tone ? ' ' + tone : '')
+}
+
+async function cloudRenderModal() {
+  setErr('cloud-error', '')
+  const statusEl = document.getElementById('cloud-auth-status')
+  const signInBtn = document.getElementById('cloud-signin-btn')
+  const signOutBtn = document.getElementById('cloud-signout-btn')
+  const body = document.getElementById('cloud-body')
+
+  if (!cloudConfigured()) {
+    statusEl.textContent = 'Cloud sync is not configured on this device. See CLOUD_SYNC_SETUP.md.'
+    signInBtn.classList.add('hidden')
+    signOutBtn.classList.add('hidden')
+    body.classList.add('hidden')
+    return
+  }
+  // Load the SDK lazily on first open so the cost is opt-in.
+  const ready = await cloudEnsureLoaded()
+  if (!ready) {
+    statusEl.textContent = 'Failed to load Firebase SDK. Check your network connection.'
+    return
+  }
+  if (cloud.authReady) await cloud.authReady
+  if (!cloud.user) {
+    statusEl.textContent = 'Sign in to push and pull encrypted vaults across devices.'
+    signInBtn.classList.remove('hidden')
+    signOutBtn.classList.add('hidden')
+    body.classList.add('hidden')
+    return
+  }
+  statusEl.textContent = `Signed in as ${cloud.user.email || cloud.user.displayName || cloud.user.uid}.`
+  signInBtn.classList.add('hidden')
+  signOutBtn.classList.remove('hidden')
+  body.classList.remove('hidden')
+  await cloudRenderVaultLists()
+}
+
+async function cloudRenderVaultLists() {
+  const localList = document.getElementById('cloud-local-vaults')
+  const remoteList = document.getElementById('cloud-remote-vaults')
+  const remoteEmpty = document.getElementById('cloud-remote-empty')
+  localList.innerHTML = ''
+  remoteList.innerHTML = ''
+  const syncState = await cloudGetSyncState()
+  const localVaults = await getAllVaults()
+  let remoteVaults = []
+  try { remoteVaults = await cloudListVaults() }
+  catch (e) { setErr('cloud-error', 'Failed to list cloud vaults: ' + (e.message || e)) }
+
+  // -- This device's vaults --
+  for (const v of localVaults) {
+    const link = syncState.vaults?.[v.id] || null
+    const li = document.createElement('li')
+    const name = document.createElement('span')
+    name.className = 'cv-name'
+    name.textContent = v.name || 'Untitled'
+    li.appendChild(name)
+    const status = document.createElement('span')
+    if (link?.cloudVaultId) {
+      status.className = 'cv-linked'
+      status.textContent = 'linked'
+    } else {
+      status.className = 'cv-unlinked'
+      status.textContent = 'not linked'
+    }
+    li.appendChild(status)
+    const sub = document.createElement('span')
+    sub.className = 'cv-sub'
+    if (link?.lastSyncedAt) {
+      sub.textContent = `Last synced ${new Date(link.lastSyncedAt).toLocaleString()}`
+    } else if (link) {
+      sub.textContent = 'Linked but never synced yet.'
+    } else {
+      sub.textContent = 'Click "Link" to upload an encrypted copy of this vault.'
+    }
+    li.appendChild(sub)
+    // Buttons
+    if (!link?.cloudVaultId) {
+      const linkBtn = document.createElement('button')
+      linkBtn.className = 'vl-btn'; linkBtn.textContent = 'Link & push'
+      linkBtn.disabled = !(state.unlocked && state.ctx?.vaultId === v.id)
+      linkBtn.title = linkBtn.disabled ? 'Unlock this vault first to link it' : ''
+      linkBtn.onclick = () => cloudRunLink(v.id)
+      li.appendChild(linkBtn)
+    } else {
+      const pushBtn = document.createElement('button')
+      pushBtn.className = 'vl-btn'; pushBtn.textContent = 'Push'
+      pushBtn.disabled = !(state.unlocked && state.ctx?.vaultId === v.id)
+      pushBtn.title = pushBtn.disabled ? 'Unlock this vault first to push' : ''
+      pushBtn.onclick = () => cloudRunPush(v.id)
+      li.appendChild(pushBtn)
+      const pullBtn = document.createElement('button')
+      pullBtn.className = 'vl-btn'; pullBtn.textContent = 'Pull'
+      pullBtn.disabled = !(state.unlocked && state.ctx?.vaultId === v.id)
+      pullBtn.title = pullBtn.disabled ? 'Unlock this vault first to pull' : ''
+      pullBtn.onclick = () => cloudRunPull(v.id)
+      li.appendChild(pullBtn)
+      const unlinkBtn = document.createElement('button')
+      unlinkBtn.className = 'vl-btn danger'; unlinkBtn.textContent = 'Unlink'
+      unlinkBtn.onclick = () => cloudRunUnlink(v.id, v.name || 'Untitled')
+      li.appendChild(unlinkBtn)
+    }
+    localList.appendChild(li)
+  }
+
+  // -- Cloud-only vaults (not yet on this device) --
+  const linkedCvIds = new Set(Object.values(syncState.vaults || {}).map(x => x.cloudVaultId).filter(Boolean))
+  const cloudOnly = remoteVaults.filter(rv => !linkedCvIds.has(rv.cloudVaultId))
+  if (!cloudOnly.length) {
+    remoteEmpty.classList.remove('hidden')
+  } else {
+    remoteEmpty.classList.add('hidden')
+    for (const rv of cloudOnly) {
+      const li = document.createElement('li')
+      const name = document.createElement('span')
+      name.className = 'cv-name'
+      name.textContent = rv.meta?.name || 'Untitled'
+      li.appendChild(name)
+      const pullBtn = document.createElement('button')
+      pullBtn.className = 'vl-btn'; pullBtn.textContent = 'Pull to this device'
+      pullBtn.onclick = () => cloudOpenPullPrompt(rv.cloudVaultId, rv.meta?.name || 'Untitled')
+      li.appendChild(pullBtn)
+      const sub = document.createElement('span')
+      sub.className = 'cv-sub'
+      const created = rv.meta?.createdAt ? new Date(rv.meta.createdAt).toLocaleDateString() : '—'
+      sub.textContent = `Created ${created}. You'll be asked for the vault password.`
+      li.appendChild(sub)
+      remoteList.appendChild(li)
+    }
+  }
+}
+
+async function cloudGuardBusy(fn) {
+  if (cloudUI.busy) return
+  cloudUI.busy = true
+  try { await fn() }
+  catch (e) { setErr('cloud-error', e.message || String(e)) }
+  finally { cloudUI.busy = false; await cloudRenderVaultLists() }
+}
+
+function cloudFormatPushSummary(r) {
+  const bits = [`Pushed ${r.pushed} records, ${r.pushedAssets} assets`]
+  if (r.conflicts) bits.push(`${r.conflicts} conflicts duplicated`)
+  if (r.skippedAssetsTooBig) bits.push(`${r.skippedAssetsTooBig} image(s) skipped — over 15 MB`)
+  return bits.join('. ') + '.'
+}
+
+async function cloudRunLink(localVaultId) {
+  if (!(state.unlocked && state.ctx?.vaultId === localVaultId)) {
+    setErr('cloud-error', 'Open this vault before linking it.')
+    return
+  }
+  cloudSetResult('Linking and pushing…')
+  await cloudGuardBusy(async () => {
+    const r = await cloudLinkVault(localVaultId, state.ctx)
+    const tone = (r.conflicts || r.skippedAssetsTooBig) ? 'warn' : 'success'
+    cloudSetResult('Linked. ' + cloudFormatPushSummary(r), tone)
+  })
+}
+
+async function cloudRunPush(localVaultId) {
+  if (!(state.unlocked && state.ctx?.vaultId === localVaultId)) {
+    setErr('cloud-error', 'Open this vault before pushing.')
+    return
+  }
+  cloudSetResult('Pushing…')
+  await cloudGuardBusy(async () => {
+    const r = await cloudPush(localVaultId, state.ctx)
+    // Conflict resolution may have written new docs/nodes locally — refresh.
+    if (r.conflicts || r.duplicates) {
+      state.docs = await getAllDocs(state.ctx)
+      if (state.activeDocId) state.nodes = await getAllNodes(state.ctx)
+    }
+    const tone = r.conflicts ? 'warn' : 'success'
+    cloudSetResult(`Pushed ${r.pushed} records, ${r.pushedAssets} assets. ${r.conflicts ? r.conflicts + ' conflicts duplicated.' : ''}`.trim(), tone)
+    renderSidebar(); if (state.activeDocId) renderEditor()
+  })
+}
+
+async function cloudRunPull(localVaultId) {
+  if (!(state.unlocked && state.ctx?.vaultId === localVaultId)) {
+    setErr('cloud-error', 'Open this vault before pulling.')
+    return
+  }
+  cloudSetResult('Pulling…')
+  await cloudGuardBusy(async () => {
+    const r = await cloudPull(localVaultId, state.ctx)
+    const tone = r.conflicts ? 'warn' : 'success'
+    cloudSetResult(`Pulled ${r.pulled} records, ${r.pulledAssets} assets. ${r.conflicts ? r.conflicts + ' conflicts duplicated.' : ''}`.trim(), tone)
+    renderSidebar(); if (state.activeDocId) renderEditor()
+  })
+}
+
+async function cloudRunUnlink(localVaultId, name) {
+  if (!confirm(`Stop syncing "${name}" with the cloud? You'll be asked whether to delete the remote copy too.`)) return
+  const deleteRemote = confirm(`Also delete the cloud-side copy of "${name}"? OK = delete remote. Cancel = keep remote (you can pull it later).`)
+  cloudSetResult('Unlinking…')
+  await cloudGuardBusy(async () => {
+    await cloudUnlinkVault(localVaultId, { deleteRemote })
+    cloudSetResult(deleteRemote ? `Unlinked and deleted remote copy.` : `Unlinked. Remote copy preserved.`, 'success')
+  })
+}
+
+function cloudOpenPullPrompt(cloudVaultId, name) {
+  cloudUI.pendingPull = { cloudVaultId, name }
+  document.getElementById('cloud-pull-title').textContent = `Pull "${name}" from cloud`
+  document.getElementById('cloud-pull-pass').value = ''
+  setErr('cloud-pull-error', '')
+  show('cloud-pull-modal')
+  setTimeout(() => document.getElementById('cloud-pull-pass').focus(), 50)
+}
+
+document.getElementById('cloud-pull-cancel').addEventListener('click', () => {
+  hide('cloud-pull-modal'); cloudUI.pendingPull = null
+})
+document.getElementById('cloud-pull-submit').addEventListener('click', async () => {
+  const pass = document.getElementById('cloud-pull-pass').value
+  setErr('cloud-pull-error', '')
+  if (!pass) { setErr('cloud-pull-error', 'Enter the vault password.'); return }
+  const ctxInfo = cloudUI.pendingPull; if (!ctxInfo) { hide('cloud-pull-modal'); return }
+  const btn = document.getElementById('cloud-pull-submit'); btn.disabled = true; btn.textContent = 'Pulling…'
+  try {
+    const { ctx, localVaultId } = await cloudPullNewVault(ctxInfo.cloudVaultId, pass)
+    hide('cloud-pull-modal'); cloudUI.pendingPull = null
+    state.vaults = await getAllVaults()
+    state.ctx = ctx; state.unlocked = true; state._password = pass
+    state.docs = await getAllDocs(state.ctx)
+    await rebuildSearchIndexFromVault(state.ctx)
+    if (state.docs.length) await selectDoc(state.docs[0].id)
+    hide('cloud-modal')
+    renderApp()
+    await autoSnapRestoreOnUnlock()
+    resetAutoLockTimer()
+    cloudSetResult(`Pulled "${ctxInfo.name}" to this device.`, 'success')
+  } catch (e) { setErr('cloud-pull-error', e.message || String(e)) }
+  btn.disabled = false; btn.textContent = 'Pull & unlock'
+})
+document.getElementById('cloud-pull-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('cloud-pull-submit').click()
+})
+
+function openCloudModal() {
+  if (!cloudConfigured()) {
+    alert('Cloud sync is not configured. See CLOUD_SYNC_SETUP.md.')
+    return
+  }
+  cloudSetResult('')
+  setErr('cloud-error', '')
+  show('cloud-modal')
+  cloudRenderModal()
+}
+
+document.getElementById('cloud-btn')?.addEventListener('click', openCloudModal)
+document.getElementById('vault-cloud-btn')?.addEventListener('click', openCloudModal)
+document.getElementById('cloud-close-btn').addEventListener('click', () => hide('cloud-modal'))
+document.getElementById('cloud-signin-btn').addEventListener('click', async () => {
+  setErr('cloud-error', '')
+  try { await cloudSignIn() }
+  catch (e) { setErr('cloud-error', e.message || String(e)) }
+  await cloudRenderModal()
+})
+document.getElementById('cloud-signout-btn').addEventListener('click', async () => {
+  try { await cloudSignOut() }
+  catch (e) { setErr('cloud-error', e.message || String(e)) }
+  await cloudRenderModal()
+})
+cloudOnAuth(() => { if (!document.getElementById('cloud-modal').classList.contains('hidden')) cloudRenderModal() })
+
 // New doc
 document.getElementById('new-doc-btn').addEventListener('click', newDoc)
 
@@ -6498,6 +7389,9 @@ const PALETTE_COMMANDS = [
     },
   },
   { id: 'import-flash-deck', label: 'Import flash deck…', run: () => triggerFlashImport() },
+  { id: 'cloud-open',  label: 'Cloud sync…',          run: () => openCloudModal() },
+  { id: 'cloud-push',  label: 'Cloud: push this vault', run: () => state.ctx && cloudRunPush(state.ctx.vaultId) },
+  { id: 'cloud-pull',  label: 'Cloud: pull this vault', run: () => state.ctx && cloudRunPull(state.ctx.vaultId) },
   {
     id: 'card-count-debug',
     label: 'Show card count for selected subtree (debug)',
@@ -6731,6 +7625,7 @@ async function init() {
   await loadTheme()
   await loadAutoLockSetting()
   loadArgon2()  // warm the WASM fetch so the new-vault path doesn't pay the cost on first click
+  cloudRevealEntryPoints()
   state.vaults = await getAllVaults()
   state.vaults.sort((a,b) => (b.createdAt||0) - (a.createdAt||0))
   renderApp()

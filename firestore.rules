@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Local Outline cloud sync rules.
+// Single-user deployment: only the listed email may read/write, and only
+// against documents under its own uid. Anyone else signs in successfully but
+// gets permission-denied on every read and write.
+//
+// Vault data is end-to-end encrypted on the client; the server enforces
+// access control, never content semantics.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{rest=**} {
+      allow read, write: if request.auth != null
+                          && request.auth.uid == userId
+                          && request.auth.token.email_verified == true
+                          && request.auth.token.email == "trevorlewisolsen@gmail.com";
+    }
+  }
+}
