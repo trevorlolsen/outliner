@@ -1746,6 +1746,10 @@ async function cloudListVaults() {
 
 // ---- Link a local vault to the cloud (first push) -----------------------
 // Uploads vaultMeta + wrappedKey, then performs a full push of records + assets.
+//
+// The cloud vault id is the SAME UUID as the local vault id, so any device
+// can recognise "I already have this vault" by id alone — link/unlink/pull
+// cycles are idempotent and never produce duplicates.
 async function cloudLinkVault(localVaultId, ctx, password) {
   if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
   const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
@@ -1755,7 +1759,7 @@ async function cloudLinkVault(localVaultId, ctx, password) {
   if (!meta) throw new Error('Local vault not found.')
   const keyRec = await db.keyRecords.get(`vaultKey-${localVaultId}-v${meta.keyVersion}`)
   if (!keyRec) throw new Error('Key record missing.')
-  const cvId = genId()
+  const cvId = localVaultId
   const { setDoc } = cloud.fbStore
   await setDoc(cloudVaultMetaDoc(uid, cvId), {
     name: meta.name,
@@ -1774,8 +1778,10 @@ async function cloudLinkVault(localVaultId, ctx, password) {
 }
 
 // ---- Pull an existing cloud vault onto this device ----------------------
-// Creates the local vaultMeta + keyRecord from the cloud-side wrappedKey,
-// validates the password by trying to unwrap, then fetches every record/asset.
+// Idempotent: if a local vault with the same id already exists (e.g. the user
+// previously unlinked it), we re-link to that local record instead of
+// creating a duplicate. Otherwise we materialise a fresh local vault from
+// the cloud-side wrappedKey + KDF spec.
 async function cloudPullNewVault(cloudVaultId, password) {
   if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
   const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
@@ -1793,25 +1799,28 @@ async function cloudPullNewVault(cloudVaultId, password) {
       { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']
     )
   } catch { throw new Error('Incorrect password.') }
-  // Write the local vault record + key record. Reuse the cloud vault id so the
-  // local↔cloud mapping is trivially recoverable from local data alone.
-  const localVaultId = genId()
-  await db.vaultMeta.put({
-    id: localVaultId,
-    name: cmeta.name,
-    salt: cmeta.salt,
-    kdf:  cmeta.kdf,
-    kdfSpec: cmeta.kdfSpec,
-    keyVersion: cmeta.keyVersion || 1,
-    createdAt: cmeta.createdAt || now(),
-  })
-  await db.keyRecords.put({
-    id: `vaultKey-${localVaultId}-v${cmeta.keyVersion || 1}`,
-    vaultId: localVaultId,
-    version: cmeta.keyVersion || 1,
-    wrappedKey: cmeta.wrappedKey,
-    iv: cmeta.wrapIv,
-  })
+  // The cloud vault id IS the local vault id. Re-use any existing local
+  // record so unlink → pull is a re-link, not a duplicate.
+  const localVaultId = cloudVaultId
+  const existingLocal = await db.vaultMeta.get(localVaultId)
+  if (!existingLocal) {
+    await db.vaultMeta.put({
+      id: localVaultId,
+      name: cmeta.name,
+      salt: cmeta.salt,
+      kdf:  cmeta.kdf,
+      kdfSpec: cmeta.kdfSpec,
+      keyVersion: cmeta.keyVersion || 1,
+      createdAt: cmeta.createdAt || now(),
+    })
+    await db.keyRecords.put({
+      id: `vaultKey-${localVaultId}-v${cmeta.keyVersion || 1}`,
+      vaultId: localVaultId,
+      version: cmeta.keyVersion || 1,
+      wrappedKey: cmeta.wrappedKey,
+      iv: cmeta.wrapIv,
+    })
+  }
   const rawKey = await crypto.subtle.exportKey('raw', vaultKey)
   const runtimeKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
   const ctx = makeCtx(runtimeKey, localVaultId)
@@ -1846,6 +1855,11 @@ async function cloudPush(localVaultId, ctx) {
   if (!link?.cloudVaultId) throw new Error('Vault is not linked to cloud yet.')
   const cvId = link.cloudVaultId
   const since = link.lastSyncedAt || 0
+  // On the very first sync against a given link (since=0) there is no shared
+  // history to detect conflicts against, so we apply newer-wins instead of
+  // duplicating. Real conflict detection kicks in on later syncs once
+  // lastSyncedAt is set.
+  const isFirstSync = !since
   const manifest = await cloudFetchManifest(uid, cvId)
 
   // Local records, raw rows (we re-use the encrypted ciphertext as-is).
@@ -1860,15 +1874,17 @@ async function cloudPush(localVaultId, ctx) {
   const batchOps = []
   for (const lr of localRecs) {
     const cm = manifest.records.get(lr.id)
-    const localChanged = lr.updatedAt > since
-    const cloudChanged = cm && cm.updatedAt > since
     if (cm && cm.updatedAt === lr.updatedAt) { skipped++; continue }
-    if (localChanged && cloudChanged) {
-      conflicts++
-      conflictRecords.push({ localRec: lr })
-      continue
-    }
     if (cm && cm.updatedAt > lr.updatedAt) { skipped++; continue } // cloud is strictly newer
+    if (!isFirstSync) {
+      const localChanged = lr.updatedAt > since
+      const cloudChanged = cm && cm.updatedAt > since
+      if (localChanged && cloudChanged) {
+        conflicts++
+        conflictRecords.push({ localRec: lr })
+        continue
+      }
+    }
     batchOps.push({ id: lr.id, store: lr.store, ciphertext: lr.ciphertext, iv: lr.iv, updatedAt: lr.updatedAt })
   }
   await cloudCommitRecordWrites(uid, cvId, batchOps)
@@ -1878,11 +1894,13 @@ async function cloudPush(localVaultId, ctx) {
   let pushedAssets = 0, conflictAssets = 0, skippedAssetsTooBig = 0
   for (const la of localAssets) {
     const cm = manifest.assets.get(la.id)
-    const localChanged = la.updatedAt > since
-    const cloudChanged = cm && cm.updatedAt > since
     if (cm && cm.updatedAt === la.updatedAt) continue
-    if (localChanged && cloudChanged) { conflictAssets++; continue } // node-level conflict copy is enough
     if (cm && cm.updatedAt > la.updatedAt) continue
+    if (!isFirstSync) {
+      const localChanged = la.updatedAt > since
+      const cloudChanged = cm && cm.updatedAt > since
+      if (localChanged && cloudChanged) { conflictAssets++; continue }
+    }
     const b64 = la.ciphertext || ''
     if (b64.length > CLOUD_ASSET_MAX_TOTAL_B64) { skippedAssetsTooBig++; continue }
     await cloudPushAsset(uid, cvId, la)
@@ -2037,6 +2055,9 @@ async function cloudPull(localVaultId, ctx, fullFetch = false) {
   if (!link?.cloudVaultId) throw new Error('Vault is not linked to cloud yet.')
   const cvId = link.cloudVaultId
   const since = fullFetch ? -1 : (link.lastSyncedAt || 0)
+  // First sync (fullFetch on a fresh pull, or since=0 on re-link) has no
+  // shared history → newer-wins, no conflict duplication.
+  const isFirstSync = fullFetch || !since
   const manifest = await cloudFetchManifest(uid, cvId)
 
   const localRecs = await db.encryptedRecords.where('vaultId').equals(localVaultId).toArray()
@@ -2048,22 +2069,24 @@ async function cloudPull(localVaultId, ctx, fullFetch = false) {
   // Process records that exist in the cloud.
   for (const [id, cm] of manifest.records) {
     const local = localMap.get(id)
-    const cloudChanged = cm.updatedAt > since
-    const localChanged = local && local.updatedAt > since
     if (local && local.updatedAt === cm.updatedAt) { skipped++; continue }
-    if (cloudChanged && localChanged) {
-      // Pull cloud, then make a duplicate of the cloud version locally so
-      // both versions are visible.
-      const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', id))
-      if (!cSnap.exists()) continue
-      const cData = cSnap.data()
-      const cPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
-      if (cm.store === 'documents') await cloudMakeDocumentDuplicate(ctx, cPlain)
-      else if (cm.store === 'nodes') await cloudMakeNodeDuplicate(ctx, cPlain)
-      conflicts++
-      continue
-    }
     if (local && local.updatedAt > cm.updatedAt) { skipped++; continue }
+    if (!isFirstSync) {
+      const cloudChanged = cm.updatedAt > since
+      const localChanged = local && local.updatedAt > since
+      if (cloudChanged && localChanged) {
+        // Pull cloud, then make a duplicate of the cloud version locally so
+        // both versions are visible.
+        const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', id))
+        if (!cSnap.exists()) continue
+        const cData = cSnap.data()
+        const cPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
+        if (cm.store === 'documents') await cloudMakeDocumentDuplicate(ctx, cPlain)
+        else if (cm.store === 'nodes') await cloudMakeNodeDuplicate(ctx, cPlain)
+        conflicts++
+        continue
+      }
+    }
     // Cloud-only or cloud-newer: download and store.
     const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', id))
     if (!cSnap.exists()) continue
@@ -5442,8 +5465,12 @@ async function cloudRenderVaultLists() {
   }
 
   // -- Cloud-only vaults (not yet on this device) --
+  // A cloud vault is "on this device" if (a) any local sync record points to
+  // it, OR (b) a local vault with the same id already exists (covers the
+  // unlinked-but-still-present case — they can re-link from the local list).
   const linkedCvIds = new Set(Object.values(syncState.vaults || {}).map(x => x.cloudVaultId).filter(Boolean))
-  const cloudOnly = remoteVaults.filter(rv => !linkedCvIds.has(rv.cloudVaultId))
+  const localIds    = new Set(localVaults.map(v => v.id))
+  const cloudOnly = remoteVaults.filter(rv => !linkedCvIds.has(rv.cloudVaultId) && !localIds.has(rv.cloudVaultId))
   if (!cloudOnly.length) {
     remoteEmpty.classList.remove('hidden')
   } else {
