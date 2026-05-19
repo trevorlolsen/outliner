@@ -7696,7 +7696,20 @@ if (window.katex) window._onKatexLoad()  // in case KaTeX loaded synchronously
 init()
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js')
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // Check for SW updates on every page load — otherwise the browser only
+    // re-fetches sw.js every ~24h, so users sit on stale cached HTML/JS far
+    // longer than they should.
+    reg.update().catch(() => {})
+    // When a fresh SW takes control, reload so the new precached HTML/JS
+    // becomes active immediately instead of waiting for the next navigation.
+    let didReload = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (didReload) return
+      didReload = true
+      window.location.reload()
+    })
+  })
 }
 
 ;(function installHint() {
