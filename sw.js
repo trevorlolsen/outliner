@@ -1,7 +1,8 @@
-const CACHE = 'outline-v3'
+const CACHE = 'outline-v8'
 const PRECACHE = [
   './',
   './index.html',
+  './documentation.html',
   './libs/deps.js',
   './manifest.webmanifest',
   './icons/icon-192.png',

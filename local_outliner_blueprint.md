@@ -119,3 +119,5 @@ Structure is preserved
 ```
 
 For the full build plan, data model, roadmap, tests, and implementation checklist, use the DOCX blueprint.
+
+See `outliner_technical_blueprint.md` for the full implementation reference that documents the current code (25 sections, with file:line anchors into `index.html`).

@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local Outline — User Guide</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f7f7f8;
+    --bg-code: #f2f3f5;
+    --text: #1f1f23;
+    --text-soft: #5a5a63;
+    --text-faint: #888893;
+    --border: #e2e2e8;
+    --border-soft: #ececf0;
+    --accent: #4252e0;
+    --accent-hover: #3242d0;
+    --kbd-bg: #f4f4f7;
+    --kbd-border: #d4d4dc;
+    --danger-bg: #fdecea;
+    --danger-text: #8c1d18;
+    --info-bg: #eef2ff;
+    --info-text: #1c2f9c;
+    --tip-bg: #effaf2;
+    --tip-text: #1f6f3a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15161b;
+      --bg-soft: #1d1e24;
+      --bg-code: #21222a;
+      --text: #e6e6ed;
+      --text-soft: #b0b0be;
+      --text-faint: #80808e;
+      --border: #2f3039;
+      --border-soft: #292a32;
+      --accent: #8b97ff;
+      --accent-hover: #a8b3ff;
+      --kbd-bg: #2a2b34;
+      --kbd-border: #44454f;
+      --danger-bg: #3a1f1d;
+      --danger-text: #ffb3ad;
+      --info-bg: #1d2a4d;
+      --info-text: #b8c9ff;
+      --tip-bg: #1c3025;
+      --tip-text: #9ce0b0;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 16px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+  nav.toc {
+    border-right: 1px solid var(--border);
+    background: var(--bg-soft);
+    padding: 28px 22px 40px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    font-size: 14px;
+  }
+  nav.toc h2 {
+    margin: 0 0 14px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-faint);
+  }
+  nav.toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: section;
+  }
+  nav.toc li { margin: 4px 0; counter-increment: section; }
+  nav.toc a {
+    display: block;
+    color: var(--text-soft);
+    text-decoration: none;
+    padding: 4px 6px;
+    border-radius: 4px;
+  }
+  nav.toc a::before {
+    content: counter(section) ".";
+    color: var(--text-faint);
+    margin-right: 6px;
+  }
+  nav.toc a:hover { background: var(--bg-code); color: var(--text); }
+  main {
+    padding: 48px 56px 96px;
+    max-width: 760px;
+  }
+  h1 {
+    font-size: 34px;
+    margin: 0 0 8px;
+    letter-spacing: -.01em;
+  }
+  .subtitle {
+    color: var(--text-soft);
+    margin: 0 0 40px;
+    font-size: 16px;
+  }
+  h2 {
+    margin: 56px 0 14px;
+    font-size: 24px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-soft);
+    letter-spacing: -.01em;
+  }
+  h3 { margin: 32px 0 10px; font-size: 17px; }
+  p { margin: 12px 0; }
+  ul, ol { padding-left: 22px; margin: 12px 0; }
+  li { margin: 4px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-hover); text-decoration: underline; }
+  code {
+    background: var(--bg-code);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, ui-monospace, monospace;
+    font-size: 13.5px;
+  }
+  pre {
+    background: var(--bg-code);
+    padding: 12px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid var(--border-soft);
+  }
+  pre code { background: transparent; padding: 0; }
+  kbd {
+    display: inline-block;
+    background: var(--kbd-bg);
+    border: 1px solid var(--kbd-border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-family: "SF Mono", Menlo, Consolas, ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+    vertical-align: baseline;
+  }
+  table {
+    border-collapse: collapse;
+    margin: 16px 0;
+    width: 100%;
+    font-size: 14.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  th { color: var(--text-soft); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; }
+  .callout {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border-left: 3px solid;
+    font-size: 14.5px;
+  }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout.tip { background: var(--tip-bg); color: var(--tip-text); border-color: var(--tip-text); }
+  .callout.info { background: var(--info-bg); color: var(--info-text); border-color: var(--info-text); }
+  .callout.warn { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-text); }
+  .callout strong { font-weight: 700; }
+  hr { border: none; border-top: 1px solid var(--border-soft); margin: 40px 0; }
+  .footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-faint);
+    font-size: 13px;
+  }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 32px 24px 64px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#welcome">Welcome</a></li>
+    <li><a href="#getting-started">Getting started</a></li>
+    <li><a href="#documents">Documents &amp; the sidebar</a></li>
+    <li><a href="#outlining">Working with outlines</a></li>
+    <li><a href="#node-types">Node types</a></li>
+    <li><a href="#formatting">Text formatting</a></li>
+    <li><a href="#tags-links">Tags &amp; links</a></li>
+    <li><a href="#search">Search</a></li>
+    <li><a href="#cards">Spaced-repetition study</a></li>
+    <li><a href="#memo">Memorization cards</a></li>
+    <li><a href="#import-export">Importing &amp; exporting</a></li>
+    <li><a href="#backup">Backups &amp; transferring devices</a></li>
+    <li><a href="#security">Security &amp; privacy</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#shortcuts">Keyboard shortcuts</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<h1>Local Outline</h1>
+<p class="subtitle">A private, encrypted outliner that lives entirely in your browser. This guide walks you through everything you can do with it.</p>
+
+<h2 id="welcome">1. Welcome</h2>
+<p>Local Outline is a hierarchical note-taking app inspired by tools like Dynalist. Everything you create stays on your own device, encrypted with your password. There is no account, no cloud, and no server &mdash; if you don't share your snapshot file, no one else can read your notes.</p>
+<p>You can use it for:</p>
+<ul>
+  <li>Personal journals and daily notes</li>
+  <li>Project planning and checklists</li>
+  <li>Knowledge management with tags and cross-references</li>
+  <li>Code snippets with syntax highlighting</li>
+  <li>Pasted screenshots and reference images</li>
+  <li>Flashcards with spaced-repetition review</li>
+</ul>
+
+<div class="callout warn">
+<strong>Important:</strong> Your password is the only key to your notes. If you forget it, nobody &mdash; not even the app's author &mdash; can help you recover the data. Use a password you can remember, and always keep at least one encrypted snapshot backed up somewhere safe.
+</div>
+
+<h2 id="getting-started">2. Getting started</h2>
+
+<h3>Creating your first vault</h3>
+<p>When you open the app for the first time you'll see the <strong>Vaults</strong> screen. Click <strong>+ New vault</strong> and you'll be asked for:</p>
+<ul>
+  <li><strong>Name</strong> &mdash; just a label so you can tell vaults apart (e.g. <em>Personal</em>, <em>Work</em>).</li>
+  <li><strong>Password</strong> &mdash; minimum 8 characters. This encrypts everything in the vault.</li>
+  <li><strong>Confirm password</strong> &mdash; type it again to catch typos.</li>
+</ul>
+<p>Click <strong>Create</strong>. The vault opens and you're ready to start writing.</p>
+
+<h3>Unlocking a vault</h3>
+<p>Returning to the app shows the vault list. Click a vault and enter its password. After 15 minutes of inactivity (configurable), the vault locks itself automatically.</p>
+
+<h3>Multiple vaults</h3>
+<p>You can create as many vaults as you like on the same device. Each has its own password and its own contents &mdash; useful for separating, say, personal notes from work notes. The <kbd>⊞</kbd> button at the top of the sidebar returns you to the vault picker at any time.</p>
+
+<h2 id="documents">3. Documents &amp; the sidebar</h2>
+<p>Inside a vault, your work is organised into <strong>documents</strong>. Each document is a separate outline tree.</p>
+
+<h3>Creating documents</h3>
+<p>Click <strong>+ New</strong> in the sidebar top row. A new untitled document opens; click the title to rename it.</p>
+
+<h3>Daily notes</h3>
+<p>Click the <strong>📅 Today</strong> button to open or create today's daily note. The calendar below it lets you jump to any other date &mdash; daily notes are documents named by their date.</p>
+
+<h3>The sidebar at a glance</h3>
+<table>
+  <tr><th>Element</th><th>What it does</th></tr>
+  <tr><td><kbd>⊞</kbd></td><td>Back to the vault picker</td></tr>
+  <tr><td><kbd>🔍</kbd></td><td>Search across every document (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>)</td></tr>
+  <tr><td><kbd>❔</kbd></td><td>Open this help / shortcut overlay</td></tr>
+  <tr><td><strong>+ New</strong></td><td>Create a new document</td></tr>
+  <tr><td><strong>📅 Today</strong></td><td>Today's daily note</td></tr>
+  <tr><td><strong>Calendar</strong></td><td>Jump to any date's daily note</td></tr>
+  <tr><td><strong>Tags</strong></td><td>Click any tag to filter the document list</td></tr>
+  <tr><td><strong>Auto-snapshot</strong></td><td>Pick a folder for automatic encrypted backups</td></tr>
+  <tr><td><strong>Import / Export</strong></td><td>Markdown import, snapshot/HTML/Markdown/PDF export</td></tr>
+  <tr><td><kbd>🌙</kbd></td><td>Toggle light / dark theme</td></tr>
+  <tr><td><kbd>🔑</kbd></td><td>Change the vault password</td></tr>
+</table>
+
+<h2 id="outlining">4. Working with outlines</h2>
+
+<h3>Adding nodes</h3>
+<p>Click anywhere in the outline area or use the <strong>+ Text</strong> button. Press <kbd>Enter</kbd> at the end of a node to add a new one below it.</p>
+
+<h3>Indenting and outdenting</h3>
+<p>Press <kbd>Tab</kbd> to indent (move under the previous sibling) and <kbd>Shift</kbd>+<kbd>Tab</kbd> to outdent. There is no nesting limit.</p>
+
+<h3>Moving nodes</h3>
+<p>Use <kbd>Ctrl</kbd>+<kbd>↑</kbd> and <kbd>Ctrl</kbd>+<kbd>↓</kbd> to move a node up or down. You can also drag nodes by their bullet.</p>
+
+<h3>Collapsing and expanding</h3>
+<p>Click the small triangle next to a bullet to collapse a subtree. <kbd>Ctrl</kbd>+<kbd>.</kbd> toggles the current node, and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd> expands every descendant.</p>
+
+<h3>Zooming in</h3>
+<p>Focus on a single subtree with <kbd>Ctrl</kbd>+<kbd>]</kbd>. The breadcrumb at the top shows where you are; click any crumb to zoom back out.</p>
+
+<h3>Deleting</h3>
+<p><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>⌫</kbd> deletes the current node <em>and</em> all of its children. There's also a context menu (right-click a bullet) for more selective operations.</p>
+
+<h3>Undo and redo</h3>
+<p><kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>. The app remembers the last 200 changes.</p>
+
+<h2 id="node-types">5. Node types</h2>
+<p>Every node has a kind. You can convert between kinds from the context menu.</p>
+
+<h3>Text</h3>
+<p>The default. Rich text with Markdown formatting (see <a href="#formatting">§6</a>).</p>
+
+<h3>Checkbox</h3>
+<p>A to-do item. Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> to insert one or convert a text node to a checkbox. <kbd>Ctrl</kbd>+<kbd>/</kbd> toggles its checked state.</p>
+<p>You can add a <strong>due date</strong> by typing <code>@YYYY-MM-DD</code> anywhere in the text, for example:</p>
+<pre><code>- [ ] Submit invoice @2026-05-22</code></pre>
+<p>Tasks due today, overdue, or due this week are surfaced in search and the sidebar counters.</p>
+
+<h3>Code block</h3>
+<p>Click <strong>+ Code</strong> or convert a text node. Type the language right after the bullet (e.g. <code>javascript</code>, <code>python</code>, <code>rust</code>) &mdash; the editor switches to that language's syntax highlighting.</p>
+<p>Supported languages: JavaScript, Python, Markdown, CSS, HTML, JSON, SQL, Rust, C / C++, Java, Julia, R. The editor below uses CodeMirror with the One Dark theme.</p>
+
+<h3>Image</h3>
+<p>Paste an image directly into the outline (<kbd>Ctrl</kbd>+<kbd>V</kbd>) and it becomes a node. Images are encrypted and stored inside the vault, never uploaded.</p>
+<div class="callout info">The maximum image size is <strong>5&nbsp;MB</strong>. Larger files are rejected with a notice.</div>
+
+<h2 id="formatting">6. Text formatting</h2>
+<p>Local Outline uses inline Markdown. The most useful forms:</p>
+
+<table>
+  <tr><th>You type</th><th>You see</th></tr>
+  <tr><td><code>**bold**</code></td><td><strong>bold</strong></td></tr>
+  <tr><td><code>*italic*</code></td><td><em>italic</em></td></tr>
+  <tr><td><code>`code`</code></td><td><code>code</code></td></tr>
+  <tr><td><code>~~strike~~</code></td><td><s>strike</s></td></tr>
+  <tr><td><code>[label](https://example.com)</code></td><td><a href="#">label</a></td></tr>
+  <tr><td><code>https://example.com</code></td><td>linkified automatically</td></tr>
+</table>
+
+<h3>Math</h3>
+<p>Use single dollar signs for inline math and double for display math:</p>
+<pre><code>The Pythagorean theorem: $a^2 + b^2 = c^2$
+$$
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
+$$</code></pre>
+<p>Math is rendered with KaTeX. Both single-line and multi-line forms work.</p>
+
+<h2 id="tags-links">7. Tags &amp; links</h2>
+
+<h3>Tags</h3>
+<p>Type <code>#tagname</code> anywhere to tag a node. Tags appear in the sidebar; click one to filter the document list to documents containing that tag.</p>
+
+<h3>Wiki links</h3>
+<p>Type <code>[[</code> and start typing a document title &mdash; an autocomplete appears. Selecting one inserts <code>[[Doc title]]</code>, which becomes a clickable link to that document.</p>
+
+<h3>Node references</h3>
+<p>You can also link to a specific node anywhere using <code>((node-id))</code>. The easiest way to get the id is to copy a node link from the context menu.</p>
+
+<h3>Backlinks</h3>
+<p>When you zoom into a node or document, a panel at the bottom shows every place that links back to it.</p>
+
+<h2 id="search">8. Search</h2>
+<p>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> (or click <kbd>🔍</kbd>) to open the search overlay. It searches every node in every document in the current vault.</p>
+
+<h3>Filters</h3>
+<p>You can combine plain words with these filters:</p>
+
+<table>
+  <tr><th>Filter</th><th>What it matches</th></tr>
+  <tr><td><code>in:"Doc Title"</code></td><td>Only nodes in that document</td></tr>
+  <tr><td><code>kind:checkbox</code></td><td>Only checkbox nodes (also <code>kind:text</code>, <code>kind:code</code>, <code>kind:image</code>)</td></tr>
+  <tr><td><code>is:unchecked</code></td><td>Open checkboxes (or <code>is:checked</code>)</td></tr>
+  <tr><td><code>has:#tag</code></td><td>Nodes carrying a specific tag</td></tr>
+  <tr><td><code>@due:today</code> / <code>@due:overdue</code> / <code>@due:thisweek</code></td><td>Filter by due date</td></tr>
+  <tr><td><code>@card:due</code> / <code>@card:new</code></td><td>Cards ready for review</td></tr>
+</table>
+
+<h3>Command palette</h3>
+<p>Type <code>&gt;</code> in the search box to switch to command mode, which exposes app actions (e.g. <em>Open today's note</em>, <em>Toggle theme</em>).</p>
+
+<h2 id="cards">9. Spaced-repetition study</h2>
+<p>Any text node can be turned into a flashcard by starting it with the <code>@card</code> anchor. Cards live alongside the rest of your outline &mdash; you do not have to keep them in a separate document &mdash; and the app schedules them with a variant of the SM-2 spaced-repetition algorithm. This section covers every way to write a card, all the modifiers, and the full review flow.</p>
+
+<h3>9.1 The anchor</h3>
+<p>A card always begins with <code>@card</code> at the very start of the node (leading spaces are fine), optionally followed by a bracketed list of modifiers, then a single space, then the body of the card:</p>
+<pre><code>@card &lt;body&gt;
+@card[reverse] &lt;body&gt;
+@card[reverse,suspend] &lt;body&gt;</code></pre>
+<p>If the line does not start with <code>@card</code>, it is just a text node. If <code>@card</code> appears mid-line, it is just literal text. The anchor is what the app scans for when building the deck.</p>
+
+<div class="callout tip">
+The fastest way to make a card is to type <kbd>@</kbd><kbd>c</kbd><kbd>a</kbd><kbd>r</kbd><kbd>d</kbd><kbd>Space</kbd> at the start of any node and then write the card. A pill badge appears next to the node as soon as the anchor is recognised.
+</div>
+
+<h3>9.2 The three card kinds</h3>
+<p>The kind is determined by what the body contains, not by an explicit choice. The same anchor produces a question card, an inline (front/back) card, or a cloze card automatically:</p>
+
+<table>
+  <tr><th>If the body&hellip;</th><th>You get a&hellip;</th></tr>
+  <tr><td>Contains <code>{{c<i>N</i>::&hellip;}}</code></td><td><strong>Cloze card</strong></td></tr>
+  <tr><td>Has three or more top-level <code>::</code>-separated parts</td><td><strong>Multi-side card</strong> (sides revealed sequentially)</td></tr>
+  <tr><td>Contains exactly one <code>::</code> (and no cloze)</td><td><strong>Inline card</strong> (front/back)</td></tr>
+  <tr><td>Has neither</td><td><strong>Question card</strong> (prompt only, no answer side)</td></tr>
+</table>
+
+<h3>9.3 Question cards</h3>
+<p>The simplest form. The whole body is the prompt; there is no separate answer to flip to.</p>
+<pre><code>@card Name the seven continents.
+@card Recite the opening of <i>Beowulf</i>.
+@card What is the Pythagorean theorem?</code></pre>
+<p>Use this for cards where there is no single canonical answer or where flipping doesn't make sense (recitations, lists you want to recall from memory, open-ended prompts). You still grade yourself in the session.</p>
+
+<h3>9.4 Inline cards (front :: back)</h3>
+<p>Put <code>::</code> between the front and the back. Whitespace around the separator is trimmed.</p>
+<pre><code>@card Capital of France :: Paris
+@card TLS stands for :: Transport Layer Security
+@card What year was the moon landing? :: 1969
+@card $e^{i\pi} + 1$ = :: $0$</code></pre>
+<p>Markdown and math work inside both halves &mdash; you can have a code snippet on the front and prose on the back, or images, or KaTeX equations.</p>
+
+<div class="callout info">
+<strong>Multi-line cards.</strong> Each node is a single line. For longer prompts or answers, break the card into nested children &mdash; the child nodes render as part of the card's prompt and answer respectively. (Or write a longer prose card as a question-card; flipping is optional.)
+</div>
+
+<h4>Multi-side cards (3 or more sides)</h4>
+<p>Add more <code>::</code> separators to produce a card with as many sides as you like:</p>
+<pre><code>@card Subject :: Predicate :: Object
+@card Latin :: English :: Example sentence :: Notes
+@card Term :: Definition :: Mnemonic :: Source page :: Related terms</code></pre>
+<p>In the session you see the first side; each <kbd>Space</kbd> / <kbd>Enter</kbd> reveals the next one stacked below the previous. After the last side, the grade bar appears and a single rating applies to the whole card. Internally a multi-side card is one item with one schedule &mdash; the extra sides are just additional context that gets revealed before you grade.</p>
+<p>The pill shows the side count (e.g. <code>🎴 4-side · due</code>) so you can spot multi-side cards at a glance.</p>
+
+<h3>9.5 Cloze cards</h3>
+<p>Cloze deletion hides parts of a sentence. The syntax is <code>{{c<i>N</i>::content}}</code> &mdash; the <code>c</code> is literal, <i>N</i> is a number, and <code>content</code> is what gets hidden:</p>
+<pre><code>@card The capital of France is {{c1::Paris}}.</code></pre>
+<p>In the session you see the sentence with <code>Paris</code> blanked out, recall it, and grade yourself.</p>
+
+<h4>Multiple independent clozes</h4>
+<p>Give each cloze a different group number to schedule them independently. Each becomes its own card with its own review history.</p>
+<pre><code>@card {{c1::Mitochondria}} are the {{c2::powerhouse}} of the {{c3::cell}}.</code></pre>
+<p>That node produces three cards from one anchor: hide <code>Mitochondria</code>, hide <code>powerhouse</code>, hide <code>cell</code>. Each can be due on a different day.</p>
+
+<h4>Grouped clozes (reveal together)</h4>
+<p>Reuse the same group number to hide multiple regions <em>together</em> &mdash; they reveal as one and share a single review schedule.</p>
+<pre><code>@card In {{c1::1969}}, {{c1::Apollo 11}} landed on the Moon.</code></pre>
+<p>Here both blanks belong to group <code>c1</code>, so they form one card: the student must recall the year <em>and</em> the mission name in the same beat.</p>
+
+<h4>Hints</h4>
+<p>Add a second <code>::</code> inside a cloze to supply a hint that stays visible:</p>
+<pre><code>@card The capital of France is {{c1::Paris::city}}.</code></pre>
+<p>In the session you see <code>The capital of France is [city]</code>. Hints are useful for disambiguating similar-looking prompts (e.g. several country/capital pairs in one paragraph).</p>
+
+<h4>Mixed example</h4>
+<p>A single cloze card combining independent groups, a grouped pair, and a hint:</p>
+<pre><code>@card {{c1::France}}'s capital is {{c1::Paris}}, while {{c2::Germany::country}}'s is {{c3::Berlin}}.</code></pre>
+<p>This produces three scheduled cards: a grouped <code>c1</code> (France ↔ Paris together), a hinted <code>c2</code> (Germany with the hint "country" shown), and a plain <code>c3</code> (Berlin alone).</p>
+
+<h3>9.6 Modifiers</h3>
+<p>Modifiers go inside square brackets right after <code>@card</code>, comma-separated, with no spaces inside the brackets:</p>
+
+<table>
+  <tr><th>Modifier</th><th>Effect</th></tr>
+  <tr><td><code>reverse</code></td><td>For an inline (2-side) card, schedules a second review item in the opposite direction. Each direction is tracked with its own SM-2 schedule, so the forward and reverse cards become due independently. The pill aggregates to whichever direction is soonest due, and clicking it shows both schedules side-by-side. Ignored on multi-side cards (with a console warning).</td></tr>
+  <tr><td><code>suspend</code></td><td>Keeps the card in the deck but never schedules it for review. Useful when you want to put a card "on ice" without deleting it.</td></tr>
+</table>
+
+<p>Examples:</p>
+<pre><code>@card[reverse] Bonjour :: Hello
+@card[suspend] What is the cosine of 73 degrees?
+@card[reverse,suspend] mitochondrion :: cell organelle</code></pre>
+
+<div class="callout info">
+You can also suspend or unsuspend an existing card without editing its text &mdash; click the card's pill badge in the outline and choose <strong>Suspend</strong> / <strong>Unsuspend</strong> from the popover. That setting overrides the <code>suspend</code> modifier and is preserved when the card text is edited.
+</div>
+
+<h3>9.7 The card pill</h3>
+<p>Every recognised card shows a small pill badge next to the bullet. The pill tells you the card's state at a glance:</p>
+<ul>
+  <li><strong>New</strong> &mdash; never reviewed yet</li>
+  <li><strong>Due</strong> &mdash; ready for review now</li>
+  <li>An interval (<strong>3d</strong>, <strong>2w</strong>) &mdash; how long until it's next due</li>
+  <li><strong>Suspended</strong> &mdash; excluded from sessions</li>
+  <li><strong>N-side</strong> &mdash; multi-side card with N sides (e.g. <code>🎴 4-side · due</code>)</li>
+</ul>
+<p>For <strong>reverse</strong> cards the pill aggregates the soonest due date across both directions; clicking it shows the forward and reverse schedules separately. For <strong>cloze</strong> cards it aggregates across every group the same way.</p>
+<p>Click the pill to open a popover with three actions:</p>
+<table>
+  <tr><th>Action</th><th>What it does</th></tr>
+  <tr><td><strong>Study just this card</strong></td><td>Opens a one-card session</td></tr>
+  <tr><td><strong>Suspend / Unsuspend</strong></td><td>Toggles whether the card is scheduled</td></tr>
+  <tr><td><strong>Reset stats</strong></td><td>Wipes review history and interval; the card becomes "new" again. (Suspension state is kept.)</td></tr>
+</table>
+
+<h3>9.8 Starting a review session</h3>
+<p>There are four ways to launch a session:</p>
+<ol>
+  <li><strong>Sidebar due counter</strong> &mdash; if any cards are due in the vault, a counter appears in the sidebar; click it to study everything due.</li>
+  <li><strong>Card pill popover</strong> &mdash; "Study just this card" reviews exactly one card.</li>
+  <li><strong>Node context menu</strong> &mdash; right-click any node in the outline and choose <em>🎴 Study cards under here</em> to review every card in that subtree.</li>
+  <li><strong>Command palette</strong> &mdash; press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>, type <code>&gt;</code>, then search for <em>Study cards under selected node</em>.</li>
+</ol>
+
+<h3>9.9 The session UI</h3>
+<p>Once a session opens:</p>
+<ul>
+  <li>The front of the first card appears. For multi-side cards, each <kbd>Space</kbd> / <kbd>Enter</kbd> reveals the next side stacked below.</li>
+  <li>Press <kbd>Space</kbd> or <kbd>Enter</kbd> (or click the card) to flip and reveal the answer (or, for multi-side, to reach the grade bar after the last side).</li>
+  <li>For reverse-companion cards, the queue contains both directions and the progress bar shows <em>→ forward</em> or <em>← reverse</em> so you know which one you're grading.</li>
+  <li>Rate yourself with one of the five buttons or their number keys:</li>
+</ul>
+<table>
+  <tr><th>Button</th><th>Key</th><th>What it means</th></tr>
+  <tr><td><strong>Again</strong></td><td><kbd>1</kbd></td><td>You didn't recall it. The card returns in about 6 hours and the ease factor drops.</td></tr>
+  <tr><td><strong>Hard</strong></td><td><kbd>2</kbd></td><td>You got it but struggled. The interval grows slightly (×1.2) and ease drops a little.</td></tr>
+  <tr><td><strong>Good</strong></td><td><kbd>3</kbd></td><td>Comfortable recall. The interval grows by the current ease factor.</td></tr>
+  <tr><td><strong>Easy</strong></td><td><kbd>4</kbd></td><td>Trivial. The interval grows extra (× ease × 1.4) and ease nudges up.</td></tr>
+  <tr><td><strong>Perfect</strong></td><td><kbd>5</kbd></td><td>Instant recall with no hesitation. Largest interval growth (× ease × 1.8) and ease nudges up the most.</td></tr>
+</table>
+<p>The session moves to the next due card automatically. When the queue is empty, it closes. You can close at any time with the × button or <kbd>Esc</kbd>; partial sessions still record the grades you gave.</p>
+
+<h3>9.10 Finding cards in search</h3>
+<p>The search filters in <a href="#search">§8</a> include card-specific ones:</p>
+<table>
+  <tr><th>Filter</th><th>Matches</th></tr>
+  <tr><td><code>@card</code></td><td>Every card, regardless of state</td></tr>
+  <tr><td><code>@card:due</code></td><td>Cards ready to review now</td></tr>
+  <tr><td><code>@card:new</code></td><td>Cards never reviewed</td></tr>
+  <tr><td><code>@card:cloze</code> / <code>@card:inline</code> / <code>@card:question</code></td><td>Filter by card kind</td></tr>
+  <tr><td><code>@card:suspended</code></td><td>Cards excluded from scheduling</td></tr>
+  <tr><td><code>@card:reverse</code></td><td>Cards carrying the <code>reverse</code> modifier</td></tr>
+</table>
+
+<h3>9.11 Tips and recipes</h3>
+
+<h4>Build a card from notes you already have</h4>
+<p>Convert the line in place: put your cursor at the start, type <code>@card </code>, then add a <code>::</code> where the question/answer split is. The pill appears the moment the anchor parses.</p>
+
+<h4>One paragraph, many cards</h4>
+<p>Group related facts into a single cloze card with multiple groups. It keeps the context intact while still letting each fact be reviewed independently:</p>
+<pre><code>@card The {{c1::mitochondria}} of {{c2::eukaryotic}} cells produce {{c3::ATP}} via {{c4::oxidative phosphorylation}}.</code></pre>
+
+<h4>Both directions of a translation</h4>
+<p>Use <code>reverse</code> on an inline card &mdash; one node, two cards:</p>
+<pre><code>@card[reverse] danke :: thank you</code></pre>
+
+<h4>Bury a card you're not ready to review</h4>
+<p>Click its pill and choose <strong>Suspend</strong>. The card stays in the outline and remains visible; it simply won't appear in sessions until you unsuspend it.</p>
+
+<h4>Hide leading metadata</h4>
+<p>If a card needs context that shouldn't appear in the prompt, put the context in a parent node and the <code>@card</code> on a child:</p>
+<pre><code>- Chemistry / Bonding
+  - @card Ionic bonds form between :: a metal and a nonmetal
+  - @card Covalent bonds form between :: two nonmetals</code></pre>
+
+<h4>Forgotten everything in a deck?</h4>
+<p>Use the pill's <strong>Reset stats</strong> action on each card to put it back to "new", or just keep grading them <strong>Again</strong> and the scheduler will gradually relearn your knowledge.</p>
+
+<h3>9.12 What's preserved when you back up or move</h3>
+<p>Card stats (interval, ease, review history, suspension state) are part of the node &mdash; encrypted snapshots preserve them exactly. Markdown export <em>does not</em> preserve them: the <code>@card</code> text round-trips, but a re-imported card starts as new. Use encrypted snapshots if you want your review schedule to survive a device transfer.</p>
+
+<h2 id="memo">10. Memorization cards (<code>@memo</code>)</h2>
+<p>Where <code>@card</code> is for short prompt/answer recall, <code>@memo</code> is for memorising whole passages word-for-word &mdash; speeches, poems, prayers, scripture, code snippets you want to recall from memory. The app tracks mastery for every word individually and progressively blinds the ones you know best, so the prompt gets harder as you improve.</p>
+
+<h3>10.1 Anchor</h3>
+<p>Like cards, memo nodes start with an anchor:</p>
+<pre><code>@memo Four score and seven years ago our fathers brought forth
+@memo[suspend] A passage to keep but not study right now</code></pre>
+<p>The body that follows is the passage. The only modifier today is <code>suspend</code> (<code>reverse</code> doesn't apply to memorisation). A 🧠 pill badge appears next to the node as soon as the anchor parses.</p>
+
+<h3>10.2 Word visibility modes</h3>
+<p>Each word in the passage carries one of four visibility modes that determine what you see during recall:</p>
+<table>
+  <tr><th>Mode</th><th>What you see</th><th>When it's chosen</th></tr>
+  <tr><td><code>full</code></td><td>The full word</td><td>Words you're still learning or that the algorithm has demoted</td></tr>
+  <tr><td><code>letter</code></td><td>First letter, then underscores</td><td>Default for new words; gives you a strong hint</td></tr>
+  <tr><td><code>blind</code></td><td>Underscores only</td><td>Words you've mastered &mdash; the hardest level</td></tr>
+  <tr><td><code>locked</code></td><td>The full word, always</td><td>Manually-pinned words that should never be blinded (e.g. proper names you want to keep visible)</td></tr>
+</table>
+
+<h3>10.3 A review session</h3>
+<p>Click the 🧠 pill and choose <strong>Study just this memo</strong>. The review has three phases:</p>
+<ol>
+  <li><strong>Recall</strong> &mdash; the passage appears with each word rendered per its visibility mode. Try to recite it from memory. If you get stuck, <em>click any word</em> to peek at its full form; the click is remembered for the rest of this review.</li>
+  <li><strong>Reveal</strong> &mdash; press <kbd>Space</kbd> or <kbd>Enter</kbd>. The full passage appears below the masked version so you can compare. Grade yourself with one of the five buttons:
+    <ul>
+      <li><strong>Again</strong> (<kbd>1</kbd>) &mdash; resets interval, demotes any word you peeked at or that has low mastery.</li>
+      <li><strong>Hard</strong> / <strong>Good</strong> / <strong>Easy</strong> / <strong>Perfect</strong> (<kbd>2</kbd>&ndash;<kbd>5</kbd>) &mdash; grow the schedule and promote 2 / 4 / 8 of the highest-scoring words one step toward being blind (good → 2 words; easy → 4; perfect → 8).</li>
+    </ul>
+  </li>
+  <li><strong>Blinding preview</strong> &mdash; the app shows you the suggested new state of every word, with words that are about to change highlighted with a dashed outline. Click <strong>Accept</strong> to commit, or <strong>Customise</strong> to fine-tune the suggestion by hand before saving.</li>
+</ol>
+<p>The schedule (interval, ease, next due date) lives on the node alongside the per-word state.</p>
+
+<h3>10.4 Customising blinding</h3>
+<p>From the 🧠 pill popover, choose <strong>Edit blinding</strong> at any time (no review required) to open a customise view where each word cycles through <code>full → letter → blind → locked → full</code> on click. Use this to lock proper names that should always be visible, to hide tricky terms before you've earned the right with the scheduler, or to "warm up" a new memo by blinding common words you already know.</p>
+
+<h3>10.5 The 🧠 pill</h3>
+<p>States mirror the card pill:</p>
+<ul>
+  <li><strong>🧠 new</strong> &mdash; never reviewed yet</li>
+  <li><strong>🧠 due</strong> &mdash; ready for review now</li>
+  <li><strong>🧠 3d</strong>, <strong>🧠 2w</strong> &mdash; days until next review</li>
+  <li><strong>🧠 💤</strong> &mdash; suspended</li>
+</ul>
+<p>The popover shows word counts (blind / letter / full), average mastery, and the full SM-2 stats. Actions: <strong>Study just this memo</strong>, <strong>Edit blinding</strong>, <strong>Suspend / Unsuspend</strong>, <strong>Reset stats</strong>.</p>
+
+<h3>10.6 Editing the passage</h3>
+<p>You can edit a memo's text any time. When you do, the per-word state is reconciled: words that still appear at the same position keep their visibility mode and mastery; new or moved words start fresh at <code>letter</code> with mastery 0. The reconciliation runs the next time you open the memo for review or customise.</p>
+
+<h3>10.7 Search filters</h3>
+<table>
+  <tr><th>Filter</th><th>Matches</th></tr>
+  <tr><td><code>@memo</code></td><td>Every memo node, regardless of state</td></tr>
+  <tr><td><code>@memo:due</code></td><td>Memos ready to review now</td></tr>
+  <tr><td><code>@memo:new</code></td><td>Memos never reviewed</td></tr>
+  <tr><td><code>@memo:suspended</code></td><td>Memos excluded from scheduling</td></tr>
+</table>
+
+<h3>10.8 What's preserved when you back up or move</h3>
+<p>Encrypted snapshots round-trip the full memo state &mdash; per-word visibility, mastery, click counts, review history, and the schedule. Markdown export round-trips only the <code>@memo</code> anchor and the passage text; a re-imported memo starts fresh.</p>
+
+<h3>10.9 Tips</h3>
+<h4>Start easy, ramp up</h4>
+<p>New memos start with every word in <code>letter</code> mode &mdash; a strong hint. As you grade Good / Easy / Perfect, the algorithm progressively blinds the words you find easiest to recall.</p>
+<h4>Lock proper names you don't want to memorise</h4>
+<p>If a passage contains a long proper name (a place, a person, a citation) that you want to keep as context but never hide, open Edit blinding, click each occurrence until it shows <code>locked</code>, then Save. Locked words are immune to all adaptive suggestions.</p>
+<h4>Burn-in a tough passage</h4>
+<p>If you're struggling with a section, click the words you can't recall during the recall phase. Clicked words are penalised in the next blinding pass &mdash; their mastery drops faster and they're more likely to be promoted back to <code>full</code> on the next <strong>Again</strong>.</p>
+<h4>Import from flash</h4>
+<p>Flash text-memory cards import directly as <code>@memo</code> nodes with their tokens and schedule preserved &mdash; no lossy conversion to question cards anymore.</p>
+
+<h2 id="import-export">11. Importing &amp; exporting</h2>
+
+<h3>Encrypted snapshot</h3>
+<p>The most important format. A snapshot is a single <code>.json</code> file containing every document, node, and image in the vault, encrypted with a password you choose at export time.</p>
+<p>Export: <strong>Export → Encrypted snapshot</strong>, enter the vault password, save the file.</p>
+<p>Import: from the <strong>Vaults</strong> screen click <strong>Import vault from snapshot&hellip;</strong>, pick the file, choose a name, enter the snapshot's password. A brand-new vault is created from its contents.</p>
+
+<h3>Markdown</h3>
+<p>Per-document import and export. Headings become document titles; <code>- bullets</code> become text nodes; <code>- [x]</code> / <code>- [ ]</code> become checkboxes; fenced code blocks become code nodes.</p>
+<div class="callout info">Markdown export does <strong>not</strong> include images &mdash; images appear as placeholder references. For a fully self-contained file, use HTML export instead.</div>
+
+<h3>HTML</h3>
+<p>Per-document. Exports a single self-contained HTML file with inline CSS, rendered Markdown, KaTeX math, and base64-embedded images. Great for sharing a read-only copy.</p>
+
+<h3>Print / PDF</h3>
+<p>Choose <strong>Export → Print / PDF</strong> to open the browser print dialog. Pick "Save as PDF" as the destination for a clean PDF copy of the active document; sidebars and modals are hidden automatically.</p>
+
+<h3>Importing from Flash</h3>
+<p>If you have an export from the sibling <em>Flash</em> memorization app, drop its <code>.json</code> file into the import flow. Standard and cloze cards are converted to <code>@card</code> nodes with their review history preserved.</p>
+
+<h2 id="backup">12. Backups &amp; transferring devices</h2>
+
+<h3>Why backups matter</h3>
+<p>Your data lives in your browser's IndexedDB. Browsers can evict that storage if disk space runs low, and clearing site data (or uninstalling the browser) removes it permanently. <strong>Always keep at least one encrypted snapshot backed up outside the browser.</strong></p>
+
+<h3>Auto-snapshot</h3>
+<p>Click <strong>Enable auto-snapshot</strong> in the sidebar to pick a folder. While the permission is granted, the app writes a fresh encrypted snapshot to that folder periodically. Re-enable if you switch folders or revoke the permission.</p>
+<div class="callout tip">Pick a folder that is itself synced (e.g. a cloud-sync folder). That way your encrypted snapshots are automatically off-device, but they remain encrypted in transit.</div>
+
+<h3>Moving to a new device</h3>
+<ol>
+  <li>On the old device: <strong>Export → Encrypted snapshot</strong>, save the file.</li>
+  <li>Transfer the <code>.json</code> file by any means (USB, cloud drive, email-to-self).</li>
+  <li>On the new device: open the app, click <strong>Import vault from snapshot&hellip;</strong>, pick the file, enter its password.</li>
+</ol>
+<p>The new device gets a fresh, independent vault containing the same data. Changes on either device remain local until you snapshot again.</p>
+
+<h2 id="security">13. Security &amp; privacy</h2>
+
+<h3>What's encrypted</h3>
+<p>Every document title, every node, every image. All encryption happens in your browser using AES-GCM with a key derived from your password (using Argon2id where available, PBKDF2 as a fallback).</p>
+
+<h3>What's <em>not</em> encrypted</h3>
+<p>Some app settings stored alongside the vault data are intentionally plaintext:</p>
+<ul>
+  <li>Your theme choice (light/dark)</li>
+  <li>The auto-lock timeout</li>
+  <li>The path to the auto-snapshot folder (handle only, not contents)</li>
+</ul>
+<p>These contain no notes or personal information.</p>
+
+<h3>Zero knowledge</h3>
+<p>There is no server. Your password never leaves the device. Nobody can read your notes without your password, and there is no recovery mechanism.</p>
+
+<h3>Password change</h3>
+<p>Click the <kbd>🔑</kbd> in the sidebar to change your vault password. The internal encryption key isn't changed; only the way it is locked with your password. The change is instant &mdash; no re-encryption pass is needed.</p>
+
+<h3>Auto-lock</h3>
+<p>After 15 minutes of inactivity (configurable in settings) the vault locks itself and you'll need to re-enter the password. Closing the browser tab also locks the vault.</p>
+
+<h2 id="settings">14. Settings</h2>
+
+<h3>Themes</h3>
+<p>Click the <kbd>🌙</kbd> button in the sidebar to toggle light and dark themes. Your choice persists across sessions.</p>
+
+<h3>Auto-lock duration</h3>
+<p>Look for the setting in the sidebar / settings area. <strong>0</strong> disables auto-lock entirely (not recommended on shared devices).</p>
+
+<h3>Installing as an app (PWA)</h3>
+<p>On most browsers you can install Local Outline like a native app:</p>
+<ul>
+  <li><strong>Chrome / Edge</strong>: click the install icon in the address bar.</li>
+  <li><strong>Safari (iOS)</strong>: Share → Add to Home Screen.</li>
+  <li><strong>Firefox Android</strong>: menu → Install.</li>
+</ul>
+<p>Installed, it launches in its own window with no browser chrome and works fully offline after the first load.</p>
+
+<h2 id="shortcuts">15. Keyboard shortcuts</h2>
+
+<table>
+  <tr><th>Action</th><th>Shortcut</th></tr>
+  <tr><td>Collapse / expand node</td><td><kbd>Ctrl</kbd> + <kbd>.</kbd></td></tr>
+  <tr><td>Expand all descendants</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>.</kbd></td></tr>
+  <tr><td>Add node below</td><td><kbd>Enter</kbd></td></tr>
+  <tr><td>Zoom into node</td><td><kbd>Ctrl</kbd> + <kbd>]</kbd></td></tr>
+  <tr><td>Delete node (and children)</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>⌫</kbd></td></tr>
+  <tr><td>Move node up</td><td><kbd>Ctrl</kbd> + <kbd>↑</kbd></td></tr>
+  <tr><td>Move node down</td><td><kbd>Ctrl</kbd> + <kbd>↓</kbd></td></tr>
+  <tr><td>Indent</td><td><kbd>Tab</kbd></td></tr>
+  <tr><td>Outdent</td><td><kbd>Shift</kbd> + <kbd>Tab</kbd></td></tr>
+  <tr><td>Add checkbox</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd></td></tr>
+  <tr><td>Toggle checkbox</td><td><kbd>Ctrl</kbd> + <kbd>/</kbd></td></tr>
+  <tr><td>Number children</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd></td></tr>
+  <tr><td>Undo</td><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td></tr>
+  <tr><td>Redo</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td></tr>
+  <tr><td>Search all</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></td></tr>
+  <tr><td>Show this help</td><td><kbd>?</kbd></td></tr>
+</table>
+<p><kbd>Ctrl</kbd> means <kbd>Cmd</kbd> on macOS. Inside a code block, <kbd>Tab</kbd> indents code (not the outline).</p>
+
+<h2 id="troubleshooting">16. Troubleshooting</h2>
+
+<h3>I forgot my password</h3>
+<p>There is no password recovery. The vault key is wrapped with your password and only you have it. If you've kept an encrypted snapshot somewhere and you remember the password you set when you exported it, you can import that snapshot. Otherwise the data is unrecoverable.</p>
+
+<h3>The app says "Incorrect password" but I'm sure it's right</h3>
+<p>Double-check the keyboard layout and Caps Lock. If you genuinely typed it correctly, the vault data on disk may be partially corrupted &mdash; try importing your most recent snapshot into a fresh vault.</p>
+
+<h3>I cleared site data and lost everything</h3>
+<p>Clearing browser site data wipes IndexedDB along with cookies and local storage. The vault data is gone unless you have an encrypted snapshot. This is one of the reasons auto-snapshot exists.</p>
+
+<h3>My snapshot file failed to import</h3>
+<p>Make sure you're using the same password you set <em>when you exported the snapshot</em> (not the current vault password &mdash; they're stored independently inside the snapshot). The error message <em>"Incorrect password or corrupted snapshot"</em> covers both cases without distinguishing them &mdash; this is intentional.</p>
+
+<h3>An image won't paste</h3>
+<p>Images over 5&nbsp;MB are rejected. Resize or compress the image before pasting. If a non-image file is on the clipboard, the paste handler ignores it.</p>
+
+<h3>Auto-snapshot stopped working</h3>
+<p>Browsers can revoke the folder permission (e.g. after a restart). Click <strong>Enable auto-snapshot</strong> again to re-grant access.</p>
+
+<h3>The app won't open offline</h3>
+<p>Visit the app online once with a modern browser; the service worker caches everything needed. After that it works offline. If it still doesn't, check that your browser hasn't disabled service workers (some privacy settings do).</p>
+
+<h3>I want to migrate to or from another app</h3>
+<p>Markdown export works as a bridge to any other Markdown-based tool. For full fidelity (images, encryption, review state) only the snapshot format round-trips.</p>
+
+<div class="footer">
+<p>For the technical specification (encryption details, schema, internals) see <code>outliner_technical_blueprint.md</code> in the project directory.</p>
+</div>
+
+</main>
+</div>
+</body>
+</html>

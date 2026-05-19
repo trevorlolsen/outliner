@@ -239,11 +239,13 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .node-meta{opacity:0.25;display:flex;gap:2px;align-items:center;flex-shrink:0;transition:opacity .1s}
 .node-meta button{background:none;border:none;color:var(--text-soft);cursor:pointer;font-size:13px;padding:1px 5px;line-height:1}
 .node-meta button:hover{color:var(--text-muted)}
+.node-meta-right{opacity:0.6;display:flex;gap:4px;align-items:center;flex-shrink:0;margin-left:auto;padding-right:6px;transition:opacity .1s}
+.node-row:hover .node-meta-right{opacity:1}
 .collapse-btn{background:none;border:none;cursor:pointer;color:var(--text-fainter);font-size:9px;padding:3px 2px;line-height:1;min-width:14px;flex-shrink:0;margin-top:2px}
 .collapse-btn.invisible{visibility:hidden}
 .bullet{background:none;border:none;cursor:default;color:var(--text-fainter);font-size:16px;padding:0 3px;line-height:1.4;flex-shrink:0}
 .checkbox-input{margin:4px 4px 0 0;cursor:pointer;accent-color:var(--accent);flex-shrink:0}
-.card-pill{font-size:0.75em;opacity:0.6;padding:0 4px;border-radius:4px;background:transparent;border:1px solid var(--border);margin-left:6px;cursor:pointer;font-family:inherit;color:inherit;line-height:1.4;white-space:nowrap}
+.card-pill{font-size:0.75em;opacity:0.6;padding:0 4px;border-radius:4px;background:transparent;border:1px solid var(--border);margin-left:0;cursor:pointer;font-family:inherit;color:inherit;line-height:1.4;white-space:nowrap}
 .card-pill:hover{opacity:1}
 .node-text{flex:1;outline:none;color:var(--text);font-size:14px;line-height:1.6;min-height:1.6em;white-space:pre-wrap;word-break:break-word;cursor:text;user-select:text;caret-color:var(--text);padding:0}
 .node-text.done{text-decoration:line-through;color:var(--text-fainter)}
@@ -327,6 +329,8 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .card-popover-meta .cp-stat{display:flex;justify-content:space-between;gap:12px}
 .card-popover-meta .cp-k{color:var(--text-fainter)}
 .card-popover-meta .cp-v{color:var(--text-dim);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+.card-popover-meta .cp-dir-head{color:var(--text-dim);font-weight:600;margin-top:6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.card-popover-meta .cp-dir-head:first-child{margin-top:0}
 .ctx-sep{height:1px;background:var(--ctx-sep);margin:3px 0}
 .ctx-shortcut{font-size:11px;color:var(--text-fainter);font-family:monospace;flex-shrink:0}
 .ctx-arrow{font-size:9px;color:var(--text-fainter);flex-shrink:0;margin-left:2px}
@@ -343,7 +347,9 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #help-overlay .shortcut-grid{display:grid;grid-template-columns:max-content 1fr;gap:8px 20px;font-size:13px;align-items:center}
 #help-overlay .shortcut-grid .sc-keys{font-family:monospace;color:var(--text-dim);white-space:nowrap;background:var(--bg-list-active);border:1px solid var(--border);border-radius:3px;padding:2px 8px;font-size:12px;justify-self:start}
 #help-overlay .shortcut-grid .sc-label{color:var(--text-muted)}
-#help-overlay .help-close{margin-top:20px;width:100%}
+#help-overlay .help-docs-link{display:block;margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);color:var(--inline-link);text-decoration:none;font-size:13px}
+#help-overlay .help-docs-link:hover{color:var(--inline-link-hover);text-decoration:underline}
+#help-overlay .help-close{margin-top:14px;width:100%}
 
 /* Command palette */
 #palette-overlay{position:fixed;inset:0;background:var(--overlay-soft);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:700}
@@ -395,6 +401,23 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .card-face[hidden]{display:none}
 .card-back{border-top:2px dashed var(--border-soft)}
 .study-divider{font-size:10px;color:var(--text-fainter);text-align:center;letter-spacing:.1em;text-transform:uppercase}
+.card-side:not(:first-child){margin-top:10px}
+.side-separator{text-align:center;color:var(--text-faintest);font-size:18px;margin:6px 0;letter-spacing:.4em}
+/* Memo review tokens — colour by visibility mode so the user can see at a
+   glance which words are full / letter / blind / locked. */
+.memo-word{display:inline;border-radius:3px;padding:0 1px;transition:background .1s ease}
+.memo-word-full{color:var(--text)}
+.memo-word-letter{color:var(--text-dim)}
+.memo-word-letter .memo-word-rest{color:var(--text-faintest);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:-1px}
+.memo-word-blind{color:var(--text-faintest);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:-1px}
+.memo-word-locked{color:var(--text);background:var(--bg-list-active);padding:0 3px;border-radius:3px}
+.memo-word-clickable{cursor:pointer}
+.memo-word-clickable:hover{background:var(--bg-3)}
+.memo-word-changed{outline:1px dashed var(--accent);outline-offset:1px}
+.memo-controls{display:flex;gap:8px;justify-content:flex-end;padding:10px 0}
+.memo-controls button{padding:8px 14px;background:var(--accent);color:var(--accent-on);border:none;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;font-weight:600}
+.memo-controls button:nth-child(n+2){background:var(--bg-3);color:var(--text)}
+.memo-controls button:hover{filter:brightness(1.1)}
 .grade-bar{display:flex;gap:8px;justify-content:space-between}
 .grade-bar[hidden]{display:none}
 .grade-bar button{flex:1;padding:10px 8px;background:var(--bg-4);color:var(--text);border:1px solid var(--border-soft);border-radius:6px;font:inherit;font-size:13px;cursor:pointer;transition:background .12s}
@@ -403,6 +426,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .grade-bar button[data-rating="hard"]:hover{background:#7a5a2c;border-color:#a08444}
 .grade-bar button[data-rating="good"]:hover{background:#2c5a7a;border-color:#4484a0}
 .grade-bar button[data-rating="easy"]:hover{background:#2c7a4a;border-color:#44a070}
+.grade-bar button[data-rating="perfect"]:hover{background:#4a2c7a;border-color:#7044a0}
 .study-flip-hint{text-align:center;font-size:12px;color:var(--text-faint);padding:8px 0}
 .study-flip-hint[hidden]{display:none}
 .study-close{position:absolute;top:6px;right:10px;background:transparent;border:none;color:var(--text-faint);cursor:pointer;font-size:20px;line-height:1;padding:4px 8px}
@@ -428,7 +452,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
   #wiki-autocomplete, #node-ctx-menu, #help-overlay, #palette-overlay, #search-overlay, #study-overlay,
   #vault-screen, #vault-new-modal, #vault-unlock-modal,
   #export-modal, #import-modal, #vault-snap-modal, #vault-chpass-modal,
-  .node-meta, .collapse-btn, .backlinks-panel { display:none !important; }
+  .node-meta, .node-meta-right, .collapse-btn, .backlinks-panel { display:none !important; }
   #app { display:block; height:auto; overflow:visible; }
   #editor-area { background:#fff; overflow:visible; display:block; }
   #outline-tree { padding:0; overflow:visible; color:#000; }
@@ -632,6 +656,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
       <button id="back-to-vaults-btn" title="All vaults">⊞</button>
       <span class="app-title" id="active-vault-label">Outline</span>
       <button id="search-btn" title="Search (Ctrl+Shift+F)">🔍</button>
+      <button id="help-btn" title="Help & documentation (?)">❔</button>
       <button id="new-doc-btn">+ New</button>
       <button id="sidebar-toggle" title="Toggle sidebar">‹</button>
     </div>
@@ -1205,7 +1230,7 @@ function opChangeCodeLang(nodes, nodeId, lang) {
 // stats via the ported SM-2 scheduler, and appends a capped history entry.
 // Returned through the standard op shape but applied via applyReview (sibling
 // of applyOp) so grading never lands on the undo stack.
-function opGradeCard(nodes, nodeId, rating, clozeGroup) {
+function opGradeCard(nodes, nodeId, rating, clozeGroup, direction) {
   const node = nodes.find(n => n.id === nodeId)
   if (!node) return null
   const updated = { ...node, updatedAt: now() }
@@ -1213,12 +1238,16 @@ function opGradeCard(nodes, nodeId, rating, clozeGroup) {
     const stats = { ...(node.cardClozeStats?.[clozeGroup] ?? defaultCardStats()) }
     updateScheduleFor(stats, rating)
     updated.cardClozeStats = { ...(node.cardClozeStats ?? {}), [clozeGroup]: stats }
+  } else if (direction === 'rev') {
+    const stats = { ...(node.cardReverseStats ?? defaultCardStats()) }
+    updateScheduleFor(stats, rating)
+    updated.cardReverseStats = stats
   } else {
     const stats = { ...(node.cardStats ?? defaultCardStats()) }
     updateScheduleFor(stats, rating)
     updated.cardStats = stats
   }
-  const history = [...(node.cardHistory ?? []), { at: new Date().toISOString(), rating, group: clozeGroup ?? null }]
+  const history = [...(node.cardHistory ?? []), { at: new Date().toISOString(), rating, group: clozeGroup ?? null, direction: direction ?? null }]
   while (history.length > 20) history.shift()
   updated.cardHistory = history
   return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
@@ -1236,8 +1265,50 @@ function opToggleCardSuspend(nodes, nodeId) {
 // "reset stats" is about clearing the schedule, not un-hiding the card.
 function opResetCardStats(nodes, nodeId) {
   const node = nodes.find(n => n.id === nodeId); if (!node) return null
-  const { cardStats, cardClozeStats, cardHistory, ...rest } = node
+  const { cardStats, cardClozeStats, cardReverseStats, cardHistory, ...rest } = node
   const updated = { ...rest, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+// Memo ops — parallel to opGradeCard / opToggleCardSuspend / opResetCardStats
+// but write to memoStats / memoTokens / memoSuspended / memoHistory. Memo
+// grading takes the SUGGESTED (post-blinding) tokens so the adaptive blinding
+// preview becomes the persisted state on accept.
+function opGradeMemo(nodes, nodeId, rating, suggestedTokens) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const stats = { ...(node.memoStats ?? defaultCardStats()) }
+  updateScheduleFor(stats, rating)
+  const history = [...(node.memoHistory ?? []), { at: new Date().toISOString(), rating }]
+  while (history.length > 20) history.shift()
+  const updated = {
+    ...node,
+    memoStats: stats,
+    memoTokens: suggestedTokens,
+    memoHistory: history,
+    updatedAt: now(),
+  }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opToggleMemoSuspend(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const updated = { ...node, memoSuspended: !node.memoSuspended, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opResetMemoStats(nodes, nodeId) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const { memoStats, memoTokens, memoHistory, ...rest } = node
+  const updated = { ...rest, updatedAt: now() }
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+// Persist a tokens edit (from the "Edit blinding" customise UI) without
+// touching the schedule. Routes through applyOp because changes to which
+// words are blind ARE editorial — the user should be able to undo them.
+function opSetMemoTokens(nodes, nodeId, tokens) {
+  const node = nodes.find(n => n.id === nodeId); if (!node) return null
+  const updated = { ...node, memoTokens: tokens, updatedAt: now() }
   return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
 }
 
@@ -1515,7 +1586,7 @@ a{color:#3a5cd0}
 <body>
 <h1>${escText(doc.title || 'Outline')}</h1>
 <ul>${bodyHtml}</ul>
-</body>
+</bo${''}dy>
 </html>`
 }
 
@@ -1589,16 +1660,11 @@ function importMarkdown(text) {
 function flashCardToText(card, lossy) {
   if (!card || !card.type) return null
   if (card.type === 'standard') {
-    const sides = (card.standardCard?.sides || []).map(s => (s?.markdown || '').trim())
+    const sides = (card.standardCard?.sides || []).map(s => (s?.markdown || '').trim()).filter(Boolean)
     if (sides.length < 2) return null
-    const front = sides[0]
-    const back = sides.length === 2 ? sides[1] : sides.slice(1).join(' / ')
-    if (sides.length > 2) {
-      lossy.multiSide++
-      console.warn('[flash-import] standard card has', sides.length, 'sides; joined sides 2..N with " / ":', card.id)
-    }
-    if (!front && !back) return null
-    return `@card ${front} :: ${back}`
+    // Outliner supports multi-side cards natively via `@card a :: b :: c …`,
+    // so 3+ side standard cards round-trip losslessly.
+    return `@card ${sides.join(' :: ')}`
   }
   if (card.type === 'cloze') {
     const text = card.clozeCard?.text || ''
@@ -1608,10 +1674,9 @@ function flashCardToText(card, lossy) {
   if (card.type === 'text-memory') {
     const text = card.textMemoryCard?.text || ''
     if (!text.trim()) return null
-    lossy.textMemory++
-    console.warn('[flash-import] text-memory card converted to question card (lossy):', card.id)
-    const title = (card.title || 'Recall').trim() || 'Recall'
-    return `@card ${title} :: ${text.trim()}`
+    // Outliner now has a native @memo card kind, so text-memory cards
+    // round-trip with their tokens and review stats intact.
+    return `@memo ${text.trim()}`
   }
   return null
 }
@@ -1634,7 +1699,7 @@ async function importFlashDeck(json) {
   const ts = now()
   const doc = { id: genId(), title: docTitle, createdAt: ts, updatedAt: ts }
 
-  const lossy = { multiSide: 0, textMemory: 0 }
+  const lossy = {}
   const skipped = []
   const newNodes = []
   let prevOrder = null
@@ -1654,9 +1719,17 @@ async function importFlashDeck(json) {
       createdAt: ts,
       updatedAt: ts,
     }
-    if (card.cardStats && typeof card.cardStats === 'object') node.cardStats = card.cardStats
-    if (card.type === 'cloze' && card.clozeCard?.groupStats && typeof card.clozeCard.groupStats === 'object') {
-      node.cardClozeStats = card.clozeCard.groupStats
+    if (card.type === 'text-memory') {
+      // Memo nodes keep their schedule in memoStats and per-word state in
+      // memoTokens — emitting cardStats here would let the cardExtractor
+      // tag the node @card by mistake.
+      if (card.cardStats && typeof card.cardStats === 'object') node.memoStats = card.cardStats
+      if (Array.isArray(card.textMemoryCard?.tokens)) node.memoTokens = card.textMemoryCard.tokens
+    } else {
+      if (card.cardStats && typeof card.cardStats === 'object') node.cardStats = card.cardStats
+      if (card.type === 'cloze' && card.clozeCard?.groupStats && typeof card.clozeCard.groupStats === 'object') {
+        node.cardClozeStats = card.clozeCard.groupStats
+      }
     }
     newNodes.push(node)
   }
@@ -1670,8 +1743,6 @@ async function importFlashDeck(json) {
 
   if (skipped.length) console.warn(`[flash-import] skipped ${skipped.length} cards:`, skipped)
   const notes = []
-  if (lossy.multiSide) notes.push(`${lossy.multiSide} multi-side (joined with " / ")`)
-  if (lossy.textMemory) notes.push(`${lossy.textMemory} text-memory (converted to question)`)
   if (skipped.length) notes.push(`${skipped.length} skipped`)
   const suffix = notes.length ? `\n(${notes.join('; ')}; see console for details)` : ''
   alert(`Imported ${newNodes.length} cards into "${docTitle}".${suffix}`)
@@ -1799,13 +1870,176 @@ function parseCard(content) {
     }
     return { kind: 'cloze', text: body, groups: parsed.groups, segments: parsed.segments, modifiers, unknown }
   }
-  const sep = body.match(/\s*::\s*/)
-  if (sep) {
-    const front = body.slice(0, sep.index).trim()
-    const back  = body.slice(sep.index + sep[0].length).trim()
-    if (front && back) return { kind: 'inline', front, back, modifiers, unknown }
+  if (/\s*::\s*/.test(body)) {
+    const parts = body.split(/\s*::\s*/).map(s => s.trim()).filter(Boolean)
+    if (parts.length >= 3) {
+      return { kind: 'sides', sides: parts, modifiers, unknown }
+    }
+    if (parts.length === 2) {
+      return { kind: 'inline', front: parts[0], back: parts[1], modifiers, unknown }
+    }
   }
   return { kind: 'question', question: body, modifiers, unknown }
+}
+
+// =====================================================================
+// MEMO  (@memo cards — text memorization with per-word adaptive blinding)
+// =====================================================================
+
+const MEMO_ANCHOR_RE = /^\s*@memo(?:\[([^\]\n]*)\])?(?=\s|$)/
+
+function parseMemo(content) {
+  if (typeof content !== 'string') return null
+  const m = content.match(MEMO_ANCHOR_RE)
+  if (!m) return null
+  const modsRaw = (m[1] || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const known = new Set(['suspend'])  // reverse is meaningless for memo cards
+  const modifiers = modsRaw.filter(s => known.has(s))
+  const unknown  = modsRaw.filter(s => !known.has(s))
+  const body = content.slice(m[0].length).trim()
+  if (!body) return null
+  return { text: body, modifiers, unknown }
+}
+
+// Tokenizer ported verbatim from flash/src/cards/tokenizer.js. Splits a
+// passage into word / space / punctuation / linebreak tokens, with per-word
+// metadata for adaptive blinding (visibleMode, mastery, click counters).
+function tokenizeMemo(text) {
+  if (!text) return []
+  const tokens = []
+  let wordIndex = 0
+  const parts = text.split(/(\r?\n|[^\w']+|[\w']+)/g).filter(p => p !== '')
+  for (const part of parts) {
+    if (part === '\n' || part === '\r\n') {
+      tokens.push({ type: 'linebreak', raw: '\n' })
+    } else if (/^[\w']+$/.test(part)) {
+      tokens.push({
+        type: 'word',
+        index: wordIndex++,
+        raw: part,
+        normalized: part.toLowerCase(),
+        prefix: part[0],
+        visibleMode: 'letter',
+        mastery: 0,
+        revealCount: 0,
+        rightCount: 0,
+        wrongCount: 0,
+        lastClickedAt: null,
+        lastChangedAt: null,
+      })
+    } else if (/^\s+$/.test(part)) {
+      tokens.push({ type: 'space', raw: part })
+    } else {
+      tokens.push({ type: 'punctuation', raw: part })
+    }
+  }
+  return tokens
+}
+
+// Re-tokenise on edit, carrying over visibleMode / mastery / counters
+// for words that still appear at the same (normalized, occurrence-index)
+// position. Unchanged sentences round-trip with zero state loss; words that
+// move or change reset to fresh defaults.
+function reconcileMemoTokens(oldTokens, newText) {
+  const fresh = tokenizeMemo(newText)
+  if (!Array.isArray(oldTokens) || oldTokens.length === 0) return fresh
+  const seen = new Map()  // normalized -> count seen so far in fresh
+  // Build a lookup of (normalized, nthOccurrence) -> oldWord for matching.
+  const oldSeen = new Map()
+  const oldMap = new Map()
+  for (const t of oldTokens) {
+    if (t.type !== 'word') continue
+    const n = (oldSeen.get(t.normalized) ?? 0)
+    oldMap.set(`${t.normalized}#${n}`, t)
+    oldSeen.set(t.normalized, n + 1)
+  }
+  for (const t of fresh) {
+    if (t.type !== 'word') continue
+    const n = (seen.get(t.normalized) ?? 0)
+    seen.set(t.normalized, n + 1)
+    const old = oldMap.get(`${t.normalized}#${n}`)
+    if (old) {
+      t.visibleMode = old.visibleMode
+      t.mastery = old.mastery
+      t.revealCount = old.revealCount
+      t.rightCount = old.rightCount
+      t.wrongCount = old.wrongCount
+      t.lastClickedAt = old.lastClickedAt
+      t.lastChangedAt = old.lastChangedAt
+    }
+  }
+  return fresh
+}
+
+function _clamp01(v) { return Math.max(0, Math.min(1, v)) }
+
+// Mutates the passed-in word object. Ported verbatim from
+// flash/src/review/adaptiveBlinding.js — deltas are tuned for the SM-2
+// rating set this app shares with flash.
+function updateWordMastery(word, rating, wasClicked) {
+  const ratingDelta = { again: -0.15, hard: 0.02, good: 0.08, easy: 0.14, perfect: 0.22 }
+  let delta = ratingDelta[rating] || 0
+  if (wasClicked) {
+    delta -= 0.18
+    word.revealCount = (word.revealCount || 0) + 1
+    word.lastClickedAt = new Date().toISOString()
+  }
+  word.mastery = _clamp01((word.mastery || 0) + delta)
+}
+
+// Score a candidate word for promotion (full→letter→blind). Higher score =
+// more eligible. Mirrors flash's heuristics so the per-word blinding feel
+// transfers across both apps for users who use both.
+function blindCandidateScore(word, tokens) {
+  let score = (word.mastery || 0) * 100
+  if (word.revealCount > 0) score -= word.revealCount * 20
+  if (word.raw.length <= 3) score += 10
+  const idx = word.index
+  if (idx === 0) score -= 10
+  if (idx > 0) {
+    const prev = tokens.slice(0, idx).reverse().find(t => t.type !== 'space')
+    if (prev && prev.type === 'linebreak') score -= 10
+  }
+  const normalized = word.normalized
+  const occurrences = tokens.filter(t => t.type === 'word' && t.normalized === normalized).length
+  if (occurrences > 1) score += 8
+  return score
+}
+
+const BLIND_COUNTS = { again: 0, hard: 0, good: 2, easy: 4, perfect: 8 }
+
+// Returns a NEW tokens array with visibleMode promotions / demotions applied
+// per the user's rating + which words they had to click to remember. Locked
+// words are immune. Mutates word stats (mastery, revealCount, etc.) on the
+// returned tokens. Callers should clone before passing in if they want the
+// preview to be non-destructive.
+function suggestBlinding(tokens, rating, clickedIndices = []) {
+  const words = tokens.filter(t => t.type === 'word')
+  for (const word of words) {
+    const wasClicked = clickedIndices.includes(word.index)
+    updateWordMastery(word, rating, wasClicked)
+  }
+  if (rating === 'again') {
+    for (const word of words) {
+      if (clickedIndices.includes(word.index) || word.mastery < 0.2) {
+        if (word.visibleMode === 'blind') word.visibleMode = 'letter'
+        else if (word.visibleMode === 'letter') word.visibleMode = 'full'
+      }
+    }
+    return tokens
+  }
+  const toBlind = BLIND_COUNTS[rating] || 0
+  if (toBlind === 0) return tokens
+  const candidates = words
+    .filter(w => w.visibleMode !== 'blind' && w.visibleMode !== 'locked')
+    .map(w => ({ word: w, score: blindCandidateScore(w, tokens) }))
+    .sort((a, b) => b.score - a.score)
+  const toPromote = candidates.slice(0, toBlind)
+  for (const { word } of toPromote) {
+    if (word.visibleMode === 'full') word.visibleMode = 'letter'
+    else if (word.visibleMode === 'letter') word.visibleMode = 'blind'
+  }
+  return tokens
 }
 
 const searchIndex = {
@@ -1919,6 +2153,26 @@ function cardExtractor(node) {
   return out
 }
 registerExtractor(cardExtractor)
+
+// Memo extractor — same shape as cardExtractor but for @memo nodes. Emits
+// @memo / @memo:due / @memo:new / @memo:suspended so the existing search /
+// palette / sidebar plumbing finds memo nodes without any new infrastructure.
+function memoExtractor(node) {
+  if (node.kind !== 'text') return []
+  const parsed = parseMemo(node.content || '')
+  if (!parsed) return []
+  const out = ['@memo']
+  const suspended = node.memoSuspended === true || parsed.modifiers.includes('suspend')
+  if (suspended) out.push('@memo:suspended')
+  const stats = node.memoStats
+  if (!stats || !stats.totalReviews) {
+    out.push('@memo:new')
+  } else if (stats.nextDueAt && new Date(stats.nextDueAt).getTime() <= Date.now()) {
+    out.push('@memo:due')
+  }
+  return out
+}
+registerExtractor(memoExtractor)
 
 function getAllTags() {
   const out = []
@@ -2974,6 +3228,8 @@ function renderCardPill(node) {
   // top-level cardStats. Aggregate by picking the soonest nextDueAt across
   // groups; if any group is overdue the whole pill goes "due". This keeps
   // one pill per node while still surfacing the most urgent group.
+  // Multi-direction (reverse) cards aggregate cardStats + cardReverseStats
+  // the same way so the pill reflects whichever direction is most urgent.
   let stats = node.cardStats
   if (parsed.kind === 'cloze') {
     const groupKeys = Array.from(parsed.groups.keys())
@@ -2993,22 +3249,33 @@ function renderCardPill(node) {
         return new Date(s.nextDueAt) < new Date(best.nextDueAt) ? s : best
       }, null)
     }
+  } else if (parsed.kind === 'inline' && parsed.modifiers.includes('reverse')) {
+    const fwd = node.cardStats
+    const rev = node.cardReverseStats
+    if (!fwd?.totalReviews || !rev?.totalReviews) {
+      // One direction still new → pill reads new so the author notices.
+      stats = null
+    } else {
+      stats = (new Date(fwd.nextDueAt) < new Date(rev.nextDueAt)) ? fwd : rev
+    }
   }
 
   let label = '🎴'
   let titleIso = ''
+  if (parsed.kind === 'sides') label = `🎴 ${parsed.sides.length}-side`
   if (suspended) {
     label = '🎴 💤'
   } else if (!stats || !stats.totalReviews) {
-    label = '🎴 new'
+    label = parsed.kind === 'sides' ? `🎴 ${parsed.sides.length}-side · new` : '🎴 new'
   } else if (stats.nextDueAt) {
     titleIso = stats.nextDueAt
     const ms = new Date(stats.nextDueAt).getTime() - Date.now()
     if (Number.isFinite(ms)) {
-      if (ms <= 0) label = '🎴 due'
+      const prefix = parsed.kind === 'sides' ? `🎴 ${parsed.sides.length}-side · ` : '🎴 '
+      if (ms <= 0) label = prefix + 'due'
       else {
         const days = Math.round(ms / 86400000)
-        label = days <= 0 ? '🎴 today' : `🎴 ${days}d`
+        label = prefix + (days <= 0 ? 'today' : `${days}d`)
       }
     }
   }
@@ -3080,14 +3347,23 @@ function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
     row.appendChild(textDiv)
   }
 
-  // Node meta actions (left of collapse button)
+  // Leading meta (left of collapse button): node menu only — kept narrow and
+  // constant-width so bullets always line up across siblings, regardless of
+  // whether a node carries a card / memo pill.
   const meta = document.createElement('div'); meta.className = 'node-meta'
   const kindBtn = document.createElement('button'); kindBtn.title = 'Node menu'
   kindBtn.textContent = '☰'; kindBtn.dataset.action = 'kindmenu'; kindBtn.dataset.nodeId = node.id
   meta.appendChild(kindBtn)
-  const cardPill = renderCardPill(node)
-  if (cardPill) meta.appendChild(cardPill)
   row.insertBefore(meta, row.firstChild)
+
+  // Trailing meta (right edge): card / memo pills. margin-left:auto in CSS
+  // pins it to the row's right edge so the content column stays flush left.
+  const metaRight = document.createElement('div'); metaRight.className = 'node-meta-right'
+  const cardPill = renderCardPill(node)
+  if (cardPill) metaRight.appendChild(cardPill)
+  const memoPill = renderMemoPill(node)
+  if (memoPill) metaRight.appendChild(memoPill)
+  if (metaRight.childNodes.length) row.appendChild(metaRight)
 
   wrap.appendChild(row)
 
@@ -3137,13 +3413,70 @@ function flushNodeText(el) {
 function refreshCardPill(nodeId) {
   const wrap = document.querySelector(`.node-wrap[data-node-id="${nodeId}"]`)
   if (!wrap) return
-  const meta = wrap.querySelector(':scope > .node-row > .node-meta')
-  if (!meta) return
-  meta.querySelectorAll('.card-pill').forEach(el => el.remove())
+  const row = wrap.querySelector(':scope > .node-row')
+  if (!row) return
+  // The trailing meta is created on demand — a previously plain node that
+  // just gained an @card / @memo anchor won't have one yet. Likewise we
+  // tear it down when a node loses its last pill so it doesn't sit there
+  // as a dead flex item taking up the right-edge hover slot.
+  let metaRight = row.querySelector(':scope > .node-meta-right')
+  if (metaRight) {
+    metaRight.querySelectorAll('.card-pill').forEach(el => el.remove())
+    metaRight.querySelectorAll('.memo-pill').forEach(el => el.remove())
+  }
   const node = state.nodes.find(n => n.id === nodeId)
-  if (!node) return
+  if (!node) {
+    if (metaRight && !metaRight.childNodes.length) metaRight.remove()
+    return
+  }
   const pill = renderCardPill(node)
-  if (pill) meta.appendChild(pill)
+  const memoPill = renderMemoPill(node)
+  if (pill || memoPill) {
+    if (!metaRight) {
+      metaRight = document.createElement('div')
+      metaRight.className = 'node-meta-right'
+      row.appendChild(metaRight)
+    }
+    if (pill) metaRight.appendChild(pill)
+    if (memoPill) metaRight.appendChild(memoPill)
+  } else if (metaRight && !metaRight.childNodes.length) {
+    metaRight.remove()
+  }
+}
+
+// Memo pill. Mirrors renderCardPill but reads memoStats / memoSuspended
+// and shows a brain emoji + interval (or "new" / "due" / "💤"). Click
+// behaviour mirrors the card pill — opens the memo popover.
+function renderMemoPill(node) {
+  if (node.kind !== 'text') return null
+  const parsed = parseMemo(node.content || '')
+  if (!parsed) return null
+  const btn = document.createElement('button')
+  btn.className = 'card-pill memo-pill'
+  btn.dataset.action = 'memo-info'
+  btn.dataset.nodeId = node.id
+  const suspended = node.memoSuspended === true || parsed.modifiers.includes('suspend')
+  const stats = node.memoStats
+  let label = '🧠'
+  let titleIso = ''
+  if (suspended) {
+    label = '🧠 💤'
+  } else if (!stats || !stats.totalReviews) {
+    label = '🧠 new'
+  } else if (stats.nextDueAt) {
+    titleIso = stats.nextDueAt
+    const ms = new Date(stats.nextDueAt).getTime() - Date.now()
+    if (Number.isFinite(ms)) {
+      if (ms <= 0) label = '🧠 due'
+      else {
+        const days = Math.round(ms / 86400000)
+        label = days <= 0 ? '🧠 today' : `🧠 ${days}d`
+      }
+    }
+  }
+  btn.textContent = label
+  if (titleIso) btn.title = `Next due: ${titleIso}`
+  return btn
 }
 
 // Phase 7 — pill popover. Single global instance anchored next to the pill
@@ -3196,11 +3529,363 @@ function closeCardPopover() {
   cardPopover.nodeId = null
 }
 
+// Memo popover. Reuses the card-popover DOM element + cardPopover state so
+// only one popover can be open at a time across the two pill types. Buttons
+// use memo-* action names so the popover click handler can route correctly.
+function openMemoPopover(nodeId, anchorEl) {
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  const parsed = parseMemo(node.content || '')
+  if (!parsed) return
+  const pop = document.getElementById('card-popover')
+  pop.innerHTML = ''
+  pop.dataset.nodeId = nodeId
+
+  const suspended = node.memoSuspended === true
+
+  const studyBtn = document.createElement('button')
+  studyBtn.type = 'button'
+  studyBtn.dataset.action = 'memo-study-one'
+  studyBtn.textContent = 'Study just this memo'
+  pop.appendChild(studyBtn)
+
+  const editBtn = document.createElement('button')
+  editBtn.type = 'button'
+  editBtn.dataset.action = 'memo-edit-blinding'
+  editBtn.textContent = 'Edit blinding'
+  pop.appendChild(editBtn)
+
+  const suspendBtn = document.createElement('button')
+  suspendBtn.type = 'button'
+  suspendBtn.dataset.action = 'memo-toggle-suspend'
+  suspendBtn.textContent = suspended ? 'Unsuspend' : 'Suspend'
+  pop.appendChild(suspendBtn)
+
+  const resetBtn = document.createElement('button')
+  resetBtn.type = 'button'
+  resetBtn.dataset.action = 'memo-reset-stats'
+  resetBtn.textContent = 'Reset stats'
+  pop.appendChild(resetBtn)
+
+  pop.appendChild(buildMemoPopoverMeta(node, parsed, suspended))
+
+  pop.classList.remove('hidden')
+  positionCardPopover(pop, anchorEl)
+
+  cardPopover.open = true
+  cardPopover.nodeId = nodeId
+}
+
+// Memo review session — uses the same #study-overlay DOM as cards but with
+// its own phase state machine: recall → revealed → preview (→ customise) →
+// commit. Tokens edits go through opSetMemoTokens (undoable); grading goes
+// through opGradeMemo via applyReview (so it doesn't pollute the undo stack).
+const memoSession = {
+  open: false,
+  nodeId: null,
+  phase: null,           // 'recall' | 'revealed' | 'preview' | 'customise'
+  tokens: null,          // committed tokens for this session
+  suggestedTokens: null, // post-blinding preview (deep clone of tokens)
+  customTokens: null,    // tokens being edited in customise mode
+  clickedThisReview: null, // Set<number> of word indices clicked during recall
+  rating: null,
+  // Customise can be entered either via the preview (then Save persists +
+  // grades) or directly from the pill (just persists tokens, no grade).
+  customiseMode: 'preview', // 'preview' | 'direct'
+}
+
+function openMemoSession(nodeId) {
+  if (!state.unlocked) return
+  if (session.open) closeSession()
+  if (memoSession.open) closeMemoSession()
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  const parsed = parseMemo(node.content || '')
+  if (!parsed) return
+  // Build or reconcile tokens lazily — node.memoTokens may be missing on a
+  // freshly-authored memo, or stale if the text was edited since last review.
+  const tokens = reconcileMemoTokens(node.memoTokens, parsed.text)
+  memoSession.open = true
+  memoSession.nodeId = nodeId
+  memoSession.phase = 'recall'
+  memoSession.tokens = tokens
+  memoSession.suggestedTokens = null
+  memoSession.customTokens = null
+  memoSession.clickedThisReview = new Set()
+  memoSession.rating = null
+  memoSession.customiseMode = 'preview'
+  const overlay = document.getElementById('study-overlay')
+  overlay.hidden = false
+  renderMemoPhase()
+}
+
+function openMemoCustomise(nodeId) {
+  if (!state.unlocked) return
+  if (session.open) closeSession()
+  if (memoSession.open) closeMemoSession()
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  const parsed = parseMemo(node.content || '')
+  if (!parsed) return
+  const tokens = reconcileMemoTokens(node.memoTokens, parsed.text)
+  memoSession.open = true
+  memoSession.nodeId = nodeId
+  memoSession.phase = 'customise'
+  memoSession.tokens = tokens
+  memoSession.suggestedTokens = null
+  memoSession.customTokens = JSON.parse(JSON.stringify(tokens))
+  memoSession.clickedThisReview = new Set()
+  memoSession.rating = null
+  memoSession.customiseMode = 'direct'
+  const overlay = document.getElementById('study-overlay')
+  overlay.hidden = false
+  renderMemoPhase()
+}
+
+function closeMemoSession() {
+  memoSession.open = false
+  memoSession.phase = null
+  memoSession.nodeId = null
+  memoSession.tokens = null
+  memoSession.suggestedTokens = null
+  memoSession.customTokens = null
+  memoSession.clickedThisReview = null
+  memoSession.rating = null
+  const overlay = document.getElementById('study-overlay')
+  if (overlay) overlay.hidden = true
+}
+
+function renderMemoPhase() {
+  const front = document.getElementById('study-front')
+  const back = document.getElementById('study-back')
+  const grade = document.getElementById('study-grade-bar')
+  const hint = document.getElementById('study-flip-hint')
+  const divider = document.getElementById('study-divider')
+  const progress = document.getElementById('study-progress')
+  front.innerHTML = ''
+  back.innerHTML = ''
+  back.hidden = true
+  divider.hidden = true
+  grade.hidden = true
+  hint.hidden = false
+  front.hidden = false
+  if (memoSession.phase === 'recall') {
+    progress.textContent = 'Memo · recall'
+    _renderMemoTokens(front, memoSession.tokens, {
+      clickable: true,
+      tempRevealed: new Set(memoSession.clickedThisReview),
+      onClick: (wordIndex) => {
+        memoSession.clickedThisReview.add(wordIndex)
+        renderMemoPhase()  // re-render so the clicked word shows full
+      },
+    })
+    hint.textContent = 'Click a word to peek. Space / Enter to reveal full text.'
+  } else if (memoSession.phase === 'revealed') {
+    progress.textContent = 'Memo · revealed'
+    _renderMemoTokens(front, memoSession.tokens, {
+      clickable: false,
+      tempRevealed: new Set(memoSession.clickedThisReview),
+    })
+    _renderMemoTokens(back, memoSession.tokens, { clickable: false, revealAll: true })
+    back.hidden = false
+    divider.hidden = false
+    grade.hidden = false
+    hint.hidden = true
+  } else if (memoSession.phase === 'preview') {
+    progress.textContent = 'Memo · suggested blinding'
+    _renderMemoTokens(front, memoSession.suggestedTokens, {
+      clickable: false,
+      diffAgainst: memoSession.tokens,
+    })
+    _renderMemoControls(back, [
+      { label: 'Accept', action: () => _memoAcceptBlinding() },
+      { label: 'Customise', action: () => _memoEnterCustomiseFromPreview() },
+    ])
+    back.hidden = false
+    divider.hidden = false
+    hint.hidden = true
+  } else if (memoSession.phase === 'customise') {
+    progress.textContent = 'Memo · customise'
+    _renderMemoTokens(front, memoSession.customTokens, {
+      clickable: true,
+      cycleOnClick: true,
+      onClick: (wordIndex) => {
+        _memoCycleWord(wordIndex)
+        renderMemoPhase()
+      },
+    })
+    _renderMemoControls(back, [
+      { label: 'Save', action: () => _memoSaveCustom() },
+    ])
+    back.hidden = false
+    divider.hidden = false
+    hint.textContent = 'Click words to cycle: full → letter → blind → locked → full. Save when done.'
+  }
+}
+
+// Render a tokens list into the given element with the indicated mode.
+function _renderMemoTokens(el, tokens, opts) {
+  for (const t of tokens) {
+    if (t.type === 'space') {
+      el.appendChild(document.createTextNode(t.raw))
+    } else if (t.type === 'punctuation') {
+      el.appendChild(document.createTextNode(t.raw))
+    } else if (t.type === 'linebreak') {
+      el.appendChild(document.createElement('br'))
+    } else if (t.type === 'word') {
+      el.appendChild(_renderMemoWord(t, opts))
+    }
+  }
+}
+
+function _renderMemoWord(t, opts) {
+  let mode = t.visibleMode || 'letter'
+  if (opts.revealAll) mode = 'full'
+  if (opts.tempRevealed && opts.tempRevealed.has(t.index)) mode = 'full'
+  const span = document.createElement('span')
+  span.className = 'memo-word memo-word-' + mode
+  if (mode === 'full' || mode === 'locked') {
+    span.textContent = t.raw
+  } else if (mode === 'letter') {
+    span.textContent = t.prefix
+    // Show a small placeholder for the missing letters so the layout doesn't jump.
+    const dim = document.createElement('span')
+    dim.className = 'memo-word-rest'
+    dim.textContent = ' ' + '_'.repeat(Math.max(1, t.raw.length - 1))
+    span.appendChild(dim)
+  } else if (mode === 'blind') {
+    span.textContent = '_'.repeat(Math.max(2, t.raw.length))
+  }
+  span.title = t.raw
+  if (opts.diffAgainst) {
+    const old = opts.diffAgainst.find(x => x.type === 'word' && x.index === t.index)
+    if (old && old.visibleMode !== t.visibleMode) {
+      span.classList.add('memo-word-changed')
+      span.title = `${t.raw} (${old.visibleMode || 'letter'} → ${t.visibleMode})`
+    }
+  }
+  if (opts.clickable) {
+    span.classList.add('memo-word-clickable')
+    span.addEventListener('click', () => opts.onClick(t.index))
+  }
+  return span
+}
+
+function _renderMemoControls(parent, buttons) {
+  parent.innerHTML = ''
+  const row = document.createElement('div')
+  row.className = 'memo-controls'
+  for (const b of buttons) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.textContent = b.label
+    btn.addEventListener('click', b.action)
+    row.appendChild(btn)
+  }
+  parent.appendChild(row)
+}
+
+function _memoRate(rating) {
+  if (memoSession.phase !== 'revealed') return
+  // Deep clone so the preview is non-destructive; suggestBlinding mutates.
+  const cloned = JSON.parse(JSON.stringify(memoSession.tokens))
+  memoSession.rating = rating
+  memoSession.suggestedTokens = suggestBlinding(cloned, rating, Array.from(memoSession.clickedThisReview))
+  memoSession.phase = 'preview'
+  renderMemoPhase()
+}
+
+function _memoAcceptBlinding() {
+  const nodeId = memoSession.nodeId
+  const rating = memoSession.rating
+  const tokens = memoSession.suggestedTokens
+  if (!nodeId || !rating || !tokens) return
+  const result = opGradeMemo(state.nodes, nodeId, rating, tokens)
+  if (result) applyReview(result)
+  closeMemoSession()
+}
+
+function _memoEnterCustomiseFromPreview() {
+  memoSession.customTokens = JSON.parse(JSON.stringify(memoSession.suggestedTokens))
+  memoSession.customiseMode = 'preview'
+  memoSession.phase = 'customise'
+  renderMemoPhase()
+}
+
+function _memoSaveCustom() {
+  const nodeId = memoSession.nodeId
+  const tokens = memoSession.customTokens
+  if (!nodeId || !tokens) return
+  if (memoSession.customiseMode === 'preview' && memoSession.rating) {
+    // Customise came from a real review session — persist with grade
+    // (so the schedule advances) and the user's hand-tuned tokens.
+    const result = opGradeMemo(state.nodes, nodeId, memoSession.rating, tokens)
+    if (result) applyReview(result)
+  } else {
+    // Direct customise from the pill — no grade, just store the new tokens
+    // through the undoable op so the user can revert.
+    applyOp(opSetMemoTokens(state.nodes, nodeId, tokens))
+  }
+  closeMemoSession()
+}
+
+function _memoCycleWord(wordIndex) {
+  // full -> letter -> blind -> locked -> full
+  const order = ['full', 'letter', 'blind', 'locked']
+  const tokens = memoSession.customTokens
+  for (const t of tokens) {
+    if (t.type !== 'word' || t.index !== wordIndex) continue
+    const cur = t.visibleMode || 'letter'
+    const ix = order.indexOf(cur)
+    t.visibleMode = order[(ix + 1) % order.length]
+    return
+  }
+}
+
+function buildMemoPopoverMeta(node, parsed, suspended) {
+  const meta = document.createElement('div')
+  meta.className = 'card-popover-meta'
+  const tokens = node.memoTokens
+  if (Array.isArray(tokens) && tokens.length) {
+    const words = tokens.filter(t => t.type === 'word')
+    const blind = words.filter(w => w.visibleMode === 'blind').length
+    const letter = words.filter(w => w.visibleMode === 'letter').length
+    const full = words.filter(w => w.visibleMode === 'full').length
+    const locked = words.filter(w => w.visibleMode === 'locked').length
+    appendStatLine(meta, 'Words', `${words.length}`)
+    appendStatLine(meta, 'Blind / letter / full', `${blind} / ${letter} / ${full}`)
+    if (locked) appendStatLine(meta, 'Locked', String(locked))
+    const avgMastery = words.reduce((a, w) => a + (w.mastery || 0), 0) / Math.max(1, words.length)
+    appendStatLine(meta, 'Avg mastery', `${Math.round(avgMastery * 100)}%`)
+  } else {
+    appendStatLine(meta, 'Words', '— (tokens not yet built)')
+  }
+  const stats = node.memoStats
+  appendStatLine(meta, 'Total reviews', stats ? String(stats.totalReviews || 0) : '0')
+  appendStatLine(meta, 'Ease', stats?.ease ? Number(stats.ease).toFixed(2) : '—')
+  appendStatLine(meta, 'Interval', stats?.intervalDays ? `${Math.round(stats.intervalDays)} d` : '—')
+  appendStatLine(meta, 'Next due', formatNextDueAt(stats?.nextDueAt))
+  appendStatLine(meta, 'Last seen', formatRelativePast(stats?.lastSeenAt))
+  if (suspended) appendStatLine(meta, 'Status', 'Suspended')
+  return meta
+}
+
 // Aggregate stats for the meta block. Cloze cards keep per-group stats in
 // cardClozeStats; show summed reviews, average ease, and the earliest
 // upcoming nextDueAt so a card with a 1-day group and a 30-day group
 // surfaces as "next due in 1 day".
 function buildCardPopoverMeta(node, parsed, suspended) {
+  // Reverse inline cards have two independent SM-2 schedules (forward and
+  // reverse). Render them as two stacked mini-tables so the user can see
+  // each direction's interval/ease/next-due separately.
+  if (parsed.kind === 'inline' && parsed.modifiers.includes('reverse')) {
+    const meta = document.createElement('div')
+    meta.className = 'card-popover-meta'
+    appendDirSection(meta, '→ Forward', node.cardStats)
+    appendDirSection(meta, '← Reverse', node.cardReverseStats)
+    if (suspended) appendStatLine(meta, 'Status', 'Suspended')
+    return meta
+  }
   let stats = node.cardStats
   if (parsed.kind === 'cloze') {
     const groupKeys = Array.from(parsed.groups.keys())
@@ -3224,6 +3909,7 @@ function buildCardPopoverMeta(node, parsed, suspended) {
   }
   const meta = document.createElement('div')
   meta.className = 'card-popover-meta'
+  if (parsed.kind === 'sides') appendStatLine(meta, 'Sides', String(parsed.sides.length))
   appendStatLine(meta, 'Total reviews', stats ? String(stats.totalReviews || 0) : '0')
   appendStatLine(meta, 'Ease', stats?.ease ? Number(stats.ease).toFixed(2) : '—')
   appendStatLine(meta, 'Interval', stats?.intervalDays ? `${Math.round(stats.intervalDays)} d` : '—')
@@ -3231,6 +3917,18 @@ function buildCardPopoverMeta(node, parsed, suspended) {
   appendStatLine(meta, 'Last seen', formatRelativePast(stats?.lastSeenAt))
   if (suspended) appendStatLine(meta, 'Status', 'Suspended')
   return meta
+}
+
+function appendDirSection(parent, title, stats) {
+  const head = document.createElement('div')
+  head.className = 'cp-dir-head'
+  head.textContent = title
+  parent.appendChild(head)
+  appendStatLine(parent, 'Total reviews', stats ? String(stats.totalReviews || 0) : '0')
+  appendStatLine(parent, 'Ease', stats?.ease ? Number(stats.ease).toFixed(2) : '—')
+  appendStatLine(parent, 'Interval', stats?.intervalDays ? `${Math.round(stats.intervalDays)} d` : '—')
+  appendStatLine(parent, 'Next due', formatNextDueAt(stats?.nextDueAt))
+  appendStatLine(parent, 'Last seen', formatRelativePast(stats?.lastSeenAt))
 }
 
 function appendStatLine(parent, label, value) {
@@ -4134,6 +4832,17 @@ document.getElementById('outline-tree').addEventListener('click', e => {
     return
   }
 
+  const memoPillBtn = e.target.closest('[data-action="memo-info"]')
+  if (memoPillBtn) {
+    e.stopPropagation()
+    if (cardPopover.open && cardPopover.nodeId === memoPillBtn.dataset.nodeId) {
+      closeCardPopover()
+    } else {
+      openMemoPopover(memoPillBtn.dataset.nodeId, memoPillBtn)
+    }
+    return
+  }
+
   // Multi-select. Shift extends from anchor; Ctrl/Cmd toggles. Plain clicks
   // outside the existing selection clear it (so editing a fresh node resets).
   const row = e.target.closest('.node-row[data-node-id]')
@@ -4497,6 +5206,18 @@ document.getElementById('card-popover').addEventListener('click', e => {
   } else if (action === 'reset-stats') {
     applyOp(opResetCardStats(state.nodes, nodeId))
     closeCardPopover()
+  } else if (action === 'memo-study-one') {
+    closeCardPopover()
+    openMemoSession(nodeId)
+  } else if (action === 'memo-edit-blinding') {
+    closeCardPopover()
+    openMemoCustomise(nodeId)
+  } else if (action === 'memo-toggle-suspend') {
+    applyOp(opToggleMemoSuspend(state.nodes, nodeId))
+    closeCardPopover()
+  } else if (action === 'memo-reset-stats') {
+    applyOp(opResetMemoStats(state.nodes, nodeId))
+    closeCardPopover()
   }
 })
 
@@ -4523,6 +5244,7 @@ function closeHelp() {
   document.getElementById('help-overlay').classList.add('hidden')
 }
 document.getElementById('help-close-btn').addEventListener('click', closeHelp)
+document.getElementById('help-btn').addEventListener('click', openHelp)
 document.getElementById('help-overlay').addEventListener('click', e => {
   if (e.target.id === 'help-overlay') closeHelp()
 })
@@ -4551,11 +5273,31 @@ document.addEventListener('keydown', e => {
       return
     }
     if (session.flipped && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      const map = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' }
+      const map = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy', '5': 'perfect' }
       const rating = map[e.key]
       if (rating) { e.preventDefault(); e.stopPropagation(); gradeAndAdvance(rating); return }
     }
     // Soak up anything else so outline shortcuts don't fire behind the modal.
+    if (!e.ctrlKey && !e.metaKey) { e.stopPropagation(); return }
+  }
+
+  // Memo session — own state machine, but shares the study-overlay DOM.
+  if (memoSession.open) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMemoSession(); return }
+    if (memoSession.phase === 'recall' && (e.key === ' ' || e.key === 'Enter')) {
+      e.preventDefault(); e.stopPropagation()
+      memoSession.phase = 'revealed'
+      renderMemoPhase()
+      return
+    }
+    if (memoSession.phase === 'revealed' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      const map = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy', '5': 'perfect' }
+      const rating = map[e.key]
+      if (rating) { e.preventDefault(); e.stopPropagation(); _memoRate(rating); return }
+    }
+    if (memoSession.phase === 'preview' && (e.key === 'Enter')) {
+      e.preventDefault(); e.stopPropagation(); _memoAcceptBlinding(); return
+    }
     if (!e.ctrlKey && !e.metaKey) { e.stopPropagation(); return }
   }
 
@@ -5013,8 +5755,25 @@ function openSession(deckRootId, opts = {}) {
     const parsed = parseCard(node.content || '')
     if (!parsed) continue
     if (parsed.kind === 'inline') {
+      const isReverse = parsed.modifiers.includes('reverse')
+      if (isReverse) {
+        const fwdId = `${node.id}::fwd`
+        const revId = `${node.id}::rev`
+        entriesById.set(fwdId, { nodeId: node.id, kind: 'inline', front: parsed.front, back: parsed.back, direction: 'fwd' })
+        entriesById.set(revId, { nodeId: node.id, kind: 'inline', front: parsed.back, back: parsed.front, direction: 'rev' })
+        pseudoCards.push({ id: fwdId, cardStats: node.cardStats ?? defaultCardStats() })
+        pseudoCards.push({ id: revId, cardStats: node.cardReverseStats ?? defaultCardStats() })
+      } else {
+        const id = node.id
+        entriesById.set(id, { nodeId: node.id, kind: 'inline', front: parsed.front, back: parsed.back })
+        pseudoCards.push({ id, cardStats: node.cardStats ?? defaultCardStats() })
+      }
+    } else if (parsed.kind === 'sides') {
+      if (parsed.modifiers.includes('reverse')) {
+        console.warn('[study] [reverse] is ignored on multi-side cards:', node.id)
+      }
       const id = node.id
-      entriesById.set(id, { nodeId: node.id, kind: 'inline', front: parsed.front, back: parsed.back })
+      entriesById.set(id, { nodeId: node.id, kind: 'sides', sides: parsed.sides })
       pseudoCards.push({ id, cardStats: node.cardStats ?? defaultCardStats() })
     } else if (parsed.kind === 'question') {
       const id = node.id
@@ -5070,7 +5829,13 @@ function liveEntry(entry) {
   const parsed = parseCard(node.content || '')
   if (!parsed) return entry
   if (entry.kind === 'inline' && parsed.kind === 'inline') {
+    if (entry.direction === 'rev') {
+      return { ...entry, front: parsed.back, back: parsed.front }
+    }
     return { ...entry, front: parsed.front, back: parsed.back }
+  }
+  if (entry.kind === 'sides' && parsed.kind === 'sides') {
+    return { ...entry, sides: parsed.sides }
   }
   if (entry.kind === 'question' && parsed.kind === 'question') {
     return { ...entry, question: parsed.question }
@@ -5157,6 +5922,17 @@ function renderCard() {
     applyRichRender(front, entry.front)
     back.textContent = entry.back
     applyRichRender(back, entry.back)
+  } else if (entry.kind === 'sides') {
+    // Multi-side: front cycles through every side one Space/Enter at a time.
+    // back/divider stay hidden; grade bar reveals only after the last side.
+    front.innerHTML = ''
+    const sideEl = document.createElement('div')
+    sideEl.className = 'card-side'
+    applyRichRender(sideEl, entry.sides[0])
+    front.appendChild(sideEl)
+    session.sidesIndex = 1
+    session.sidesTotal = entry.sides.length
+    session.currentSides = entry.sides
   } else if (entry.kind === 'question') {
     front.textContent = entry.question
     applyRichRender(front, entry.question)
@@ -5172,7 +5948,18 @@ function renderCard() {
   grade.hidden = true
   hint.hidden = false
   front.hidden = false
-  progress.textContent = `${session.index + 1} / ${session.queue.length}`
+  // Hint for multi-side shows side counter; progress shows queue position +
+  // direction arrow for reverse-companion cards so the user knows which
+  // direction of the pair they're reviewing.
+  if (entry.kind === 'sides') {
+    hint.textContent = `Space / Enter for side ${session.sidesIndex + 1} of ${session.sidesTotal}`
+  } else {
+    hint.textContent = 'Space / Enter to flip'
+  }
+  let progressTxt = `${session.index + 1} / ${session.queue.length}`
+  if (entry.direction === 'fwd') progressTxt += '  ·  → forward'
+  if (entry.direction === 'rev') progressTxt += '  ·  ← reverse'
+  progress.textContent = progressTxt
   session.flipped = false
 }
 
@@ -5210,6 +5997,11 @@ function renderEmptySession() {
 function flipCard() {
   if (!session.open || session.flipped || session.finished) return
   if (!session.queue.length) return
+  const entry = session.queue[session.index]
+  if (entry && entry.kind === 'sides') {
+    advanceSideOrGrade()
+    return
+  }
   document.getElementById('study-back').hidden = false
   document.getElementById('study-divider').hidden = false
   document.getElementById('study-grade-bar').hidden = false
@@ -5217,14 +6009,43 @@ function flipCard() {
   session.flipped = true
 }
 
+// Multi-side reveal: append the next side to the front panel. After the
+// last side is appended, expose the grade bar. flipCard() delegates here
+// when the active entry is a sides card so the standard front/back flip
+// path stays untouched.
+function advanceSideOrGrade() {
+  const front = document.getElementById('study-front')
+  if (session.sidesIndex < session.sidesTotal) {
+    const sep = document.createElement('div')
+    sep.className = 'side-separator'
+    sep.textContent = '·'
+    front.appendChild(sep)
+    const sideEl = document.createElement('div')
+    sideEl.className = 'card-side'
+    applyRichRender(sideEl, session.currentSides[session.sidesIndex])
+    front.appendChild(sideEl)
+    session.sidesIndex++
+  }
+  const hint = document.getElementById('study-flip-hint')
+  if (session.sidesIndex >= session.sidesTotal) {
+    document.getElementById('study-grade-bar').hidden = false
+    hint.hidden = true
+    session.flipped = true
+  } else {
+    hint.textContent = `Space / Enter for side ${session.sidesIndex + 1} of ${session.sidesTotal}`
+  }
+}
+
 function gradeAndAdvance(rating) {
   if (!session.open || !session.flipped || session.finished) return
   const entry = session.queue[session.index]
   if (!entry) return
   // Cloze grades land in cardClozeStats[group] so every group schedules
-  // independently; inline/question grades use the top-level cardStats.
+  // independently. Reverse-companion grades land in cardReverseStats. Plain
+  // inline/question/sides grades use the top-level cardStats.
   const clozeGroup = entry.kind === 'cloze' ? entry.group : null
-  const result = opGradeCard(state.nodes, entry.nodeId, rating, clozeGroup)
+  const direction = entry.direction ?? null
+  const result = opGradeCard(state.nodes, entry.nodeId, rating, clozeGroup, direction)
   if (result) applyReview(result)
   if (rating === 'again') session.failedQueue.push(entry)
   session.reviewedCount++
@@ -5684,6 +6505,7 @@ if ('serviceWorker' in navigator) {
   <div class="modal">
     <h2>Keyboard Shortcuts</h2>
     <div class="shortcut-grid" id="help-grid"></div>
+    <a id="help-docs-link" class="help-docs-link" href="documentation.html" target="_blank" rel="noopener">Full documentation →</a>
     <button id="help-close-btn" class="btn btn-secondary help-close">Close</button>
   </div>
 </div>
@@ -5720,6 +6542,7 @@ if ('serviceWorker' in navigator) {
       <button data-rating="hard">Hard (2)</button>
       <button data-rating="good">Good (3)</button>
       <button data-rating="easy">Easy (4)</button>
+      <button data-rating="perfect">Perfect (5)</button>
     </div>
     <div class="study-flip-hint" id="study-flip-hint">Space / Enter to flip</div>
   </div>
