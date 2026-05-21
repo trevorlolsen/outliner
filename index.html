@@ -136,6 +136,41 @@ body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:syste
 /* Overlay modals */
 .overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:100}
 .modal{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:32px;width:380px;max-width:95vw}
+.modal-preview{width:920px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;padding:0}
+.modal-preview-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border)}
+.modal-preview-head h2{margin:0;font-size:15px;color:var(--text-muted);font-weight:600}
+.preview-body{flex:1;overflow:auto;padding:24px 32px;color:var(--text);font-size:14px;line-height:1.6;background:var(--bg)}
+.preview-body h1{font-size:24px;margin:18px 0 10px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:6px}
+.preview-body h2{font-size:20px;margin:16px 0 8px;color:var(--text)}
+.preview-body h3{font-size:17px;margin:14px 0 6px;color:var(--text)}
+.preview-body h4,.preview-body h5,.preview-body h6{margin:12px 0 4px;color:var(--text)}
+.preview-body p{margin:8px 0}
+.preview-body ul,.preview-body ol{padding-left:24px;margin:6px 0}
+.preview-body li{margin:2px 0}
+.preview-body code{background:var(--bg-3);padding:1px 5px;border-radius:3px;font-size:.92em;font-family:ui-monospace,Menlo,Consolas,monospace}
+.preview-body pre{background:var(--bg-3);border:1px solid var(--border);border-radius:5px;padding:10px 12px;overflow-x:auto;font-size:13px;line-height:1.45;margin:10px 0}
+.preview-body pre code{background:none;padding:0;border-radius:0;font-size:inherit}
+.preview-body table{border-collapse:collapse;margin:10px 0;font-size:13px}
+.preview-body th,.preview-body td{border:1px solid var(--border);padding:5px 9px;vertical-align:top}
+.preview-body th{background:var(--bg-3);font-weight:600}
+.preview-body tr:nth-child(even) td{background:var(--bg-1)}
+.preview-body blockquote{border-left:3px solid var(--border-input);margin:10px 0;padding:2px 12px;color:var(--text-dim)}
+.preview-body a{color:var(--inline-link)}
+.preview-body a:hover{color:var(--inline-link-hover)}
+.preview-body img{max-width:100%;border-radius:4px}
+.preview-body hr{border:none;border-top:1px solid var(--border);margin:18px 0}
+.preview-body .callout{border-left:3px solid var(--accent);background:var(--bg-1);padding:10px 14px;margin:10px 0;border-radius:0 4px 4px 0}
+.preview-body .callout::before{content:"▣ Note";display:block;color:var(--accent);font-weight:600;font-size:12px;letter-spacing:.04em;margin-bottom:4px}
+.preview-body .callout.callout-tip::before{content:"💡 Tip"}
+.preview-body .callout.callout-warning::before{content:"⚠ Warning";color:#e0a04c}
+.preview-body .callout.callout-warning{border-left-color:#e0a04c}
+.preview-body .callout.callout-caution::before{content:"🛑 Caution";color:var(--danger)}
+.preview-body .callout.callout-caution{border-left-color:var(--danger)}
+.preview-body .callout.callout-important::before{content:"❗ Important";color:var(--danger)}
+.preview-body .callout.callout-important{border-left-color:var(--danger)}
+.preview-body .katex-display{margin:.4em 0!important}
+#doc-preview-btn{background:var(--bg-3);border:1px solid var(--border);color:var(--text-dim);font-size:12px;padding:2px 8px;border-radius:3px;cursor:pointer;font-family:inherit;flex-shrink:0}
+#doc-preview-btn:hover{background:var(--bg-3-hover);color:var(--text)}
 .modal h2{margin:0 0 8px;font-size:18px}
 .modal .hint{color:var(--text-soft);font-size:12px;margin:0 0 18px}
 .modal label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;margin-top:12px}
@@ -164,8 +199,8 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #sidebar{width:220px;background:var(--bg-1);border-right:1px solid var(--border-bg);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .15s ease}
 #sidebar .sidebar-top{padding:14px 12px 8px;display:flex;align-items:center;justify-content:space-between}
 #sidebar .app-title{font-size:12px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
-#new-doc-btn{padding:3px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);font-size:12px;cursor:pointer}
-#new-doc-btn:hover{background:var(--bg-3-hover)}
+#new-item-btn{padding:2px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);font-size:14px;line-height:1.1;cursor:pointer;flex-shrink:0}
+#new-item-btn:hover{background:var(--bg-3-hover)}
 #search-btn,#help-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1;flex-shrink:0}
 #search-btn:hover,#help-btn:hover{color:var(--text-dim)}
 #doc-list{list-style:none;margin:0;padding:4px 6px;flex:1;overflow-y:auto}
@@ -176,6 +211,17 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #doc-list li:hover .doc-actions{display:flex}
 #doc-list .doc-actions button{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:11px;padding:2px 4px}
 #doc-list .doc-actions button:hover{color:var(--text-muted)}
+#doc-list li[data-folder-id] .doc-name{color:var(--text-dim);font-weight:500}
+#doc-list .row-indent{display:inline-block;flex-shrink:0;width:calc(var(--depth, 0) * 12px)}
+#doc-list .folder-chevron{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;flex-shrink:0;width:14px;text-align:center}
+#doc-list .folder-chevron:hover{color:var(--text-muted)}
+#doc-list .doc-icon-spacer{display:inline-block;flex-shrink:0;width:14px}
+#doc-list .drop-indicator{height:2px;background:var(--accent);margin:0 4px;border-radius:1px;flex-shrink:0;list-style:none}
+#doc-list li.drop-target-folder{outline:1px dashed var(--accent);outline-offset:-1px}
+#doc-list li{position:relative}
+#doc-list li.drop-before::before{content:'';position:absolute;top:-1px;left:0;right:0;height:2px;background:var(--accent);pointer-events:none;z-index:2}
+#doc-list li.drop-after::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);pointer-events:none;z-index:2}
+#doc-list li.sidebar-dragging{opacity:.4}
 .sidebar-bottom{padding:8px;border-top:1px solid var(--border-bg);display:flex;gap:6px}
 .sidebar-bottom button{flex:1;padding:5px;background:var(--bg-4);border:1px solid var(--border-softer);border-radius:4px;color:var(--text-soft);font-size:12px;cursor:pointer}
 .sidebar-bottom button:hover{background:var(--bg-3);color:var(--text-muted)}
@@ -188,7 +234,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .autosnap-notice{color:var(--text-soft);font-size:11px;line-height:1.4;background:var(--bg-1);border:1px solid var(--border-soft);border-radius:4px;padding:6px 8px}
 #sidebar.collapsed{width:36px}
 #sidebar.collapsed .sidebar-top{justify-content:center;padding:14px 6px 8px}
-#sidebar.collapsed #back-to-vaults-btn,#sidebar.collapsed #active-vault-label,#sidebar.collapsed #new-doc-btn,#sidebar.collapsed #search-btn,#sidebar.collapsed #help-btn{display:none}
+#sidebar.collapsed #back-to-vaults-btn,#sidebar.collapsed #active-vault-label,#sidebar.collapsed #new-item-btn,#sidebar.collapsed #search-btn,#sidebar.collapsed #help-btn{display:none}
 #sidebar.collapsed #doc-list{display:none}
 #sidebar.collapsed .sidebar-bottom,#sidebar.collapsed #autosnap-section{display:none}
 #sidebar-toggle{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:16px;padding:0 2px;line-height:1;flex-shrink:0}
@@ -214,6 +260,10 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #editor-header{padding:10px 20px 0;display:flex;align-items:center;gap:12px}
 #doc-title-input{background:none;border:none;color:var(--text);font-size:16px;font-weight:600;padding:2px 0;flex:1;outline:none}
 #doc-title-input:focus{border-bottom:1px solid var(--accent)}
+#doc-frontmatter-btn{background:var(--bg-3);border:1px solid var(--border);color:var(--text-dim);font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:3px;cursor:pointer;font-family:inherit;flex-shrink:0}
+#doc-frontmatter-btn:hover{background:var(--bg-3-hover);color:var(--text)}
+#doc-frontmatter-btn.has-fm{background:var(--accent);border-color:var(--accent);color:var(--accent-on)}
+#fm-textarea{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--bg-input);color:var(--text);border:1px solid var(--border-input);border-radius:4px;padding:8px;resize:vertical;box-sizing:border-box}
 #breadcrumb{display:flex;align-items:center;gap:0;flex:1;min-width:0;flex-wrap:wrap;row-gap:2px}
 .bc-crumb{background:none;border:none;color:var(--text-soft);font-size:13px;cursor:pointer;padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
 .bc-crumb:hover{color:var(--text-muted)}
@@ -221,9 +271,31 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .bc-sep{color:var(--text-faintest);font-size:12px;padding:0 2px;flex-shrink:0}
 #outline-tree{flex:1;padding:16px 20px 50vh;overflow-y:auto}
 #no-doc-msg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-faintest);font-size:13px}
-#add-bar{padding:8px 20px;display:flex;gap:8px;border-top:1px solid var(--bg-add-bar)}
-#add-bar button{padding:4px 10px;background:var(--bg-add-bar);border:1px solid var(--border-soft);border-radius:4px;color:var(--text-faint);font-size:12px;cursor:pointer}
+/* Document action bar — sits in flow at the bottom of the editor pane. Holds
+   the +Text/+Code adders on the left and the structural edit buttons
+   (indent/outdent/move/more) on the right. Visible on every screen size so
+   it never overlaps the sidebar — the editor pane is its only territory. */
+#add-bar{padding:8px 20px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--bg-add-bar);flex-wrap:wrap}
+#add-bar button{padding:4px 10px;background:var(--bg-add-bar);border:1px solid var(--border-soft);border-radius:4px;color:var(--text-faint);font-size:12px;cursor:pointer;line-height:1}
 #add-bar button:hover{color:var(--text-dim);border-color:var(--bg-add-bar-hover-border)}
+#add-bar button[aria-disabled="true"]{opacity:.35;pointer-events:none}
+#add-bar .add-bar-spacer{flex:1}
+/* Edit buttons (icons) sit on the right and get larger tap targets so phones
+   can hit them without misfiring. The +Text/+Code buttons keep their compact
+   text style. */
+#add-bar #mt-outdent,#add-bar #mt-indent,#add-bar #mt-up,#add-bar #mt-down,#add-bar #mt-more{
+  font-size:16px;padding:4px 10px;min-width:34px;display:inline-flex;align-items:center;justify-content:center;touch-action:manipulation
+}
+@media (max-width: 768px) {
+  /* On phones, give the icon buttons bigger touch targets and let the +Text/
+     +Code buttons keep proportional size. The bar still lives in flow inside
+     the editor pane, so it never covers the sidebar. */
+  #add-bar{padding:6px 10px;gap:6px}
+  #add-bar #mt-outdent,#add-bar #mt-indent,#add-bar #mt-up,#add-bar #mt-down,#add-bar #mt-more{
+    font-size:18px;padding:8px 10px;min-width:40px;min-height:40px
+  }
+  #add-bar #add-text-btn,#add-bar #add-code-btn{padding:8px 10px;min-height:40px}
+}
 
 /* Footer status bar */
 #status-bar{padding:4px 20px;font-size:11px;color:var(--text-faint);background:var(--bg-1);border-top:1px solid var(--border-bg);display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-shrink:0;user-select:none}
@@ -258,6 +330,24 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .code-block-el .cm-editor{border-radius:5px}
 .image-block{flex:1}
 .image-block img{max-width:100%;border-radius:4px;display:block;margin-top:2px}
+.table-block-wrap{flex:1;overflow-x:auto}
+.outline-table{border-collapse:collapse;margin:2px 0;font-size:13px;background:var(--bg-2)}
+.outline-table th,.outline-table td{border:1px solid var(--border);padding:4px 8px;color:var(--text);vertical-align:top}
+.outline-table th{background:var(--bg-3);font-weight:600}
+.outline-table tr:nth-child(even) td{background:var(--bg-1)}
+.table-block-toolbar{margin-top:4px;display:flex;gap:6px}
+.table-edit-btn,.table-save-btn,.table-cancel-btn{background:var(--bg-3);border:1px solid var(--border);color:var(--text-muted);font-size:11px;padding:2px 8px;border-radius:3px;cursor:pointer;font-family:inherit}
+.table-edit-btn:hover,.table-save-btn:hover,.table-cancel-btn:hover{background:var(--bg-3-hover);color:var(--text)}
+.table-edit-textarea{width:100%;min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--bg-input);color:var(--text);border:1px solid var(--border-input);border-radius:4px;padding:6px;resize:vertical}
+.table-edit-err{color:var(--danger);font-size:12px;margin-top:4px}
+.node-text.heading-h1{font-size:22px;font-weight:700;line-height:1.35;margin:6px 0 2px}
+.node-text.heading-h2{font-size:19px;font-weight:700;line-height:1.4;margin:5px 0 2px}
+.node-text.heading-h3{font-size:17px;font-weight:600;line-height:1.4;margin:4px 0 2px}
+.node-text.heading-h4{font-size:15px;font-weight:600;line-height:1.45}
+.node-text.heading-h5{font-size:14px;font-weight:600;line-height:1.45;text-transform:uppercase;letter-spacing:.04em}
+.node-text.heading-h6{font-size:13px;font-weight:600;line-height:1.45;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
+.node-text.callout-label{font-weight:600;color:var(--accent)}
+.node-text.callout-label::before{content:"▣ ";color:var(--accent);opacity:.7}
 .vault-modal{width:460px}
 .vault-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .vault-modal-head h2{margin:0}
@@ -667,6 +757,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
     <div class="tabs">
       <button class="active" data-tab="snapshot" id="exp-tab-snap">Encrypted snapshot</button>
       <button data-tab="markdown" id="exp-tab-md">Markdown</button>
+      <button data-tab="quarto" id="exp-tab-qmd">Quarto</button>
       <button data-tab="html" id="exp-tab-html">HTML</button>
       <button data-tab="print" id="exp-tab-print">Print / PDF</button>
     </div>
@@ -677,6 +768,9 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
     </div>
     <div id="exp-markdown-section" class="hidden">
       <p class="hint">Exports the active document as Markdown. Images are not included.</p>
+    </div>
+    <div id="exp-quarto-section" class="hidden">
+      <p class="hint">Exports the active document as a Quarto (<code>.qmd</code>) file. Headings, executable code chunks, callouts, pipe tables, and YAML front-matter round-trip with import.</p>
     </div>
     <div id="exp-html-section" class="hidden">
       <p class="hint">Exports the active document as a self-contained HTML file with inline CSS, rendered markdown, and math.</p>
@@ -692,13 +786,39 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
   </div>
 </div>
 
-<!-- Import modal (Markdown only — snapshot import is on vault screen) -->
+<!-- Document properties (Quarto/Rmd YAML front-matter) -->
+<div id="frontmatter-modal" class="overlay hidden">
+  <div class="modal">
+    <h2>YAML Front-Matter</h2>
+    <p class="hint">Quarto/R Markdown front-matter for this document. Used on export to produce a valid <code>.qmd</code> file. Leave blank to omit.</p>
+    <label for="fm-textarea">Front-matter (YAML between <code>---</code> fences)</label>
+    <textarea id="fm-textarea" rows="10" spellcheck="false" placeholder="title: My Analysis&#10;author: Trevor&#10;format: html"></textarea>
+    <div class="error-msg" id="fm-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="fm-cancel">Cancel</button>
+      <button class="btn btn-primary" id="fm-submit">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Render preview (markdown → HTML for a node subtree or the whole doc) -->
+<div id="preview-modal" class="overlay hidden">
+  <div class="modal modal-preview">
+    <div class="modal-preview-head">
+      <h2 id="preview-title">Render preview</h2>
+      <button class="btn btn-secondary" id="preview-close" type="button">Close</button>
+    </div>
+    <div id="preview-body" class="preview-body"></div>
+  </div>
+</div>
+
+<!-- Import modal (Markdown, R Markdown, Quarto — snapshot import is on vault screen) -->
 <div id="import-modal" class="overlay hidden">
   <div class="modal">
-    <h2>Import Markdown</h2>
-    <p class="hint">Imports a Markdown file as a new document in this vault.</p>
+    <h2>Import Markdown / Quarto / R Markdown</h2>
+    <p class="hint">Imports a Markdown (<code>.md</code>), R Markdown (<code>.Rmd</code>), or Quarto (<code>.qmd</code>) file as a new document. Headings, code chunks, callouts, tables, and YAML front-matter round-trip on export.</p>
     <label>File</label>
-    <div class="file-row"><input type="file" id="imp-file" accept=".md,.markdown"></div>
+    <div class="file-row"><input type="file" id="imp-file" accept=".md,.markdown,.Rmd,.rmd,.qmd,.rmarkdown"></div>
     <div class="error-msg" id="imp-error"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="imp-cancel">Cancel</button>
@@ -816,7 +936,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
       <span class="app-title" id="active-vault-label">Outline</span>
       <button id="search-btn" title="Search (Ctrl+Shift+F)">🔍</button>
       <button id="help-btn" title="Help & documentation (?)">❔</button>
-      <button id="new-doc-btn">+ New</button>
+      <button id="new-item-btn" title="New document or folder">+</button>
       <button id="sidebar-toggle" title="Toggle sidebar">‹</button>
     </div>
     <div id="daily-section">
@@ -851,12 +971,32 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
   <div id="editor-area">
     <div id="editor-header" class="hidden">
       <input id="doc-title-input" placeholder="Untitled">
+      <button id="doc-preview-btn" type="button" title="Render preview (whole document)">👁 Preview</button>
+      <button id="doc-frontmatter-btn" type="button" title="Edit YAML front-matter (Quarto/Rmd)">YAML</button>
       <nav id="breadcrumb" class="hidden"></nav>
     </div>
     <div id="outline-tree"></div>
     <div id="add-bar" class="hidden">
       <button id="add-text-btn">+ Text</button>
       <button id="add-code-btn">+ Code</button>
+      <span class="add-bar-spacer"></span>
+      <button id="mt-outdent" type="button" title="Outdent" aria-label="Outdent">⇤</button>
+      <button id="mt-indent"  type="button" title="Indent"  aria-label="Indent">⇥</button>
+      <button id="mt-up"      type="button" title="Move up" aria-label="Move up">↑</button>
+      <button id="mt-down"    type="button" title="Move down" aria-label="Move down">↓</button>
+      <button id="mt-more"    type="button" title="More actions" aria-label="More">⋯</button>
+    </div>
+    <div id="doc-more-menu" class="ctx-menu hidden">
+      <ul>
+        <li class="ctx-item" data-action="mb-add-code">Insert code block</li>
+        <li class="ctx-item" data-action="mb-toggle-checkbox">Toggle as checkbox</li>
+        <li class="ctx-item" data-action="mb-check-off">Toggle checked</li>
+        <li class="ctx-sep"></li>
+        <li class="ctx-item" data-action="mb-zoom-in">Zoom into node</li>
+        <li class="ctx-item" data-action="mb-zoom-out">Exit zoom</li>
+        <li class="ctx-sep"></li>
+        <li class="ctx-item" data-action="mb-delete">Delete node</li>
+      </ul>
     </div>
     <div id="status-bar" class="hidden">
       <span id="sb-node-count">0 nodes</span>
@@ -1163,6 +1303,59 @@ async function getAllDocs(ctx) {
 
 async function deleteDoc(id) { await db.encryptedRecords.delete(id) }
 
+async function putFolder(folder, ctx) {
+  const { ciphertext, iv } = await encPayload(folder, ctx)
+  await db.encryptedRecords.put({ id: folder.id, store: 'folders', vaultId: ctx.vaultId, ciphertext, iv, updatedAt: folder.updatedAt })
+}
+
+async function getAllFolders(ctx) {
+  const recs = await db.encryptedRecords.where('store').equals('folders').and(r => r.vaultId === ctx.vaultId).toArray()
+  return Promise.all(recs.map(r => decPayload(r.ciphertext, r.iv, ctx)))
+}
+
+async function deleteFolder(id) { await db.encryptedRecords.delete(id) }
+
+// Loads docs + folders into state for the active vault. Backfills any doc
+// records that predate the folder feature with a fractional `order` key so the
+// sidebar tree can sort them deterministically. Backfilled docs are persisted
+// once so subsequent loads stay cheap.
+async function reloadDocsAndFolders(ctx) {
+  const [docs, folders] = await Promise.all([getAllDocs(ctx), getAllFolders(ctx)])
+  // Backfill: assign order to any doc that doesn't have one, grouped by folderId.
+  const missing = docs.filter(d => !d.order)
+  if (missing.length) {
+    const byFolder = new Map()
+    for (const d of docs) {
+      const k = d.folderId ?? null
+      if (!byFolder.has(k)) byFolder.set(k, [])
+      byFolder.get(k).push(d)
+    }
+    for (const group of byFolder.values()) {
+      // Stable seed: alphabetical by title, then createdAt. Only docs without
+      // an order get assigned; ones that already have an order keep it.
+      const ordered = [...group].sort((a, b) => {
+        if (a.order && b.order) return a.order < b.order ? -1 : a.order > b.order ? 1 : 0
+        if (a.order) return -1
+        if (b.order) return 1
+        const at = (a.title || '').localeCompare(b.title || '')
+        if (at !== 0) return at
+        return (a.createdAt ?? 0) - (b.createdAt ?? 0)
+      })
+      let prev = null
+      for (const d of ordered) {
+        if (d.order) { prev = d.order; continue }
+        d.order = generateKeyBetween(prev, null)
+        d.folderId = d.folderId ?? null
+        d.updatedAt = now()
+        await putDoc(d, ctx)
+        prev = d.order
+      }
+    }
+  }
+  state.docs = docs
+  state.folders = folders
+}
+
 async function putNode(node, ctx) {
   const { ciphertext, iv } = await encPayload(node, ctx)
   await db.encryptedRecords.put({ id: node.id, store: 'nodes', vaultId: ctx.vaultId, ciphertext, iv, updatedAt: node.updatedAt })
@@ -1365,6 +1558,7 @@ function opChangeKind(nodes, nodeId, kind) {
   const updated = {...node, kind,
     checked: kind === 'checkbox' ? (node.checked || false) : undefined,
     codeBody: kind === 'code' ? (node.codeBody ?? '') : undefined,
+    tableData: kind === 'table' ? (node.tableData ?? { header: [''], align: [null], rows: [['']] }) : undefined,
     updatedAt: now()}
   return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
 }
@@ -1398,6 +1592,23 @@ function opChangeCodeLang(nodes, nodeId, lang) {
   const node = nodes.find(n => n.id === nodeId); if (!node || node.kind !== 'code') return null
   if (node.content === lang) return null
   const updated = {...node, content: lang, updatedAt: now()}
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opUpdateTable(nodes, nodeId, tableData) {
+  const node = nodes.find(n => n.id === nodeId); if (!node || node.kind !== 'table') return null
+  const updated = {...node, tableData, updatedAt: now()}
+  return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
+}
+
+function opSetHeadingLevel(nodes, nodeId, level) {
+  const node = nodes.find(n => n.id === nodeId); if (!node || node.kind !== 'text') return null
+  const current = node.headingLevel ?? null
+  const target = level ? Math.min(6, Math.max(1, level)) : null
+  if (current === target) return null
+  const updated = {...node, updatedAt: now()}
+  if (target) updated.headingLevel = target
+  else delete updated.headingLevel
   return { nodes: applyPatch(nodes, [updated]), delta: [updated], deletedIds: [] }
 }
 
@@ -1604,6 +1815,7 @@ function buildSessionQueue(cards, settings, nowMs) {
 
 async function exportSnapshot(password, ctx) {
   const docs = await getAllDocs(ctx)
+  const folders = await getAllFolders(ctx)
   const nodes = await getAllNodes(ctx)
   const assetRecs = await getAllAssets(ctx)
   const assets = await Promise.all(assetRecs.map(async rec => {
@@ -1611,7 +1823,7 @@ async function exportSnapshot(password, ctx) {
     return { id: rec.id, kind: rec.kind, data: toB64(data), createdAt: rec.updatedAt }
   }))
   const vaultMeta = await db.vaultMeta.get(ctx.vaultId)
-  const payload = JSON.stringify({ documents: docs, nodes, assets })
+  const payload = JSON.stringify({ documents: docs, folders, nodes, assets })
   const plaintext = enc.encode(payload)
   const salt = crypto.getRandomValues(new Uint8Array(32))
   const snapKey = await deriveKey(password, salt)
@@ -1637,6 +1849,9 @@ async function importSnapshot(json, password, vaultName) {
   const name = vaultName || snap.vaultName || 'Imported'
   const newCtx = await initVault(name, password)
   for (const doc of payload.documents) await putDoc(doc, newCtx)
+  if (Array.isArray(payload.folders)) {
+    for (const folder of payload.folders) await putFolder(folder, newCtx)
+  }
   await putNodes(payload.nodes, newCtx)
   for (const asset of payload.assets) await putAsset(asset.id, asset.kind, fromB64(asset.data), newCtx)
   return newCtx
@@ -1928,9 +2143,11 @@ async function cloudClassifyChanges(localVaultId, ctx) {
 
 function cloudPreviewOf(store, plain) {
   if (store === 'documents') return plain.title || 'Untitled'
+  if (store === 'folders')   return plain.name || 'Untitled folder'
   if (store === 'nodes') {
     if (plain.kind === 'code')  return `‹code (${plain.content || '?'})›`
     if (plain.kind === 'image') return '‹image›'
+    if (plain.kind === 'table') return `‹table (${plain.tableData?.header?.length ?? 0}×${plain.tableData?.rows?.length ?? 0})›`
     const t = (plain.content || '').replace(/\s+/g, ' ').trim()
     return t.length > 100 ? t.slice(0, 100) + '…' : (t || '‹empty›')
   }
@@ -2019,6 +2236,9 @@ async function cloudPush(localVaultId, ctx, options = {}) {
       duplicateOps.push(...dup)
     } else if (cData.store === 'nodes') {
       const dup = await cloudMakeNodeDuplicate(ctx, cPlain)
+      duplicateOps.push(...dup)
+    } else if (cData.store === 'folders') {
+      const dup = await cloudMakeFolderDuplicate(ctx, cPlain)
       duplicateOps.push(...dup)
     }
   }
@@ -2116,6 +2336,24 @@ async function cloudMakeDocumentDuplicate(ctx, cloudDoc) {
   return [{ id: newDoc.id, store: 'documents', ciphertext: enc1.ciphertext, iv: enc1.iv, updatedAt: newDoc.updatedAt }]
 }
 
+// Build a duplicate folder marker for a conflicted folder record. Tagged
+// "(cloud conflict)" so the user can find it in the sidebar tree. Folder
+// contents (subfolders + docs) reference the original folder's id, so they
+// don't follow the duplicate — only the folder name conflict is surfaced.
+async function cloudMakeFolderDuplicate(ctx, cloudFolder) {
+  const newFolder = {
+    ...cloudFolder,
+    id: genId(),
+    name: `${cloudFolder.name || 'Folder'} (cloud conflict)`,
+    parentFolderId: cloudFolder.parentFolderId ?? null,
+    createdAt: now(),
+    updatedAt: now(),
+  }
+  await putFolder(newFolder, ctx)
+  const enc1 = await encPayload(newFolder, ctx)
+  return [{ id: newFolder.id, store: 'folders', ciphertext: enc1.ciphertext, iv: enc1.iv, updatedAt: newFolder.updatedAt }]
+}
+
 // Build a duplicate node as a sibling of the conflicted node. Marked with
 // a [conflict] prefix so the user can find them via search.
 async function cloudMakeNodeDuplicate(ctx, cloudNode) {
@@ -2187,6 +2425,7 @@ async function cloudPull(localVaultId, ctx, fullFetch = false, options = {}) {
         const cPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
         if (cm.store === 'documents') await cloudMakeDocumentDuplicate(ctx, cPlain)
         else if (cm.store === 'nodes') await cloudMakeNodeDuplicate(ctx, cPlain)
+        else if (cm.store === 'folders') await cloudMakeFolderDuplicate(ctx, cPlain)
         conflicts++
         continue
       }
@@ -2222,7 +2461,7 @@ async function cloudPull(localVaultId, ctx, fullFetch = false, options = {}) {
 
   // Refresh in-memory state if the currently open vault is the one we pulled.
   if (state.ctx?.vaultId === localVaultId) {
-    state.docs = await getAllDocs(ctx)
+    await reloadDocsAndFolders(ctx)
     if (state.activeDocId) state.nodes = await getAllNodes(ctx)
     await rebuildSearchIndexFromVault(ctx)
   }
@@ -2270,27 +2509,364 @@ async function cloudUnlinkVault(localVaultId, { deleteRemote = false } = {}) {
 
 const mdParser = new MarkdownIt({ breaks: true })
 
-function exportMarkdown(doc, nodes) {
-  function renderNode(node, depth) {
-    const indent = '  '.repeat(depth)
-    let line = ''
-    if (node.kind === 'checkbox') {
-      line = `${indent}- ${node.checked ? '[x]' : '[ ]'} ${node.content}\n`
-    } else if (node.kind === 'code') {
-      line = `${indent}\`\`\`${node.content || ''}\n${node.codeBody ?? ''}\n${indent}\`\`\`\n`
-    } else if (node.kind === 'image') {
-      line = `${indent}- ![image](asset:${node.assetId ?? ''})\n`
-    } else {
-      line = `${indent}- ${node.content}\n`
+// Separate parser for the in-app preview modal. html:true lets us inject
+// rendered KaTeX, Quarto callout `<div>` wrappers, and image substitutions
+// without escaping. Safe here because content is the user's own local data.
+const previewMdParser = new MarkdownIt({ breaks: true, html: true, linkify: true })
+
+// Export a subtree starting at rootNodeId as Quarto markdown, treating that
+// node as if it were a top-level doc. No front-matter, no synthetic title —
+// the modal supplies its own header instead.
+function exportSubtreeMarkdown(doc, nodes, rootNodeId) {
+  if (!rootNodeId) return exportMarkdown(doc, nodes)
+  const ids = new Set([rootNodeId])
+  const stack = [rootNodeId]
+  while (stack.length) {
+    const id = stack.pop()
+    for (const n of nodes) {
+      if (n.parentId === id && n.documentId === doc.id && !ids.has(n.id)) { ids.add(n.id); stack.push(n.id) }
     }
-    for (const child of sortedChildren(nodes, node.id, node.documentId)) {
-      line += renderNode(child, depth + 1)
-    }
-    return line
   }
-  let out = `# ${doc.title}\n\n`
-  for (const root of sortedChildren(nodes, null, doc.id)) out += renderNode(root, 0)
-  return out
+  const reparented = nodes
+    .filter(n => ids.has(n.id))
+    .map(n => n.id === rootNodeId ? { ...n, parentId: null } : n)
+  return exportMarkdown({ id: doc.id, title: '', createdAt: doc.createdAt, updatedAt: doc.updatedAt }, reparented)
+}
+
+// Rewrites Quarto fenced divs (`::: {.callout-note}` ... `:::`) into raw
+// `<div class="callout callout-…">` blocks so markdown-it (with html:true)
+// renders them as styled containers while still parsing the inner markdown.
+function transformFencedDivsToHtml(md) {
+  const lines = md.split('\n')
+  const out = []
+  const stack = []
+  for (const line of lines) {
+    const open = line.match(/^:::+\s*\{\.([^}\s]+)([^}]*)\}\s*$/)
+    if (open) {
+      const cls = open[1].replace(/[^a-zA-Z0-9_-]/g, '')
+      // Strip leading "callout-" so `.callout-note` ends up as a single
+      // `callout-note` class rather than `callout-callout-note`.
+      const short = cls.replace(/^callout-/, '')
+      stack.push(cls)
+      out.push('')
+      out.push(`<div class="callout callout-${short}">`)
+      out.push('')
+      continue
+    }
+    if (line.match(/^:::+\s*$/) && stack.length) {
+      stack.pop()
+      out.push('')
+      out.push('</div>')
+      out.push('')
+      continue
+    }
+    out.push(line)
+  }
+  while (stack.length) { stack.pop(); out.push(''); out.push('</div>') }
+  return out.join('\n')
+}
+
+// markdown-it doesn't recognize Quarto's executable chunk syntax (` ```{r} `).
+// Strip the braces so the inner language tag survives.
+function normalizeExecChunkFences(md) {
+  return md.replace(/^(\s*)```\{([a-zA-Z][\w-]*)[^}]*\}\s*$/gm, '$1```$2')
+}
+
+// Pipeline: subtree → markdown → normalize → wrap divs → extract KaTeX → render → splice KaTeX HTML back.
+function renderMarkdownToPreviewHtml(doc, nodes, rootNodeId) {
+  let md = exportSubtreeMarkdown(doc, nodes, rootNodeId)
+  // Strip leading YAML front-matter so markdown-it doesn't render the `---`
+  // as an <hr> followed by a setext heading. The modal header already shows
+  // the doc title.
+  md = md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+  md = normalizeExecChunkFences(md)
+  md = transformFencedDivsToHtml(md)
+
+  const slots = []
+  md = md.replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*?\$/g, (m) => {
+    const display = m.startsWith('$$')
+    const expr = display ? m.slice(2, -2) : m.slice(1, -1)
+    let html
+    if (window.katex) {
+      try { html = katex.renderToString(expr.trim(), { displayMode: display, throwOnError: false }) }
+      catch { html = m.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])) }
+    } else {
+      html = m.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]))
+    }
+    const key = `KTXPV${slots.length}KTXPVEND`
+    slots.push({ key, html })
+    return key
+  })
+
+  let html = previewMdParser.render(md)
+  for (const s of slots) html = html.split(s.key).join(s.html)
+  return html
+}
+
+// Emit Quarto-compatible markdown that round-trips with importRmd.
+//
+// Block-context nodes (headings, paragraphs, code, tables, callouts) emit at
+// column 0 separated by blank lines. List-context nodes (text/checkbox without
+// a heading or block role) indent by `listDepth * 2`. A text node's children
+// inherit list context unless the parent is itself block-shaped, in which
+// case children reset to listDepth 0.
+function exportMarkdown(doc, nodes) {
+  const childrenOf = id => sortedChildren(nodes, id, doc.id)
+  const isBlockText = n => n.kind === 'text' && (n.headingLevel || n.role === 'paragraph' || n.role === 'callout' || n.role === 'fenced-div')
+  const isListContext = n => (n.kind === 'text' && !isBlockText(n)) || n.kind === 'checkbox'
+
+  function emitChildren(parentId, listDepth) {
+    let s = ''
+    for (const k of sortedChildren(nodes, parentId, doc.id)) s += emit(k, listDepth)
+    return s
+  }
+
+  function emit(node, listDepth) {
+    if (node.kind === 'text' && node.headingLevel) {
+      const lvl = Math.min(6, Math.max(1, node.headingLevel))
+      let s = '\n' + '#'.repeat(lvl) + ' ' + (node.content || '').trim() + '\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'text' && (node.role === 'callout' || node.role === 'fenced-div')) {
+      const cls = node.divClass || (node.role === 'callout' ? 'callout-note' : 'aside')
+      let s = '\n::: {.' + cls + '}\n\n'
+      const title = (node.content || '').trim()
+      if (title) s += '## ' + title + '\n\n'
+      s += emitChildren(node.id, 0)
+      s += ':::\n\n'
+      return s
+    }
+    if (node.kind === 'text' && node.role === 'paragraph') {
+      let s = (node.content || '').trim() + '\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'code') {
+      const lang = (node.content || '').trim()
+      const fence = node.codeExecutable && lang ? '```{' + lang + '}' : '```' + lang
+      const body = node.codeBody ?? ''
+      if (listDepth > 0) {
+        const pad = '    '.repeat(listDepth)
+        const lines = body.split('\n').map(l => pad + l).join('\n')
+        let s = '\n' + pad + fence + '\n' + lines + '\n' + pad + '```\n\n'
+        s += emitChildren(node.id, listDepth)
+        return s
+      }
+      let s = '\n' + fence + '\n' + body + (body.endsWith('\n') ? '' : '\n') + '```\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'table') {
+      const indent = listDepth > 0 ? '    '.repeat(listDepth) : ''
+      let s = '\n' + tableDataToPipeMarkdown(node.tableData, indent) + '\n'
+      s += emitChildren(node.id, listDepth)
+      return s
+    }
+    if (node.kind === 'image') {
+      if (listDepth > 0) {
+        const pad = '  '.repeat(listDepth)
+        let s = pad + '- ![image](asset:' + (node.assetId ?? '') + ')\n'
+        s += emitChildren(node.id, listDepth + 1)
+        return s
+      }
+      let s = '\n![image](asset:' + (node.assetId ?? '') + ')\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    // Default: text or checkbox as a list item.
+    const indent = '  '.repeat(listDepth)
+    let prefix = '- '
+    if (node.kind === 'checkbox') prefix = '- [' + (node.checked ? 'x' : ' ') + '] '
+    let s = indent + prefix + (node.content || '') + '\n'
+    s += emitChildren(node.id, listDepth + 1)
+    return s
+  }
+
+  let out = ''
+  const fm = (doc.frontMatter || '').trim()
+  if (fm) {
+    out += '---\n' + fm + '\n---\n\n'
+  } else if (doc.title) {
+    // Synth a title heading only when no front-matter and the doc doesn't
+    // already lead with an H1 — keeps exported files render-friendly.
+    const first = childrenOf(null)[0]
+    const leadsWithH1 = first && first.kind === 'text' && first.headingLevel === 1
+    if (!leadsWithH1) out += '# ' + doc.title + '\n\n'
+  }
+  out += emitChildren(null, 0)
+  return out.replace(/\n{3,}/g, '\n\n').replace(/^\n+/, '')
+}
+
+// =====================================================================
+// PIPE-TABLE HELPERS
+// =====================================================================
+
+// Split a pipe-table row into cell strings. Leading/trailing pipes are
+// optional (GFM allows either). `\|` is honored as an escaped pipe.
+function splitPipeRow(line) {
+  let s = line.trim()
+  if (s.startsWith('|')) s = s.slice(1)
+  if (s.endsWith('|')) s = s.slice(0, -1)
+  const cells = []
+  let buf = ''
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '\\' && s[i + 1] === '|') { buf += '|'; i++; continue }
+    if (s[i] === '|') { cells.push(buf.trim()); buf = ''; continue }
+    buf += s[i]
+  }
+  cells.push(buf.trim())
+  return cells
+}
+
+function isPipeTableSeparator(line) {
+  const s = line.trim()
+  if (!s.includes('|') || !s.includes('-')) return false
+  const cells = splitPipeRow(s)
+  if (!cells.length) return false
+  return cells.every(c => /^:?-{2,}:?$/.test(c))
+}
+
+function alignFromSepCell(c) {
+  const t = c.trim()
+  const l = t.startsWith(':'), r = t.endsWith(':')
+  if (l && r) return 'center'
+  if (r) return 'right'
+  if (l) return 'left'
+  return null
+}
+
+// Detect a pipe table starting at lines[startIdx]. Returns
+// { tableData, consumed } or null. A pipe table is a header row, a
+// separator row matching `:?---:?`, and zero or more body rows. We require
+// the header to contain at least one pipe so plain prose lines aren't
+// misclassified.
+function tryParsePipeTable(lines, startIdx) {
+  if (startIdx + 1 >= lines.length) return null
+  const headerLine = lines[startIdx]
+  const sepLine = lines[startIdx + 1]
+  if (!headerLine || !sepLine) return null
+  if (!headerLine.includes('|')) return null
+  if (!isPipeTableSeparator(sepLine)) return null
+  const header = splitPipeRow(headerLine)
+  const sepCells = splitPipeRow(sepLine)
+  if (header.length !== sepCells.length || header.length === 0) return null
+  const align = sepCells.map(alignFromSepCell)
+  const rows = []
+  let i = startIdx + 2
+  while (i < lines.length) {
+    const ln = lines[i]
+    if (!ln || !ln.trim() || !ln.includes('|')) break
+    const cells = splitPipeRow(ln)
+    while (cells.length < header.length) cells.push('')
+    cells.length = header.length
+    rows.push(cells)
+    i++
+  }
+  return { tableData: { header, align, rows }, consumed: i - startIdx }
+}
+
+// Serialize tableData back to pipe-markdown. `indent` is prepended to each
+// line so a table nested under a list item exports at the right depth.
+function tableDataToPipeMarkdown(td, indent = '') {
+  if (!td || !Array.isArray(td.header)) return ''
+  const header = td.header
+  const align = td.align || header.map(() => null)
+  const rows = td.rows || []
+  const escCell = c => String(c ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
+  const sepCell = a => a === 'center' ? ':---:' : a === 'right' ? '---:' : a === 'left' ? ':---' : '---'
+  const fmtRow = cells => `${indent}| ${header.map((_, i) => escCell(cells[i] || '')).join(' | ')} |`
+  return [
+    fmtRow(header),
+    `${indent}| ${align.map(sepCell).join(' | ')} |`,
+    ...rows.map(fmtRow),
+  ].join('\n') + '\n'
+}
+
+// Build a DOM <table> for the live outline view. Read-only.
+function renderTableDom(tableData) {
+  const wrap = document.createElement('div')
+  wrap.className = 'table-block'
+  if (!tableData || !Array.isArray(tableData.header)) {
+    wrap.textContent = '(invalid table)'
+    return wrap
+  }
+  const table = document.createElement('table')
+  table.className = 'outline-table'
+  const thead = document.createElement('thead')
+  const trh = document.createElement('tr')
+  for (let i = 0; i < tableData.header.length; i++) {
+    const th = document.createElement('th')
+    th.textContent = tableData.header[i] || ''
+    if (tableData.align?.[i]) th.style.textAlign = tableData.align[i]
+    trh.appendChild(th)
+  }
+  thead.appendChild(trh)
+  table.appendChild(thead)
+  const tbody = document.createElement('tbody')
+  for (const row of tableData.rows || []) {
+    const tr = document.createElement('tr')
+    for (let i = 0; i < tableData.header.length; i++) {
+      const td = document.createElement('td')
+      td.textContent = row[i] || ''
+      if (tableData.align?.[i]) td.style.textAlign = tableData.align[i]
+      tr.appendChild(td)
+    }
+    tbody.appendChild(tr)
+  }
+  table.appendChild(tbody)
+  wrap.appendChild(table)
+  return wrap
+}
+
+// Concatenate all cell text — used for indexing/snippets/word counts.
+function tableCellText(tableData) {
+  if (!tableData || !Array.isArray(tableData.header)) return ''
+  const parts = [...tableData.header, ...((tableData.rows || []).flat())]
+  return parts.filter(Boolean).join(' ')
+}
+
+// Swap the read-only table for a textarea showing pipe-markdown.
+function beginTableEdit(nodeId) {
+  const wrap = document.querySelector(`.table-block-wrap[data-node-id="${nodeId}"]`)
+  if (!wrap) return
+  const node = state.nodes.find(n => n.id === nodeId)
+  if (!node || node.kind !== 'table') return
+  const source = tableDataToPipeMarkdown(node.tableData).trimEnd()
+  wrap.innerHTML = ''
+  const ta = document.createElement('textarea')
+  ta.className = 'table-edit-textarea'
+  ta.value = source
+  ta.dataset.nodeId = nodeId
+  wrap.appendChild(ta)
+  const toolbar = document.createElement('div'); toolbar.className = 'table-block-toolbar'
+  const save = document.createElement('button')
+  save.className = 'table-save-btn'; save.textContent = 'Save'
+  save.dataset.action = 'save-table'; save.dataset.nodeId = nodeId
+  const cancel = document.createElement('button')
+  cancel.className = 'table-cancel-btn'; cancel.textContent = 'Cancel'
+  cancel.dataset.action = 'cancel-table'; cancel.dataset.nodeId = nodeId
+  toolbar.append(save, cancel)
+  wrap.appendChild(toolbar)
+  const err = document.createElement('div'); err.className = 'table-edit-err'; err.dataset.role = 'err'
+  wrap.appendChild(err)
+  ta.focus(); ta.select()
+}
+
+// Re-parse the textarea contents and commit the new tableData.
+function commitTableEdit(nodeId) {
+  const wrap = document.querySelector(`.table-block-wrap[data-node-id="${nodeId}"]`)
+  if (!wrap) return
+  const ta = wrap.querySelector('textarea.table-edit-textarea')
+  const err = wrap.querySelector('[data-role="err"]')
+  if (!ta) return
+  const lines = ta.value.split('\n')
+  const parsed = tryParsePipeTable(lines, 0)
+  if (!parsed) {
+    if (err) err.textContent = 'Not a valid pipe table (need header, separator, and at least one row).'
+    return
+  }
+  applyOp(opUpdateTable(state.nodes, nodeId, parsed.tableData))
 }
 
 // Self-contained HTML export: nested <ul> with rendered markdown inline and
@@ -2336,12 +2912,32 @@ async function exportHtml(doc, nodes, ctx) {
     } catch { return '<em>(image error)</em>' }
   }
 
+  function renderTableHtml(td) {
+    if (!td || !Array.isArray(td.header)) return '<em>(invalid table)</em>'
+    const header = td.header
+    const align = td.align || header.map(() => null)
+    const rows = td.rows || []
+    const cellAttr = i => align[i] ? ` style="text-align:${escAttr(align[i])}"` : ''
+    let html = '<table class="outline-table"><thead><tr>'
+    for (let i = 0; i < header.length; i++) html += `<th${cellAttr(i)}>${escText(header[i] || '')}</th>`
+    html += '</tr></thead><tbody>'
+    for (const row of rows) {
+      html += '<tr>'
+      for (let i = 0; i < header.length; i++) html += `<td${cellAttr(i)}>${escText(row[i] || '')}</td>`
+      html += '</tr>'
+    }
+    html += '</tbody></table>'
+    return html
+  }
+
   async function renderNode(node) {
     let body
     if (node.kind === 'code') {
       body = `<pre><code class="lang-${escAttr(node.content || '')}">${escText(node.codeBody ?? '')}</code></pre>`
     } else if (node.kind === 'image') {
       body = await renderImage(node)
+    } else if (node.kind === 'table') {
+      body = renderTableHtml(node.tableData)
     } else if (node.kind === 'checkbox') {
       const checked = node.checked ? ' checked' : ''
       const cls = node.checked ? ' class="done"' : ''
@@ -2370,6 +2966,9 @@ ul{list-style:disc;padding-left:24px;margin:4px 0}
 li{margin:2px 0}
 pre{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:10px;overflow-x:auto;font-size:13px;line-height:1.4}
 code{font-family:ui-monospace,Menlo,Consolas,monospace}
+table.outline-table{border-collapse:collapse;margin:6px 0;font-size:14px}
+table.outline-table th,table.outline-table td{border:1px solid #ddd;padding:4px 8px;text-align:left}
+table.outline-table th{background:#f3f3f3;font-weight:600}
 img{max-width:100%;border-radius:4px}
 label{display:inline-flex;align-items:baseline;gap:6px}
 label.done{text-decoration:line-through;color:#888}
@@ -2424,6 +3023,28 @@ function importMarkdown(text) {
       continue
     }
 
+    // Pipe table — detect at the current indent so it nests like everything else.
+    const tblM = line.match(/^(\s*)\|/)
+    if (tblM) {
+      const indent = tblM[1].length
+      const sliced = lines.slice(i).map(l => l.startsWith(' '.repeat(indent)) ? l.slice(indent) : l)
+      const parsed = tryParsePipeTable(sliced, 0)
+      if (parsed) {
+        const depth = Math.floor(indent / 2)
+        while (depthStack.length > depth + 1) depthStack.pop()
+        const entry = depthStack[depth] ?? depthStack[depthStack.length - 1]
+        const order = generateKeyBetween(entry.lastOrder, null)
+        const nodeId = genId()
+        nodes.push({ id: nodeId, parentId: entry.parentId, documentId: docId, order,
+          kind: 'table', content: '', tableData: parsed.tableData, createdAt: ts, updatedAt: ts })
+        entry.lastOrder = order; entry.lastId = nodeId
+        if (!depthStack[depth + 1]) depthStack.push({ parentId: nodeId, lastOrder: null, lastId: null })
+        else { depthStack[depth + 1].parentId = nodeId; depthStack[depth + 1].lastOrder = null }
+        i += parsed.consumed
+        continue
+      }
+    }
+
     // List item
     const listM = line.match(/^(\s*)-\s+(.*)$/)
     if (listM) {
@@ -2449,6 +3070,232 @@ function importMarkdown(text) {
     i++
   }
   return { doc: { id: docId, title, createdAt: ts, updatedAt: ts }, nodes }
+}
+
+// =====================================================================
+// QUARTO / R MARKDOWN IMPORT
+// =====================================================================
+
+// Splits a top-level comma-separated chunk-option string respecting quoted
+// values, so `label, fig.cap="a, b", echo=FALSE` parses to three parts.
+function splitCsvRespectQuotes(s) {
+  const out = []
+  let buf = ''
+  let inQ = false
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === '"' && s[i - 1] !== '\\') inQ = !inQ
+    if (c === ',' && !inQ) { out.push(buf); buf = ''; continue }
+    buf += c
+  }
+  if (buf.trim()) out.push(buf)
+  return out
+}
+
+// Parse the bit after ``` on a fence line. Supports plain (` ```r `) and
+// Quarto braced (` ```{r setup, fig.cap="x"} `) forms. Returns
+// { lang, executable, optionLines } where optionLines are `#| key: value`
+// strings to prepend to the chunk body (Quarto-native option syntax).
+function parseChunkHeader(rest) {
+  const trimmed = rest.trim()
+  const braced = trimmed.match(/^\{([^}]*)\}$/)
+  if (!braced) return { lang: trimmed, executable: false, optionLines: [] }
+  const inner = braced[1].trim()
+  const langMatch = inner.match(/^([a-zA-Z][a-zA-Z0-9_-]*)/)
+  const lang = langMatch ? langMatch[1] : ''
+  let opts = inner.slice(langMatch ? langMatch[0].length : 0).trim()
+  if (opts.startsWith(',')) opts = opts.slice(1).trim()
+  const optionLines = []
+  if (opts) {
+    let labelTaken = false
+    for (const part of splitCsvRespectQuotes(opts)) {
+      const p = part.trim(); if (!p) continue
+      const eq = p.indexOf('=')
+      if (eq === -1) {
+        if (!labelTaken) { optionLines.push(`#| label: ${p}`); labelTaken = true }
+      } else {
+        optionLines.push(`#| ${p.slice(0, eq).trim()}: ${p.slice(eq + 1).trim()}`)
+      }
+    }
+  }
+  return { lang, executable: true, optionLines }
+}
+
+// Import an R Markdown (.Rmd) or Quarto (.qmd) document and produce a smart
+// outline: YAML front-matter → doc.frontMatter; ATX headings drive nesting;
+// fenced chunks become code nodes (executable ones flagged); pipe tables
+// become table nodes; `::: {.callout-…}` divs become labeled parent text
+// nodes; everything else falls back to paragraphs and list items.
+function importRmd(text) {
+  const docId = genId(); const ts = now()
+  const nodes = []
+  let title = 'Imported'
+  let frontMatter = ''
+
+  // 1. Strip YAML front-matter.
+  const fmMatch = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text)
+  let body = text
+  if (fmMatch) {
+    frontMatter = fmMatch[1]
+    body = text.slice(fmMatch[0].length)
+    const tm = /^title:\s*"?([^"\n]+?)"?\s*$/m.exec(frontMatter)
+    if (tm) title = tm[1].trim().replace(/["']/g, '')
+  }
+
+  // 2. Walk lines with section + callout + list state.
+  const lines = body.split('\n')
+  const lastOrderByParent = new Map()
+  // sectionAtLevel: level → nodeId. Level 0 = doc root (null).
+  const sectionAtLevel = new Map([[0, null]])
+  // calloutStack: nodeIds for nested `::: {.x}` divs. The topmost is the
+  // active parent for content; pops on bare `:::`.
+  const calloutStack = []
+  // listStack: list-item nesting *inside the current container*. Reset
+  // whenever the current container changes.
+  let listStack = []
+  let lastContainer = null
+
+  const currentContainer = () => {
+    if (calloutStack.length) return calloutStack[calloutStack.length - 1]
+    let maxLvl = 0
+    for (const lvl of sectionAtLevel.keys()) if (lvl > maxLvl) maxLvl = lvl
+    return sectionAtLevel.get(maxLvl)
+  }
+
+  const syncListStack = () => {
+    const c = currentContainer()
+    if (c !== lastContainer) { listStack = []; lastContainer = c }
+  }
+
+  const pushNode = (props, parentId) => {
+    const lastOrder = lastOrderByParent.get(parentId) ?? null
+    const order = generateKeyBetween(lastOrder, null)
+    const id = genId()
+    const node = { id, parentId, documentId: docId, order, createdAt: ts, updatedAt: ts, ...props }
+    nodes.push(node)
+    lastOrderByParent.set(parentId, order)
+    return id
+  }
+
+  // Paragraph buffer — accumulates consecutive non-classified lines.
+  let paraBuf = ''
+  const flushParagraph = () => {
+    const t = paraBuf.trim()
+    paraBuf = ''
+    if (!t) return
+    syncListStack()
+    pushNode({ kind: 'text', content: t, role: 'paragraph' }, currentContainer())
+  }
+
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    // Blank line — terminates a paragraph and resets list stack scoping.
+    if (!trimmed) { flushParagraph(); listStack = []; i++; continue }
+
+    // Fenced div / callout open or close.
+    const divOpen = trimmed.match(/^:::+\s*\{\.([^}\s]+)([^}]*)\}\s*$/)
+    if (divOpen) {
+      flushParagraph()
+      const cls = divOpen[1]
+      const role = cls.startsWith('callout-') ? 'callout' : 'fenced-div'
+      const id = pushNode({ kind: 'text', content: '', role, divClass: cls }, currentContainer())
+      calloutStack.push(id)
+      listStack = []; lastContainer = id
+      i++; continue
+    }
+    if (trimmed.match(/^:::+\s*$/)) {
+      flushParagraph()
+      if (calloutStack.length) calloutStack.pop()
+      listStack = []; lastContainer = null
+      i++; continue
+    }
+
+    // ATX heading.
+    const hm = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/)
+    if (hm) {
+      flushParagraph()
+      const level = hm[1].length
+      const headingText = hm[2].trim()
+      // Parent = deepest section above this level.
+      let parentLvl = 0
+      for (const lvl of sectionAtLevel.keys()) if (lvl < level && lvl > parentLvl) parentLvl = lvl
+      const parentId = sectionAtLevel.get(parentLvl)
+      const id = pushNode({ kind: 'text', content: headingText, headingLevel: level }, parentId)
+      // Headings invalidate callout scope and deeper sections.
+      for (const lvl of Array.from(sectionAtLevel.keys())) if (lvl >= level) sectionAtLevel.delete(lvl)
+      sectionAtLevel.set(level, id)
+      calloutStack.length = 0
+      listStack = []; lastContainer = id
+      i++; continue
+    }
+
+    // Fenced code block.
+    const fenceM = line.match(/^(\s*)```(.*)$/)
+    if (fenceM) {
+      flushParagraph()
+      const indent = fenceM[1]
+      const header = fenceM[2]
+      const { lang, executable, optionLines } = parseChunkHeader(header)
+      i++
+      const codeLines = []
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
+        const ln = lines[i]
+        codeLines.push(ln.startsWith(indent) ? ln.slice(indent.length) : ln)
+        i++
+      }
+      i++ // closing fence
+      const body = [...optionLines, ...codeLines].join('\n')
+      syncListStack()
+      const props = { kind: 'code', content: lang, codeBody: body }
+      if (executable) props.codeExecutable = true
+      pushNode(props, currentContainer())
+      continue
+    }
+
+    // Pipe table.
+    if (line.includes('|')) {
+      const parsed = tryParsePipeTable(lines, i)
+      if (parsed) {
+        flushParagraph()
+        syncListStack()
+        pushNode({ kind: 'table', content: '', tableData: parsed.tableData }, currentContainer())
+        i += parsed.consumed
+        continue
+      }
+    }
+
+    // List item (bullet or task).
+    const listM = line.match(/^(\s*)[-*+]\s+(.*)$/)
+    if (listM) {
+      flushParagraph()
+      syncListStack()
+      const indent = listM[1].length
+      const depth = Math.floor(indent / 2)
+      let content = listM[2]
+      let kind = 'text'; let checked
+      const taskM = content.match(/^\[(x|X| )\]\s+(.*)$/)
+      if (taskM) { kind = 'checkbox'; checked = taskM[1].toLowerCase() === 'x'; content = taskM[2] }
+      while (listStack.length > depth) listStack.pop()
+      const parent = listStack.length ? listStack[listStack.length - 1] : currentContainer()
+      const props = { kind, content }
+      if (kind === 'checkbox') props.checked = checked
+      const id = pushNode(props, parent)
+      listStack.push(id)
+      i++; continue
+    }
+
+    // Default: paragraph line — accumulate.
+    paraBuf += (paraBuf ? '\n' : '') + line
+    i++
+  }
+  flushParagraph()
+
+  const doc = { id: docId, title, createdAt: ts, updatedAt: ts }
+  if (frontMatter.trim()) doc.frontMatter = frontMatter.trim()
+  return { doc, nodes }
 }
 
 // Phase 8 — one-way migration from a flash JSON export. Converts each flash
@@ -2499,7 +3346,9 @@ async function importFlashDeck(json) {
   const deckName = decks[0]?.name ? String(decks[0].name).trim() : ''
   const docTitle = deckName ? `Imported from flash: ${deckName}` : 'Imported from flash'
   const ts = now()
-  const doc = { id: genId(), title: docTitle, createdAt: ts, updatedAt: ts }
+  const rootSiblings = sortedSidebarSiblings(null)
+  const docOrder = generateKeyBetween(rootSiblings.length ? rootSiblings[rootSiblings.length - 1].order : null, null)
+  const doc = { id: genId(), title: docTitle, folderId: null, order: docOrder, createdAt: ts, updatedAt: ts }
 
   const lossy = {}
   const skipped = []
@@ -2540,7 +3389,7 @@ async function importFlashDeck(json) {
 
   await putDoc(doc, state.ctx)
   await putNodes(newNodes, state.ctx)
-  state.docs = await getAllDocs(state.ctx)
+  await reloadDocsAndFolders(state.ctx)
   await selectDoc(doc.id)
 
   if (skipped.length) console.warn(`[flash-import] skipped ${skipped.length} cards:`, skipped)
@@ -2864,6 +3713,8 @@ function wordExtractor(node) {
   if (node.kind === 'code') {
     out.push(...tokenizeWords(node.codeBody || ''))
     out.push(...tokenizeWords(node.content || ''))
+  } else if (node.kind === 'table') {
+    out.push(...tokenizeWords(tableCellText(node.tableData)))
   } else if (node.kind !== 'image') {
     out.push(...tokenizeWords(node.content || ''))
   }
@@ -2996,6 +3847,8 @@ function indexNode(node) {
   // codeBody so the search view can show useful snippets.
   const excerpt = node.kind === 'code'
     ? (node.codeBody || '').slice(0, 600)
+    : node.kind === 'table'
+    ? tableCellText(node.tableData).slice(0, 600)
     : (node.content || '')
   searchIndex.nodeMeta.set(node.id, {
     docId: node.documentId, kind: node.kind,
@@ -3166,6 +4019,8 @@ const state = {
   unlocked: false,
   ctx: null,
   docs: [],
+  folders: [],
+  expandedFolderIds: new Set(),
   activeDocId: null,
   nodes: [],
   zoomedId: null,
@@ -3183,7 +4038,8 @@ const dragState = { ids: [], target: null }
 
 function lockVault() {
   state.unlocked = false; state.ctx = null; state._password = null
-  state.docs = []; state.nodes = []; state.activeDocId = null
+  state.docs = []; state.folders = []; state.nodes = []; state.activeDocId = null
+  state.expandedFolderIds.clear()
   state.zoomedId = null; state.selectedId = null
   state.selectedIds.clear()
   state.activeTagFilter = null
@@ -3562,6 +4418,7 @@ function renderCtxMenu(nodeId, el) {
     ${item('ctx-insert-child', 'Add child node')}
     ${sep()}
     ${item('ctx-zoom', 'Zoom in', SHORTCUTS['zoom'].keys)}
+    ${item('ctx-preview', '👁 Render preview')}
     ${sep()}
     ${item('study-here', '🎴 Study cards under here')}
     ${sep()}
@@ -3587,12 +4444,23 @@ function renderCtxMenu(nodeId, el) {
     ${sep()}
     ${item('ctx-to-text', 'Convert to text')}`
   } else {
+    let headingSub = ''
+    if (node.kind === 'text') {
+      const cur = node.headingLevel || 0
+      const mark = (l) => (cur === l ? '✓ ' : '​')
+      const levels = [1,2,3,4,5,6].map(l => item('ctx-heading-set', `${mark(l)}H${l}`, '', false, String(l))).join('')
+      const clear = item('ctx-heading-set', `${cur === 0 ? '✓ ' : '​'}Clear`, '', false, '0')
+      const curLabel = cur ? `H${cur}` : 'Body'
+      headingSub = `${sep()}<li class="ctx-item" data-action="ctx-heading-sub">Heading: <em class="ctx-cur-lang">${curLabel}</em><span class="ctx-arrow" style="margin-left:auto">▶</span><ul class="ctx-sub">${levels}${sep()}${clear}</ul></li>`
+    }
     typeItems = `
     ${sep()}
     ${item('ctx-add-checkbox', 'Add checkbox', SHORTCUTS['add-checkbox'].keys, node.kind === 'checkbox')}
     ${item('ctx-children-checkbox', 'Add checkbox to children', '', !children.length)}
     ${item('ctx-check-off', 'Check off', SHORTCUTS['check-off'].keys, node.kind !== 'checkbox')}
     ${item('ctx-to-code', 'Convert to code')}
+    ${item('ctx-to-table', 'Convert to table', '', node.kind === 'table')}
+    ${headingSub}
     ${sep()}
     ${item('ctx-number-children', 'Number children', SHORTCUTS['number-children'].keys, !children.length)}`
   }
@@ -3753,19 +4621,85 @@ function buildVisibleSet(matchedIds, nodes) {
   return set
 }
 
-// Daily notes — docs titled `daily/YYYY-MM-DD`. The sidebar Today button and
-// month calendar both route through openOrCreateDailyDoc; the calendar dot
-// marker just checks for the matching doc title in state.docs.
+// Daily notes — kept in a `daily/YYYY/MM/` folder tree, with docs titled
+// `YYYY-MM-DD` inside the month folder. Legacy notes created with the
+// previous flat scheme (doc title `daily/YYYY-MM-DD` at root) are still
+// recognized by both the calendar dot-marker and openOrCreateDailyDoc, so
+// users who created dailies the old way don't lose them.
 const DAILY_PREFIX = 'daily/'
+const DAILY_ROOT_NAME = 'daily'
+
+// Find a folder by exact name under a given parent. Returns the folder
+// record or null. parentFolderId == null targets the vault root.
+function findChildFolderByName(parentFolderId, name) {
+  const pid = parentFolderId ?? null
+  return state.folders.find(f =>
+    (f.parentFolderId ?? null) === pid && f.name === name
+  ) || null
+}
+
+// Walk `names` from the root, creating any missing folder in the chain.
+// Returns the leaf folder's id. Used to build the daily/YYYY/MM/ path.
+async function ensureFolderPath(names) {
+  let parentId = null
+  for (const name of names) {
+    let folder = findChildFolderByName(parentId, name)
+    if (!folder) {
+      const siblings = sortedSidebarSiblings(parentId)
+      const lastOrder = siblings.length ? siblings[siblings.length - 1].order : null
+      folder = {
+        id: genId(),
+        name,
+        parentFolderId: parentId,
+        order: generateKeyBetween(lastOrder, null),
+        createdAt: now(),
+        updatedAt: now(),
+      }
+      await putFolder(folder, state.ctx)
+      state.folders = [...state.folders, folder]
+    }
+    parentId = folder.id
+  }
+  return parentId
+}
+
+// True when `doc` lives somewhere inside the daily root folder. Used by the
+// calendar to attribute YYYY-MM-DD-titled docs to the daily tree (so we
+// don't pick up unrelated docs that happen to be named like a date).
+function isInDailyTree(doc) {
+  const dailyRoot = findChildFolderByName(null, DAILY_ROOT_NAME)
+  if (!dailyRoot) return false
+  let parent = doc.folderId ?? null
+  while (parent) {
+    if (parent === dailyRoot.id) return true
+    const f = state.folders.find(x => x.id === parent)
+    if (!f) return false
+    parent = f.parentFolderId ?? null
+  }
+  return false
+}
 
 async function openOrCreateDailyDoc(dateIso) {
   if (!state.ctx) return
-  const title = DAILY_PREFIX + dateIso
-  let doc = state.docs.find(d => d.title === title)
+  const [year, month] = dateIso.split('-')  // 'YYYY-MM-DD' → ['YYYY','MM','DD']
+  // Prefer a doc already in the daily tree; fall back to the legacy flat-
+  // titled doc at root so dailies created before this change still open.
+  let doc = state.docs.find(d => d.title === dateIso && isInDailyTree(d))
+            || state.docs.find(d => d.title === DAILY_PREFIX + dateIso)
   if (!doc) {
-    doc = { id: genId(), title, createdAt: now(), updatedAt: now() }
+    const monthFolderId = await ensureFolderPath([DAILY_ROOT_NAME, year, month])
+    const siblings = sortedSidebarSiblings(monthFolderId)
+    const lastOrder = siblings.length ? siblings[siblings.length - 1].order : null
+    doc = {
+      id: genId(),
+      title: dateIso,
+      folderId: monthFolderId,
+      order: generateKeyBetween(lastOrder, null),
+      createdAt: now(),
+      updatedAt: now(),
+    }
     await putDoc(doc, state.ctx)
-    state.docs = await getAllDocs(state.ctx)
+    await reloadDocsAndFolders(state.ctx)
   }
   await selectDoc(doc.id)
 }
@@ -3783,10 +4717,16 @@ function renderCalendar() {
   const startDow = firstDay.getDay()
   label.textContent = firstDay.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
 
+  // Mark a date as "has-doc" if either a legacy `daily/YYYY-MM-DD` doc or a
+  // tree doc titled `YYYY-MM-DD` inside the daily folder exists.
   const dailyIsoSet = new Set()
   for (const d of state.docs) {
     const t = d.title || ''
-    if (t.startsWith(DAILY_PREFIX)) dailyIsoSet.add(t.slice(DAILY_PREFIX.length))
+    if (t.startsWith(DAILY_PREFIX)) {
+      dailyIsoSet.add(t.slice(DAILY_PREFIX.length))
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(t) && isInDailyTree(d)) {
+      dailyIsoSet.add(t)
+    }
   }
   const todayIso = todayLocalIso()
 
@@ -3801,44 +4741,321 @@ function renderCalendar() {
   grid.innerHTML = html
 }
 
+// Returns sibling rows (folders + docs) under a parent folder, tagged with
+// kind so the renderer can branch. Tags are added here rather than sniffing
+// fields downstream.
+function sidebarChildren(parentFolderId) {
+  const pid = parentFolderId ?? null
+  const tagged = [
+    ...state.folders.filter(f => (f.parentFolderId ?? null) === pid).map(f => ({ kind: 'folder', item: f })),
+    ...state.docs   .filter(d => (d.folderId       ?? null) === pid).map(d => ({ kind: 'doc',    item: d })),
+  ]
+  return tagged.sort((a, b) => {
+    const ao = a.item.order ?? ''
+    const bo = b.item.order ?? ''
+    return ao < bo ? -1 : ao > bo ? 1 : 0
+  })
+}
+
+// Sum of @card:due postings across every doc under a folder, walking nested
+// folders. Used for the collapsed-folder due badge.
+function folderDueCount(folderId) {
+  let total = 0
+  const stack = [folderId]
+  const seen = new Set()
+  while (stack.length) {
+    const fid = stack.pop()
+    if (seen.has(fid)) continue
+    seen.add(fid)
+    for (const d of state.docs) if ((d.folderId ?? null) === fid) total += dueCountForDoc(d.id)
+    for (const f of state.folders) if ((f.parentFolderId ?? null) === fid) stack.push(f.id)
+  }
+  return total
+}
+
 function renderSidebar() {
   const vault = state.vaults.find(v => v.id === state.ctx?.vaultId)
   const label = document.getElementById('active-vault-label')
   if (label) label.textContent = vault?.name || 'Outline'
   const list = document.getElementById('doc-list')
   list.innerHTML = ''
-  for (const doc of state.docs) {
-    const li = document.createElement('li')
-    if (doc.id === state.activeDocId) li.classList.add('active')
-    li.dataset.docId = doc.id
-    const btn = document.createElement('button')
-    btn.className = 'doc-name'; btn.textContent = doc.title || 'Untitled'
-    btn.onclick = () => selectDoc(doc.id)
-    const actions = document.createElement('div')
-    actions.className = 'doc-actions'
-    const renBtn = document.createElement('button')
-    renBtn.textContent = '✎'; renBtn.title = 'Rename'
-    renBtn.onclick = (e) => { e.stopPropagation(); renameDoc(doc) }
-    const delBtn = document.createElement('button')
-    delBtn.textContent = '✕'; delBtn.title = 'Delete'
-    delBtn.onclick = (e) => { e.stopPropagation(); removeDoc(doc) }
-    actions.append(renBtn, delBtn)
-    li.append(btn, actions)
-    // Phase 7: per-doc due counter, placed before .doc-actions so the badge
-    // stays stable when hover reveals the rename/delete buttons.
-    const due = dueCountForDoc(doc.id)
-    if (due > 0) {
-      const span = document.createElement('span')
-      span.className = 'due-counter'
-      span.title = `${due} card${due === 1 ? '' : 's'} due`
-      span.textContent = String(due)
-      li.insertBefore(span, actions)
-    }
-    list.appendChild(li)
-  }
+  renderSidebarLevel(list, null, 0)
   renderCalendar()
   renderTagList()
   autoSnapRenderButton()
+}
+
+function renderSidebarLevel(list, parentFolderId, depth) {
+  for (const child of sidebarChildren(parentFolderId)) {
+    if (child.kind === 'folder') {
+      renderFolderRow(list, child.item, depth)
+      if (state.expandedFolderIds.has(child.item.id)) renderSidebarLevel(list, child.item.id, depth + 1)
+    } else {
+      renderDocRow(list, child.item, depth)
+    }
+  }
+}
+
+function renderFolderRow(list, folder, depth) {
+  const li = document.createElement('li')
+  li.dataset.folderId = folder.id
+  li.draggable = true
+  li.style.setProperty('--depth', String(depth))
+  const indent = document.createElement('span'); indent.className = 'row-indent'
+  const chev = document.createElement('button')
+  chev.className = 'folder-chevron'
+  const expanded = state.expandedFolderIds.has(folder.id)
+  chev.textContent = expanded ? '▾' : '▸'
+  chev.title = expanded ? 'Collapse' : 'Expand'
+  chev.onclick = (e) => { e.stopPropagation(); toggleFolderExpanded(folder.id) }
+  const btn = document.createElement('button')
+  btn.className = 'doc-name'
+  btn.textContent = folder.name || 'Untitled folder'
+  btn.title = folder.name || ''
+  btn.onclick = () => toggleFolderExpanded(folder.id)
+  const actions = document.createElement('div')
+  actions.className = 'doc-actions'
+  const newDocBtn = document.createElement('button')
+  newDocBtn.textContent = '+'; newDocBtn.title = 'New doc in folder'
+  newDocBtn.onclick = (e) => { e.stopPropagation(); newDoc(folder.id) }
+  const newSubBtn = document.createElement('button')
+  newSubBtn.textContent = '📁'; newSubBtn.title = 'New subfolder'
+  newSubBtn.onclick = (e) => { e.stopPropagation(); newFolder(folder.id) }
+  const renBtn = document.createElement('button')
+  renBtn.textContent = '✎'; renBtn.title = 'Rename'
+  renBtn.onclick = (e) => { e.stopPropagation(); renameFolder(folder) }
+  const delBtn = document.createElement('button')
+  delBtn.textContent = '✕'; delBtn.title = 'Delete folder'
+  delBtn.onclick = (e) => { e.stopPropagation(); removeFolder(folder) }
+  actions.append(newDocBtn, newSubBtn, renBtn, delBtn)
+  li.append(indent, chev, btn)
+  // Collapsed folders aggregate their descendants' due counts into one badge.
+  if (!expanded) {
+    const due = folderDueCount(folder.id)
+    if (due > 0) {
+      const span = document.createElement('span')
+      span.className = 'due-counter'
+      span.title = `${due} card${due === 1 ? '' : 's'} due in this folder`
+      span.textContent = String(due)
+      li.appendChild(span)
+    }
+  }
+  li.appendChild(actions)
+  list.appendChild(li)
+}
+
+function renderDocRow(list, doc, depth) {
+  const li = document.createElement('li')
+  if (doc.id === state.activeDocId) li.classList.add('active')
+  li.dataset.docId = doc.id
+  li.draggable = true
+  li.style.setProperty('--depth', String(depth))
+  const indent = document.createElement('span'); indent.className = 'row-indent'
+  const spacer = document.createElement('span'); spacer.className = 'doc-icon-spacer'
+  const btn = document.createElement('button')
+  btn.className = 'doc-name'; btn.textContent = doc.title || 'Untitled'
+  btn.onclick = () => selectDoc(doc.id)
+  const actions = document.createElement('div')
+  actions.className = 'doc-actions'
+  const renBtn = document.createElement('button')
+  renBtn.textContent = '✎'; renBtn.title = 'Rename'
+  renBtn.onclick = (e) => { e.stopPropagation(); renameDoc(doc) }
+  const delBtn = document.createElement('button')
+  delBtn.textContent = '✕'; delBtn.title = 'Delete'
+  delBtn.onclick = (e) => { e.stopPropagation(); removeDoc(doc) }
+  actions.append(renBtn, delBtn)
+  li.append(indent, spacer, btn, actions)
+  // Per-doc due counter — placed before .doc-actions so the badge stays
+  // stable when hover reveals the rename/delete buttons.
+  const due = dueCountForDoc(doc.id)
+  if (due > 0) {
+    const span = document.createElement('span')
+    span.className = 'due-counter'
+    span.title = `${due} card${due === 1 ? '' : 's'} due`
+    span.textContent = String(due)
+    li.insertBefore(span, actions)
+  }
+  list.appendChild(li)
+}
+
+// Sidebar context menu — right-click on a doc or folder row to rename,
+// delete, or move it to another folder. Reuses the .ctx-menu styling.
+function openSidebarCtxMenu(kind, id, x, y) {
+  const menu = document.getElementById('sidebar-ctx-menu')
+  renderSidebarCtxMenu(kind, id, menu)
+  menu.classList.remove('hidden')
+  const vw = window.innerWidth, vh = window.innerHeight
+  const mw = 240, mh = 320
+  menu.style.left = (x + mw > vw ? vw - mw - 8 : x) + 'px'
+  menu.style.top  = (y + mh > vh ? vh - mh - 8 : y) + 'px'
+}
+
+function closeSidebarCtxMenu() {
+  document.getElementById('sidebar-ctx-menu').classList.add('hidden')
+}
+
+// Returns folder targets the user can pick when moving `kind`/`id`. Excludes
+// the item's current parent (no-op), the item itself (folder moving into
+// itself), and any descendant of `id` if it's a folder (would create a cycle).
+function moveTargets(kind, id) {
+  const item = kind === 'folder'
+    ? state.folders.find(f => f.id === id)
+    : state.docs.find(d => d.id === id)
+  if (!item) return []
+  const currentParent = kind === 'folder' ? (item.parentFolderId ?? null) : (item.folderId ?? null)
+  const forbidden = new Set()
+  if (kind === 'folder') {
+    // Walk descendants of this folder; they can't be destinations.
+    const stack = [id]
+    while (stack.length) {
+      const fid = stack.pop()
+      forbidden.add(fid)
+      for (const f of state.folders) if (f.parentFolderId === fid) stack.push(f.id)
+    }
+  }
+  const targets = [{ id: null, path: '(Root)' }]
+  // Build path labels by walking up parentFolderId chains.
+  const byId = new Map(state.folders.map(f => [f.id, f]))
+  function pathOf(folderId) {
+    const parts = []
+    let cur = byId.get(folderId)
+    while (cur) { parts.unshift(cur.name || 'Untitled'); cur = cur.parentFolderId ? byId.get(cur.parentFolderId) : null }
+    return parts.join(' / ')
+  }
+  for (const f of state.folders) {
+    if (forbidden.has(f.id)) continue
+    targets.push({ id: f.id, path: pathOf(f.id) })
+  }
+  targets.sort((a, b) => a.path.localeCompare(b.path))
+  // Filter out the current parent so the menu only shows actionable moves.
+  return targets.filter(t => t.id !== currentParent)
+}
+
+function renderSidebarCtxMenu(kind, id, el) {
+  const item = kind === 'folder'
+    ? state.folders.find(f => f.id === id)
+    : state.docs.find(d => d.id === id)
+  if (!item) { el.innerHTML = ''; return }
+  const label = kind === 'folder' ? (item.name || 'Folder') : (item.title || 'Untitled')
+  const targets = moveTargets(kind, id)
+  const targetItems = targets.map(t =>
+    `<li class="ctx-item" data-action="sb-move" data-target-id="${t.id == null ? '' : t.id}">${escapeHtml(t.path)}</li>`
+  ).join('')
+  const moveSub = targets.length
+    ? `<li class="ctx-item" data-action="sb-move-sub">Move to <span class="ctx-arrow">▶</span><ul class="ctx-sub">${targetItems}</ul></li>`
+    : `<li class="ctx-item ctx-disabled">Move to <span class="ctx-arrow">▶</span></li>`
+  const extra = kind === 'folder'
+    ? `<li class="ctx-item" data-action="sb-new-doc">New document here</li>
+       <li class="ctx-item" data-action="sb-new-folder">New subfolder here</li>
+       <li class="ctx-sep"></li>`
+    : ''
+  el.innerHTML = `
+    <ul>
+      <li class="ctx-section-label">${escapeHtml(label)}</li>
+      ${extra}
+      <li class="ctx-item" data-action="sb-rename">Rename</li>
+      ${moveSub}
+      <li class="ctx-sep"></li>
+      <li class="ctx-item" data-action="sb-delete">Delete</li>
+    </ul>
+  `
+  el.dataset.kind = kind
+  el.dataset.id = id
+}
+
+async function sidebarCtxDispatch(action, targetId) {
+  const menu = document.getElementById('sidebar-ctx-menu')
+  const kind = menu.dataset.kind
+  const id = menu.dataset.id
+  closeSidebarCtxMenu()
+  if (action === 'sb-move-sub') return
+  if (kind === 'folder') {
+    const folder = state.folders.find(f => f.id === id); if (!folder) return
+    if (action === 'sb-rename') return renameFolder(folder)
+    if (action === 'sb-delete') return removeFolder(folder)
+    if (action === 'sb-new-doc') return newDoc(folder.id)
+    if (action === 'sb-new-folder') return newFolder(folder.id)
+    if (action === 'sb-move') return moveFolder(folder.id, targetId)
+  } else {
+    const doc = state.docs.find(d => d.id === id); if (!doc) return
+    if (action === 'sb-rename') return renameDoc(doc)
+    if (action === 'sb-delete') return removeDoc(doc)
+    if (action === 'sb-move') return moveDocToFolder(doc.id, targetId)
+  }
+}
+
+// Move a doc to a target folder (null = root). Appends at the end of the
+// destination's sibling order — drag-and-drop reordering (step 5) lets the
+// user fine-tune position.
+async function moveDocToFolder(docId, targetFolderId) {
+  const doc = state.docs.find(d => d.id === docId); if (!doc) return
+  if ((doc.folderId ?? null) === (targetFolderId ?? null)) return
+  const destSiblings = sortedSidebarSiblings(targetFolderId)
+  const lastOrder = destSiblings.length ? destSiblings[destSiblings.length - 1].order : null
+  const order = generateKeyBetween(lastOrder, null)
+  await putDoc({ ...doc, folderId: targetFolderId ?? null, order, updatedAt: now() }, state.ctx)
+  if (targetFolderId) state.expandedFolderIds.add(targetFolderId)
+  await persistExpandedFolders()
+  await reloadDocsAndFolders(state.ctx)
+  renderSidebar()
+}
+
+// Move a folder under a new parent. Refuses cycles (moving a folder into one
+// of its own descendants) — moveTargets already filters these, but we guard
+// here too in case the caller bypassed the picker.
+async function moveFolder(folderId, targetFolderId) {
+  const folder = state.folders.find(f => f.id === folderId); if (!folder) return
+  if ((folder.parentFolderId ?? null) === (targetFolderId ?? null)) return
+  if (targetFolderId) {
+    // Walk descendants of folderId; refuse if targetFolderId is among them.
+    const stack = [folderId]
+    while (stack.length) {
+      const fid = stack.pop()
+      if (fid === targetFolderId) return
+      for (const f of state.folders) if (f.parentFolderId === fid) stack.push(f.id)
+    }
+  }
+  const destSiblings = sortedSidebarSiblings(targetFolderId)
+  const lastOrder = destSiblings.length ? destSiblings[destSiblings.length - 1].order : null
+  const order = generateKeyBetween(lastOrder, null)
+  await putFolder({ ...folder, parentFolderId: targetFolderId ?? null, order, updatedAt: now() }, state.ctx)
+  if (targetFolderId) state.expandedFolderIds.add(targetFolderId)
+  await persistExpandedFolders()
+  await reloadDocsAndFolders(state.ctx)
+  renderSidebar()
+}
+
+// Walk up the active doc's folder chain and mark each ancestor expanded so
+// the doc row is visible in the sidebar. Idempotent — bails early if every
+// ancestor is already expanded, to avoid persisting unchanged state on
+// every selectDoc call.
+async function ensureDocAncestorsExpanded(docId) {
+  const doc = state.docs.find(d => d.id === docId); if (!doc) return
+  let changed = false
+  let parent = doc.folderId ?? null
+  while (parent) {
+    if (!state.expandedFolderIds.has(parent)) { state.expandedFolderIds.add(parent); changed = true }
+    const folder = state.folders.find(f => f.id === parent); if (!folder) break
+    parent = folder.parentFolderId ?? null
+  }
+  if (changed) await persistExpandedFolders()
+}
+
+async function toggleFolderExpanded(folderId) {
+  if (state.expandedFolderIds.has(folderId)) state.expandedFolderIds.delete(folderId)
+  else state.expandedFolderIds.add(folderId)
+  await persistExpandedFolders()
+  renderSidebar()
+}
+
+async function persistExpandedFolders() {
+  if (!state.ctx) return
+  await setAppState(`expandedFolders-${state.ctx.vaultId}`, [...state.expandedFolderIds])
+}
+
+async function loadExpandedFolders(vaultId) {
+  const arr = await getAppState(`expandedFolders-${vaultId}`, [])
+  state.expandedFolderIds = new Set(Array.isArray(arr) ? arr : [])
 }
 
 // Phase 7 — sidebar "Due cards" counter. Derived from the @card:due postings
@@ -3856,22 +5073,55 @@ function dueCountForDoc(docId) {
 
 // Targeted badge refresh so applyOp / applyReview don't have to re-render
 // the whole sidebar after a single grade or suspend. Adds, updates, or
-// removes the .due-counter span in place.
+// removes the .due-counter span in place. Also bubbles to ancestor folder
+// rows so their aggregate badges stay current when collapsed.
 function refreshDueCounter(docId) {
   if (!docId) return
   const li = document.querySelector(`#doc-list li[data-doc-id="${docId}"]`)
-  if (!li) return
-  let span = li.querySelector('.due-counter')
-  const n = dueCountForDoc(docId)
+  if (li) {
+    let span = li.querySelector('.due-counter')
+    const n = dueCountForDoc(docId)
+    if (n > 0) {
+      if (!span) {
+        span = document.createElement('span')
+        span.className = 'due-counter'
+        const actions = li.querySelector('.doc-actions')
+        if (actions) li.insertBefore(span, actions)
+        else li.appendChild(span)
+      }
+      span.title = `${n} card${n === 1 ? '' : 's'} due`
+      span.textContent = String(n)
+    } else if (span) {
+      span.remove()
+    }
+  }
+  // Walk ancestor folders and refresh aggregate badges for any that are
+  // currently rendered (collapsed folders show one; expanded folders don't).
+  const doc = state.docs.find(d => d.id === docId); if (!doc) return
+  let parent = doc.folderId ?? null
+  while (parent) {
+    const folder = state.folders.find(f => f.id === parent); if (!folder) break
+    refreshFolderDueBadge(parent)
+    parent = folder.parentFolderId ?? null
+  }
+}
+
+function refreshFolderDueBadge(folderId) {
+  const fli = document.querySelector(`#doc-list li[data-folder-id="${folderId}"]`)
+  if (!fli) return
+  let span = fli.querySelector('.due-counter')
+  // Expanded folders don't carry an aggregate badge — descendant doc rows do.
+  if (state.expandedFolderIds.has(folderId)) { if (span) span.remove(); return }
+  const n = folderDueCount(folderId)
   if (n > 0) {
     if (!span) {
       span = document.createElement('span')
       span.className = 'due-counter'
-      const actions = li.querySelector('.doc-actions')
-      if (actions) li.insertBefore(span, actions)
-      else li.appendChild(span)
+      const actions = fli.querySelector('.doc-actions')
+      if (actions) fli.insertBefore(span, actions)
+      else fli.appendChild(span)
     }
-    span.title = `${n} card${n === 1 ? '' : 's'} due`
+    span.title = `${n} card${n === 1 ? '' : 's'} due in this folder`
     span.textContent = String(n)
   } else if (span) {
     span.remove()
@@ -3881,9 +5131,11 @@ function refreshDueCounter(docId) {
 function renderEditor() {
   if (!state.activeDocId) {
     hide('editor-header'); hide('add-bar'); hide('status-bar'); hide('outline-tree')
+    hide('doc-more-menu')
     show('no-doc-msg'); return
   }
   show('editor-header'); show('add-bar'); show('status-bar'); show('outline-tree'); hide('no-doc-msg')
+  updateDocToolbarState()
   const doc = state.docs.find(d => d.id === state.activeDocId)
   updateStatusBar()
 
@@ -3920,6 +5172,7 @@ function renderEditor() {
     const titleInput = document.getElementById('doc-title-input')
     if (titleInput && doc) titleInput.value = doc.title || ''
   }
+  if (typeof refreshFrontMatterBtn === 'function') refreshFrontMatterBtn()
 
   renderTree()
 }
@@ -4010,6 +5263,9 @@ function renderTree() {
       cmInstances.set(id, view)
     }
   }
+  // Refresh doc toolbar button availability whenever the tree re-renders,
+  // so move-up/move-down/indent reflect the focused node's new neighbors.
+  if (typeof updateDocToolbarState === 'function') updateDocToolbarState()
 }
 
 // Phase 2: card decoration. Returns a `<button>` pill summarizing the card's
@@ -4139,9 +5395,29 @@ function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
       })
     }
     row.appendChild(imgWrap)
+  } else if (node.kind === 'table') {
+    const wrapper = document.createElement('div'); wrapper.className = 'table-block-wrap'
+    wrapper.dataset.nodeId = node.id
+    wrapper.appendChild(renderTableDom(node.tableData))
+    const toolbar = document.createElement('div'); toolbar.className = 'table-block-toolbar'
+    const editBtn = document.createElement('button')
+    editBtn.className = 'table-edit-btn'; editBtn.textContent = 'Edit'
+    editBtn.dataset.action = 'edit-table'; editBtn.dataset.nodeId = node.id
+    toolbar.appendChild(editBtn)
+    wrapper.appendChild(toolbar)
+    row.appendChild(wrapper)
   } else {
     const textDiv = document.createElement('div')
-    textDiv.className = 'node-text' + (node.kind === 'checkbox' && node.checked ? ' done' : '')
+    let cls = 'node-text' + (node.kind === 'checkbox' && node.checked ? ' done' : '')
+    if (node.kind === 'text' && node.headingLevel) {
+      const lvl = Math.min(6, Math.max(1, node.headingLevel))
+      cls += ` heading-h${lvl}`
+    }
+    if (node.kind === 'text' && (node.role === 'callout' || node.role === 'fenced-div')) {
+      cls += ' callout-label'
+      if (node.divClass) cls += ` callout-${String(node.divClass).replace(/[^a-zA-Z0-9_-]/g, '')}`
+    }
+    textDiv.className = cls
     textDiv.contentEditable = 'true'; textDiv.dataset.nodeId = node.id
     textDiv.dataset.placeholder = 'Empty note'
     textDiv.textContent = node.content
@@ -5218,24 +6494,112 @@ function renderBacklinks() {
 async function selectDoc(id) {
   state.activeDocId = id; state.zoomedId = null
   state.selectedIds.clear()
+  // Auto-expand the ancestor folders of the selected doc so it's visible
+  // in the sidebar. Persisted so the expanded set survives reloads.
+  await ensureDocAncestorsExpanded(id)
   state.nodes = await getNodesByDoc(id, state.ctx)
   clearHistory()
   for (const [nodeId] of cmInstances) destroyCM(nodeId)
   renderSidebar(); renderEditor()
 }
 
-async function newDoc() {
-  const doc = { id: genId(), title: 'Untitled', createdAt: now(), updatedAt: now() }
+async function newDoc(folderId = null) {
+  const siblings = sortedSidebarSiblings(folderId)
+  const lastOrder = siblings.length ? siblings[siblings.length - 1].order : null
+  const order = generateKeyBetween(lastOrder, null)
+  const doc = { id: genId(), title: 'Untitled', folderId, order, createdAt: now(), updatedAt: now() }
   await putDoc(doc, state.ctx)
-  state.docs = await getAllDocs(state.ctx)
+  await reloadDocsAndFolders(state.ctx)
   await selectDoc(doc.id)
+}
+
+// Returns the ordered list of items (folders + docs) that share a parent
+// folder, sorted by their fractional `order` key. Used to find neighbor keys
+// when inserting or moving items in the sidebar tree.
+function sortedSidebarSiblings(parentFolderId) {
+  const items = [
+    ...state.folders.filter(f => (f.parentFolderId ?? null) === (parentFolderId ?? null)),
+    ...state.docs.filter(d => (d.folderId ?? null) === (parentFolderId ?? null)),
+  ]
+  return items.sort((a, b) => {
+    const ao = a.order ?? ''
+    const bo = b.order ?? ''
+    return ao < bo ? -1 : ao > bo ? 1 : 0
+  })
+}
+
+async function newFolder(parentFolderId = null) {
+  const name = prompt('New folder name:', 'Untitled folder')
+  if (name == null) return
+  const trimmed = name.trim() || 'Untitled folder'
+  const siblings = sortedSidebarSiblings(parentFolderId)
+  const lastOrder = siblings.length ? siblings[siblings.length - 1].order : null
+  const order = generateKeyBetween(lastOrder, null)
+  const folder = {
+    id: genId(),
+    name: trimmed,
+    parentFolderId: parentFolderId ?? null,
+    order,
+    createdAt: now(),
+    updatedAt: now(),
+  }
+  await putFolder(folder, state.ctx)
+  // Auto-expand the new folder's parent so the user sees their creation.
+  if (parentFolderId) state.expandedFolderIds.add(parentFolderId)
+  await reloadDocsAndFolders(state.ctx)
+  await persistExpandedFolders()
+  renderSidebar()
+}
+
+async function renameFolder(folder) {
+  const name = prompt('Rename folder:', folder.name)
+  if (name == null) return
+  const trimmed = name.trim()
+  if (!trimmed || trimmed === folder.name) return
+  const updated = { ...folder, name: trimmed, updatedAt: now() }
+  await putFolder(updated, state.ctx)
+  await reloadDocsAndFolders(state.ctx)
+  renderSidebar()
+}
+
+// Deletes a folder. Children (subfolders and docs) get reparented to this
+// folder's parent rather than being cascade-deleted, since deletion is
+// irreversible and a misclick on the wrong folder shouldn't lose docs.
+async function removeFolder(folder) {
+  const childFolders = state.folders.filter(f => (f.parentFolderId ?? null) === folder.id)
+  const childDocs    = state.docs   .filter(d => (d.folderId       ?? null) === folder.id)
+  const hasContents = childFolders.length || childDocs.length
+  const msg = hasContents
+    ? `Delete "${folder.name}"? Its ${childFolders.length} folder${childFolders.length === 1 ? '' : 's'} and ${childDocs.length} document${childDocs.length === 1 ? '' : 's'} will move up one level.`
+    : `Delete "${folder.name}"?`
+  if (!confirm(msg)) return
+  const newParent = folder.parentFolderId ?? null
+  // Reparent. New `order` keys are assigned at the destination so reparented
+  // items land after whatever's already there — no order collisions.
+  const destSiblings = sortedSidebarSiblings(newParent).filter(s => s.id !== folder.id)
+  let prevOrder = destSiblings.length ? destSiblings[destSiblings.length - 1].order : null
+  for (const f of childFolders) {
+    const order = generateKeyBetween(prevOrder, null)
+    await putFolder({ ...f, parentFolderId: newParent, order, updatedAt: now() }, state.ctx)
+    prevOrder = order
+  }
+  for (const d of childDocs) {
+    const order = generateKeyBetween(prevOrder, null)
+    await putDoc({ ...d, folderId: newParent, order, updatedAt: now() }, state.ctx)
+    prevOrder = order
+  }
+  await deleteFolder(folder.id)
+  state.expandedFolderIds.delete(folder.id)
+  await persistExpandedFolders()
+  await reloadDocsAndFolders(state.ctx)
+  renderSidebar()
 }
 
 async function renameDoc(doc) {
   const title = prompt('Rename document:', doc.title); if (!title || title === doc.title) return
   const updated = { ...doc, title, updatedAt: now() }
   await putDoc(updated, state.ctx)
-  state.docs = await getAllDocs(state.ctx)
+  await reloadDocsAndFolders(state.ctx)
   renderSidebar()
   if (state.activeDocId === doc.id) document.getElementById('doc-title-input').value = title
 }
@@ -5245,7 +6609,7 @@ async function removeDoc(doc) {
   const nodes = await getNodesByDoc(doc.id, state.ctx)
   await deleteNodes(nodes.map(n => n.id))
   await deleteDoc(doc.id)
-  state.docs = await getAllDocs(state.ctx)
+  await reloadDocsAndFolders(state.ctx)
   if (state.activeDocId === doc.id) { state.activeDocId = null; state.nodes = [] }
   renderSidebar(); renderEditor()
 }
@@ -5288,6 +6652,7 @@ document.getElementById('vnew-submit').addEventListener('click', async () => {
     }
     // auto-open into the new vault
     state.ctx = newCtx; state.unlocked = true; state._password = pass; state.docs = []; state.nodes = []
+    await loadExpandedFolders(newCtx.vaultId)
     clearSearchIndex()
     renderApp()
     await autoSnapRestoreOnUnlock()
@@ -5311,7 +6676,8 @@ document.getElementById('vunlock-submit').addEventListener('click', async () => 
     const ctx = await unlockVault(state.unlockingVaultId, pass)
     state.ctx = ctx; state.unlocked = true; state._password = pass
     state.vaults = await getAllVaults()  // pick up any kdfSpec changes from silent migration
-    state.docs = await getAllDocs(state.ctx)
+    await loadExpandedFolders(ctx.vaultId)
+    await reloadDocsAndFolders(state.ctx)
     await rebuildSearchIndexFromVault(state.ctx)
     if (state.docs.length) await selectDoc(state.docs[0].id)
     hide('vault-unlock-modal')
@@ -5351,7 +6717,8 @@ document.getElementById('vsnap-submit').addEventListener('click', async () => {
     hide('vault-snap-modal')
     // auto-open the newly imported vault
     state.ctx = newCtx; state.unlocked = true; state._password = pass
-    state.docs = await getAllDocs(state.ctx)
+    await loadExpandedFolders(newCtx.vaultId)
+    await reloadDocsAndFolders(state.ctx)
     await rebuildSearchIndexFromVault(state.ctx)
     if (state.docs.length) await selectDoc(state.docs[0].id)
     renderApp()
@@ -5656,7 +7023,9 @@ function openConflictModal(conflicts, direction) {
       const li = document.createElement('li')
       const kind = document.createElement('div')
       kind.className = 'cc-kind'
-      kind.textContent = c.store === 'documents' ? 'Document' : 'Node'
+      kind.textContent = c.store === 'documents' ? 'Document'
+                        : c.store === 'folders'   ? 'Folder'
+                        : 'Node'
       li.appendChild(kind)
       for (const [side, content] of [['Local', c.localPreview], ['Cloud', c.cloudPreview]]) {
         const row = document.createElement('div')
@@ -5732,7 +7101,7 @@ async function cloudRunPush(localVaultId) {
     const r = await cloudPush(localVaultId, state.ctx, { conflictStrategy: strategy })
     // Conflict resolution may have written new docs/nodes locally — refresh.
     if (r.conflicts || r.duplicates) {
-      state.docs = await getAllDocs(state.ctx)
+      await reloadDocsAndFolders(state.ctx)
       if (state.activeDocId) state.nodes = await getAllNodes(state.ctx)
     }
     const tone = r.conflicts ? 'warn' : 'success'
@@ -5796,7 +7165,8 @@ document.getElementById('cloud-pull-submit').addEventListener('click', async () 
     hide('cloud-pull-modal'); cloudUI.pendingPull = null
     state.vaults = await getAllVaults()
     state.ctx = ctx; state.unlocked = true; state._password = pass
-    state.docs = await getAllDocs(state.ctx)
+    await loadExpandedFolders(ctx.vaultId)
+    await reloadDocsAndFolders(state.ctx)
     await rebuildSearchIndexFromVault(state.ctx)
     if (state.docs.length) await selectDoc(state.docs[0].id)
     hide('cloud-modal')
@@ -5838,8 +7208,237 @@ document.getElementById('cloud-signout-btn').addEventListener('click', async () 
 })
 cloudOnAuth(() => { if (!document.getElementById('cloud-modal').classList.contains('hidden')) cloudRenderModal() })
 
-// New doc
-document.getElementById('new-doc-btn').addEventListener('click', newDoc)
+// Combined "+" button: opens a small menu offering New document or New
+// folder. Lighter than two header buttons and leaves room for the sidebar
+// collapse toggle.
+function openSidebarNewMenu(anchor) {
+  const menu = document.getElementById('sidebar-new-menu')
+  menu.classList.remove('hidden')
+  const r = anchor.getBoundingClientRect()
+  const vw = window.innerWidth, vh = window.innerHeight
+  const mw = 180, mh = 80
+  // Open below the button by default, flipped above if it would overflow.
+  let left = r.left
+  let top = r.bottom + 4
+  if (left + mw > vw) left = vw - mw - 8
+  if (top + mh > vh) top = r.top - mh - 4
+  menu.style.left = left + 'px'
+  menu.style.top  = top + 'px'
+}
+function closeSidebarNewMenu() {
+  document.getElementById('sidebar-new-menu').classList.add('hidden')
+}
+document.getElementById('new-item-btn').addEventListener('click', e => {
+  e.stopPropagation()
+  const menu = document.getElementById('sidebar-new-menu')
+  if (menu.classList.contains('hidden')) openSidebarNewMenu(e.currentTarget)
+  else closeSidebarNewMenu()
+})
+document.getElementById('sidebar-new-menu').addEventListener('click', e => {
+  const li = e.target.closest('li.ctx-item'); if (!li) return
+  closeSidebarNewMenu()
+  if (li.dataset.action === 'new-doc') newDoc()
+  else if (li.dataset.action === 'new-folder') newFolder(null)
+})
+
+// =====================================================================
+// SIDEBAR DRAG-AND-DROP
+// =====================================================================
+// Drag any sidebar row (folder or doc) onto another row to reorder or
+// reparent. Drop position is decided by cursor Y in the target:
+//   top third    → drop BEFORE the target (as sibling)
+//   middle third → drop INTO the target (only meaningful for folders)
+//   bottom third → drop AFTER the target (as sibling)
+// Dropping on empty doc-list space below all rows appends at root.
+
+const sidebarDrag = { kind: null, id: null }
+
+function clearSidebarDropHints() {
+  for (const li of document.querySelectorAll('#doc-list li.drop-before, #doc-list li.drop-after, #doc-list li.drop-target-folder')) {
+    li.classList.remove('drop-before', 'drop-after', 'drop-target-folder')
+  }
+}
+
+// Returns the set of folder ids that descend from `folderId` (inclusive).
+// Used to block a folder from being dropped into itself or its own subtree.
+function folderDescendantSet(folderId) {
+  const out = new Set()
+  const stack = [folderId]
+  while (stack.length) {
+    const fid = stack.pop()
+    if (out.has(fid)) continue
+    out.add(fid)
+    for (const f of state.folders) if (f.parentFolderId === fid) stack.push(f.id)
+  }
+  return out
+}
+
+// Decide where a drop would land, given the target row and pointer Y.
+// Returns { parentFolderId, prevOrder, nextOrder } or null if invalid.
+function sidebarDropPosition(targetLi, clientY) {
+  const rect = targetLi.getBoundingClientRect()
+  const ratio = (clientY - rect.top) / rect.height
+  const targetFolderId = targetLi.dataset.folderId || null
+  const targetDocId = targetLi.dataset.docId || null
+  const targetKind = targetFolderId ? 'folder' : 'doc'
+
+  // INTO a folder: only the middle band on folder rows.
+  if (targetKind === 'folder' && ratio >= 0.33 && ratio <= 0.66) {
+    const siblings = sortedSidebarSiblings(targetFolderId)
+    return {
+      placement: 'inside',
+      parentFolderId: targetFolderId,
+      prevOrder: siblings.length ? siblings[siblings.length - 1].order : null,
+      nextOrder: null,
+    }
+  }
+  // BEFORE / AFTER as sibling at the same level as the target.
+  const targetItem = targetKind === 'folder'
+    ? state.folders.find(f => f.id === targetFolderId)
+    : state.docs.find(d => d.id === targetDocId)
+  if (!targetItem) return null
+  const parentFolderId = targetKind === 'folder'
+    ? (targetItem.parentFolderId ?? null)
+    : (targetItem.folderId ?? null)
+  const siblings = sortedSidebarSiblings(parentFolderId)
+  const idx = siblings.findIndex(s => s.id === targetItem.id)
+  if (idx < 0) return null
+  if (ratio < 0.5) {
+    return {
+      placement: 'before',
+      parentFolderId,
+      prevOrder: idx > 0 ? siblings[idx - 1].order : null,
+      nextOrder: targetItem.order,
+    }
+  }
+  return {
+    placement: 'after',
+    parentFolderId,
+    prevOrder: targetItem.order,
+    nextOrder: idx + 1 < siblings.length ? siblings[idx + 1].order : null,
+  }
+}
+
+// Apply a sidebar move with explicit destination position. Recomputes the
+// fractional order key between the destination's neighbors.
+async function applySidebarMove(srcKind, srcId, dest) {
+  const order = generateKeyBetween(dest.prevOrder ?? null, dest.nextOrder ?? null)
+  if (srcKind === 'folder') {
+    const folder = state.folders.find(f => f.id === srcId); if (!folder) return
+    // Cycle guard: never move a folder into itself or its own descendants.
+    if (dest.parentFolderId && folderDescendantSet(folder.id).has(dest.parentFolderId)) return
+    await putFolder({ ...folder, parentFolderId: dest.parentFolderId ?? null, order, updatedAt: now() }, state.ctx)
+  } else {
+    const doc = state.docs.find(d => d.id === srcId); if (!doc) return
+    await putDoc({ ...doc, folderId: dest.parentFolderId ?? null, order, updatedAt: now() }, state.ctx)
+  }
+  if (dest.parentFolderId) state.expandedFolderIds.add(dest.parentFolderId)
+  await persistExpandedFolders()
+  await reloadDocsAndFolders(state.ctx)
+  renderSidebar()
+}
+
+document.getElementById('doc-list').addEventListener('dragstart', e => {
+  const li = e.target.closest('li[data-doc-id], li[data-folder-id]')
+  if (!li) return
+  sidebarDrag.kind = li.dataset.folderId ? 'folder' : 'doc'
+  sidebarDrag.id   = li.dataset.folderId || li.dataset.docId
+  li.classList.add('sidebar-dragging')
+  e.dataTransfer.effectAllowed = 'move'
+  // Some browsers won't fire dragover unless dataTransfer has data set.
+  try { e.dataTransfer.setData('text/plain', sidebarDrag.id) } catch {}
+})
+
+document.getElementById('doc-list').addEventListener('dragend', () => {
+  clearSidebarDropHints()
+  for (const li of document.querySelectorAll('#doc-list li.sidebar-dragging')) li.classList.remove('sidebar-dragging')
+  sidebarDrag.kind = null; sidebarDrag.id = null
+})
+
+document.getElementById('doc-list').addEventListener('dragover', e => {
+  if (!sidebarDrag.id) return
+  const li = e.target.closest('li[data-doc-id], li[data-folder-id]')
+  if (!li) {
+    // Dragging over empty space at the bottom of the list — treat as append-to-root.
+    clearSidebarDropHints()
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    return
+  }
+  // Don't allow dropping a folder onto itself or its own descendants.
+  if (sidebarDrag.kind === 'folder') {
+    const targetFolderId = li.dataset.folderId
+    if (targetFolderId && folderDescendantSet(sidebarDrag.id).has(targetFolderId)) {
+      clearSidebarDropHints(); return
+    }
+  }
+  // Don't allow dropping a row onto itself (no-op).
+  if ((li.dataset.docId && li.dataset.docId === sidebarDrag.id) ||
+      (li.dataset.folderId && li.dataset.folderId === sidebarDrag.id)) {
+    clearSidebarDropHints(); return
+  }
+  const pos = sidebarDropPosition(li, e.clientY)
+  if (!pos) return
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'move'
+  clearSidebarDropHints()
+  if (pos.placement === 'inside') li.classList.add('drop-target-folder')
+  else if (pos.placement === 'before') li.classList.add('drop-before')
+  else li.classList.add('drop-after')
+})
+
+document.getElementById('doc-list').addEventListener('dragleave', e => {
+  // Only clear hints if the cursor truly left the list, not just moved between rows.
+  const list = document.getElementById('doc-list')
+  if (e.relatedTarget && list.contains(e.relatedTarget)) return
+  clearSidebarDropHints()
+})
+
+document.getElementById('doc-list').addEventListener('drop', async e => {
+  if (!sidebarDrag.id) return
+  e.preventDefault()
+  const li = e.target.closest('li[data-doc-id], li[data-folder-id]')
+  const srcKind = sidebarDrag.kind, srcId = sidebarDrag.id
+  let dest
+  if (!li) {
+    // Dropped on empty space — append to root, after any existing root items.
+    const siblings = sortedSidebarSiblings(null).filter(s => s.id !== srcId)
+    dest = { parentFolderId: null, prevOrder: siblings.length ? siblings[siblings.length - 1].order : null, nextOrder: null }
+  } else {
+    if (srcKind === 'folder') {
+      const targetFolderId = li.dataset.folderId
+      if (targetFolderId && folderDescendantSet(srcId).has(targetFolderId)) {
+        clearSidebarDropHints(); return
+      }
+    }
+    if ((li.dataset.docId && li.dataset.docId === srcId) ||
+        (li.dataset.folderId && li.dataset.folderId === srcId)) {
+      clearSidebarDropHints(); return
+    }
+    dest = sidebarDropPosition(li, e.clientY)
+    if (!dest) { clearSidebarDropHints(); return }
+  }
+  clearSidebarDropHints()
+  await applySidebarMove(srcKind, srcId, dest)
+})
+
+// Sidebar right-click: open the move/rename/delete menu for the row under
+// the cursor. Delegated on #doc-list since rows are recreated on every render.
+document.getElementById('doc-list').addEventListener('contextmenu', e => {
+  const li = e.target.closest('li[data-doc-id], li[data-folder-id]')
+  if (!li) return
+  e.preventDefault()
+  const docId = li.dataset.docId
+  const folderId = li.dataset.folderId
+  if (docId) openSidebarCtxMenu('doc', docId, e.clientX, e.clientY)
+  else if (folderId) openSidebarCtxMenu('folder', folderId, e.clientX, e.clientY)
+})
+// Sidebar menu item click → dispatch to the matching operation.
+document.getElementById('sidebar-ctx-menu').addEventListener('click', e => {
+  const li = e.target.closest('li.ctx-item'); if (!li) return
+  if (li.classList.contains('ctx-disabled')) return
+  sidebarCtxDispatch(li.dataset.action, li.dataset.targetId || null)
+})
 
 // Doc title edit
 document.getElementById('doc-title-input').addEventListener('blur', async () => {
@@ -5864,6 +7463,89 @@ document.getElementById('doc-title-input').addEventListener('keydown', e => {
   } else {
     focusNode(visibleNodes[0].id)
   }
+})
+
+// Render preview modal — shows the subtree (or whole doc) as HTML.
+//
+// rootNodeId === null → whole document, header shows the doc title.
+// rootNodeId === <id> → that node + descendants, header shows a short label.
+async function openPreview(rootNodeId = null) {
+  if (!state.activeDocId) return
+  const doc = state.docs.find(d => d.id === state.activeDocId); if (!doc) return
+  let title = doc.title || 'Untitled'
+  if (rootNodeId) {
+    const n = state.nodes.find(x => x.id === rootNodeId)
+    const label = n?.kind === 'code' ? `code (${n.content || '?'})`
+      : n?.kind === 'image' ? 'image'
+      : n?.kind === 'table' ? 'table'
+      : (n?.content || '').trim().slice(0, 60) || '(empty)'
+    title = `${doc.title || 'Untitled'} — ${label}`
+  }
+  document.getElementById('preview-title').textContent = `Render preview · ${title}`
+  const body = document.getElementById('preview-body')
+  body.innerHTML = renderMarkdownToPreviewHtml(doc, state.nodes, rootNodeId)
+  show('preview-modal')
+
+  // Hydrate `asset:<id>` image srcs with blob URLs from the local store.
+  const imgs = body.querySelectorAll('img[src^="asset:"]')
+  const ctx = state.ctx
+  for (const img of imgs) {
+    const assetId = img.getAttribute('src').slice(6)
+    try {
+      const bytes = await getAsset(assetId, ctx)
+      if (!bytes) { img.alt = '(image unavailable)'; img.removeAttribute('src'); continue }
+      const blob = new Blob([bytes], { type: 'image/png' })
+      const url = URL.createObjectURL(blob)
+      img.src = url
+      img.dataset.objUrl = url
+    } catch {
+      img.alt = '(image error)'; img.removeAttribute('src')
+    }
+  }
+}
+function closePreview() {
+  const body = document.getElementById('preview-body')
+  for (const img of body.querySelectorAll('img[data-obj-url]')) {
+    try { URL.revokeObjectURL(img.dataset.objUrl) } catch {}
+  }
+  body.innerHTML = ''
+  hide('preview-modal')
+}
+document.getElementById('preview-close').addEventListener('click', closePreview)
+document.getElementById('preview-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'preview-modal') closePreview()
+})
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !document.getElementById('preview-modal').classList.contains('hidden')) closePreview()
+})
+document.getElementById('doc-preview-btn').addEventListener('click', () => openPreview(null))
+
+// Front-matter (YAML) editor — gated on having an active doc.
+function refreshFrontMatterBtn() {
+  const btn = document.getElementById('doc-frontmatter-btn'); if (!btn) return
+  const doc = state.docs.find(d => d.id === state.activeDocId)
+  btn.classList.toggle('has-fm', !!(doc?.frontMatter && doc.frontMatter.trim()))
+}
+document.getElementById('doc-frontmatter-btn').addEventListener('click', () => {
+  if (!state.activeDocId) return
+  const doc = state.docs.find(d => d.id === state.activeDocId); if (!doc) return
+  document.getElementById('fm-textarea').value = doc.frontMatter || ''
+  setErr('fm-error', '')
+  show('frontmatter-modal')
+  setTimeout(() => document.getElementById('fm-textarea').focus(), 0)
+})
+document.getElementById('fm-cancel').addEventListener('click', () => hide('frontmatter-modal'))
+document.getElementById('fm-submit').addEventListener('click', async () => {
+  const doc = state.docs.find(d => d.id === state.activeDocId); if (!doc) return
+  const fm = document.getElementById('fm-textarea').value.replace(/^\s*---\s*\n?|\n?---\s*$/g, '').trim()
+  const updated = { ...doc, frontMatter: fm || undefined, updatedAt: now() }
+  if (!fm) delete updated.frontMatter
+  try {
+    await putDoc(updated, state.ctx)
+    state.docs = state.docs.map(d => d.id === doc.id ? updated : d)
+    refreshFrontMatterBtn()
+    hide('frontmatter-modal')
+  } catch (e) { setErr('fm-error', String(e)) }
 })
 
 
@@ -5900,6 +7582,7 @@ let expMode = 'snapshot'
 const EXP_TABS = {
   snapshot: { tab: 'exp-tab-snap',  section: 'exp-snapshot-section', submit: 'Export'         },
   markdown: { tab: 'exp-tab-md',    section: 'exp-markdown-section', submit: 'Export'         },
+  quarto:   { tab: 'exp-tab-qmd',   section: 'exp-quarto-section',   submit: 'Export'         },
   html:     { tab: 'exp-tab-html',  section: 'exp-html-section',     submit: 'Export'         },
   print:    { tab: 'exp-tab-print', section: 'exp-print-section',    submit: 'Print / Save as PDF' },
 }
@@ -5933,6 +7616,12 @@ document.getElementById('exp-submit').addEventListener('click', async () => {
       const md = exportMarkdown(doc, state.nodes)
       dlText(md, `${doc.title || 'outline'}.md`, 'text/markdown')
       hide('export-modal')
+    } else if (expMode === 'quarto') {
+      if (!state.activeDocId) { setErr('exp-error', 'No active document.'); return }
+      const doc = state.docs.find(d => d.id === state.activeDocId)
+      const md = exportMarkdown(doc, state.nodes)
+      dlText(md, `${doc.title || 'outline'}.qmd`, 'text/markdown')
+      hide('export-modal')
     } else if (expMode === 'html') {
       if (!state.activeDocId) { setErr('exp-error', 'No active document.'); return }
       const doc = state.docs.find(d => d.id === state.activeDocId)
@@ -5962,10 +7651,15 @@ document.getElementById('imp-submit').addEventListener('click', async () => {
   const btn = document.getElementById('imp-submit'); btn.disabled = true; btn.textContent = 'Importing…'
   try {
     const text = await file.text()
-    const { doc, nodes } = importMarkdown(text)
+    const ext = (file.name.split('.').pop() || '').toLowerCase()
+    const isRmd = ext === 'rmd' || ext === 'qmd' || ext === 'rmarkdown'
+    const { doc, nodes } = isRmd ? importRmd(text) : importMarkdown(text)
+    const rootSiblings = sortedSidebarSiblings(null)
+    doc.folderId = null
+    doc.order = generateKeyBetween(rootSiblings.length ? rootSiblings[rootSiblings.length - 1].order : null, null)
     await putDoc(doc, state.ctx)
     await putNodes(nodes, state.ctx)
-    state.docs = await getAllDocs(state.ctx)
+    await reloadDocsAndFolders(state.ctx)
     await selectDoc(doc.id)
     hide('import-modal')
   } catch (e) { setErr('imp-error', String(e)) }
@@ -6237,6 +7931,13 @@ document.getElementById('outline-tree').addEventListener('click', e => {
     return
   }
 
+  const editTableBtn = e.target.closest('[data-action="edit-table"]')
+  if (editTableBtn) { e.stopPropagation(); beginTableEdit(editTableBtn.dataset.nodeId); return }
+  const saveTableBtn = e.target.closest('[data-action="save-table"]')
+  if (saveTableBtn) { e.stopPropagation(); commitTableEdit(saveTableBtn.dataset.nodeId); return }
+  const cancelTableBtn = e.target.closest('[data-action="cancel-table"]')
+  if (cancelTableBtn) { e.stopPropagation(); renderTree(); return }
+
   const cardPillBtn = e.target.closest('[data-action="card-info"]')
   if (cardPillBtn) {
     e.stopPropagation()
@@ -6298,6 +7999,22 @@ document.getElementById('outline-tree').addEventListener('keydown', e => {
   if (!node) return
 
   const multi = state.selectedIds.size > 1 && state.selectedIds.has(nodeId)
+
+  if (e.key === ' ' && node.kind === 'text' && !node.headingLevel) {
+    const m = el.textContent.match(/^(#{1,6})$/)
+    if (m) {
+      e.preventDefault()
+      const level = m[1].length
+      el.textContent = ''
+      const updated = { ...node, content: '', headingLevel: level, updatedAt: now() }
+      state.nodes = applyPatch(state.nodes, [updated])
+      indexNode(updated)
+      putNode(updated, state.ctx)
+      renderTree()
+      focusNode(nodeId)
+      return
+    }
+  }
 
   if (e.key === 'Tab' && !e.shiftKey) {
     e.preventDefault(); flushNodeText(el)
@@ -6505,6 +8222,157 @@ document.addEventListener('mousedown', e => {
   closeWikiAutocomplete()
 })
 
+// =====================================================================
+// DOC ACTION BAR  (indent/outdent/move + overflow, lives in #add-bar)
+// =====================================================================
+// The structural edit buttons sit inside the in-flow add-bar so they stay
+// confined to the editor pane and never overlap the sidebar. They act on
+// the most-recently-focused .node-text, falling back to state.selectedId
+// so the bar still works after the keyboard dismisses focus on mobile.
+
+const docBar = { lastNodeId: null }
+
+function docBarTargetNodeId() {
+  const active = document.activeElement
+  if (active?.classList?.contains('node-text')) return active.dataset.nodeId
+  if (docBar.lastNodeId && state.nodes.some(n => n.id === docBar.lastNodeId)) return docBar.lastNodeId
+  return state.selectedId || null
+}
+
+// Remember the node that last held focus so toolbar actions can target it
+// after the keyboard dismisses (which clears document.activeElement on iOS).
+document.getElementById('outline-tree').addEventListener('focusin', e => {
+  const el = e.target.closest('[data-node-id].node-text')
+  if (el) {
+    docBar.lastNodeId = el.dataset.nodeId
+    updateDocToolbarState()
+  }
+}, true)
+
+// Refresh the enabled/disabled state of toolbar buttons based on the current
+// target node — e.g. "move up" is disabled when the node is already first.
+function updateDocToolbarState() {
+  const bar = document.getElementById('add-bar')
+  if (!bar || bar.classList.contains('hidden')) return
+  const nodeId = docBarTargetNodeId()
+  const node = nodeId ? state.nodes.find(n => n.id === nodeId) : null
+  const setDisabled = (id, disabled) => {
+    const b = document.getElementById(id); if (!b) return
+    if (disabled) b.setAttribute('aria-disabled', 'true')
+    else b.removeAttribute('aria-disabled')
+  }
+  if (!node) {
+    for (const id of ['mt-outdent','mt-indent','mt-up','mt-down','mt-more']) setDisabled(id, true)
+    return
+  }
+  const siblings = sortedChildren(state.nodes, node.parentId, node.documentId)
+  const idx = siblings.findIndex(s => s.id === nodeId)
+  setDisabled('mt-up',      idx <= 0)
+  setDisabled('mt-down',    idx < 0 || idx >= siblings.length - 1)
+  setDisabled('mt-outdent', node.parentId == null)
+  setDisabled('mt-indent',  idx <= 0)
+  setDisabled('mt-more', false)
+}
+
+// Run a structural action on the target node. flushNodeText syncs any
+// in-flight edits in the contentEditable to state.nodes before we mutate.
+function docBarRun(action) {
+  const nodeId = docBarTargetNodeId(); if (!nodeId) return
+  const node = state.nodes.find(n => n.id === nodeId); if (!node) return
+  const el = document.querySelector(`[data-node-id="${nodeId}"].node-text`)
+  if (el) flushNodeText(el)
+  const multi = state.selectedIds.size > 1 && state.selectedIds.has(nodeId)
+  if (action === 'indent') {
+    if (multi) bulkIndent(Array.from(state.selectedIds))
+    else       applyOp(opIndent(state.nodes, nodeId))
+  } else if (action === 'outdent') {
+    if (multi) bulkOutdent(Array.from(state.selectedIds))
+    else       applyOp(opOutdent(state.nodes, nodeId))
+  } else if (action === 'up') {
+    const sibs = sortedChildren(state.nodes, node.parentId, node.documentId)
+    const idx = sibs.findIndex(s => s.id === nodeId)
+    if (idx > 0) applyOp(opMove(state.nodes, nodeId, node.parentId, idx > 1 ? sibs[idx - 2] : null))
+  } else if (action === 'down') {
+    const sibs = sortedChildren(state.nodes, node.parentId, node.documentId)
+    const idx = sibs.findIndex(s => s.id === nodeId)
+    if (idx >= 0 && idx < sibs.length - 1) applyOp(opMove(state.nodes, nodeId, node.parentId, sibs[idx + 1]))
+  } else if (action === 'add-code') {
+    const r = opInsert(state.nodes, node.documentId, node.parentId, node, 'code')
+    applyOp(r); focusNode(r.newId); return
+  } else if (action === 'toggle-checkbox') {
+    applyOp(opChangeKind(state.nodes, nodeId, node.kind === 'checkbox' ? 'text' : 'checkbox'))
+  } else if (action === 'check-off') {
+    applyOp(opToggleCheck(state.nodes, nodeId))
+  } else if (action === 'zoom-in') {
+    state.zoomedId = nodeId; renderEditor(); focusNode(nodeId); return
+  } else if (action === 'zoom-out') {
+    state.zoomedId = null; renderEditor(); focusNode(nodeId); return
+  } else if (action === 'delete') {
+    const sibs = sortedChildren(state.nodes, node.parentId, node.documentId)
+    const idx = sibs.findIndex(s => s.id === nodeId)
+    const prevId = idx > 0 ? sibs[idx - 1].id : node.parentId
+    applyOp(opDelete(state.nodes, nodeId))
+    if (prevId) focusNode(prevId)
+    return
+  }
+  focusNode(nodeId)
+}
+
+// pointerdown + preventDefault keeps focus on the contentEditable so the
+// on-screen keyboard doesn't dismiss between taps. Click is the desktop
+// fallback (and the keyboard-activation path for accessibility).
+function bindDocBarBtn(id, action) {
+  const btn = document.getElementById(id); if (!btn) return
+  const fire = e => {
+    if (btn.getAttribute('aria-disabled') === 'true') return
+    e.preventDefault()
+    docBarRun(action)
+  }
+  btn.addEventListener('pointerdown', fire)
+  btn.addEventListener('click', e => e.preventDefault())
+}
+bindDocBarBtn('mt-outdent', 'outdent')
+bindDocBarBtn('mt-indent',  'indent')
+bindDocBarBtn('mt-up',      'up')
+bindDocBarBtn('mt-down',    'down')
+
+// Overflow "⋯" — opens a small menu with less-frequent actions, anchored
+// above the bar.
+function openDocMoreMenu(anchor) {
+  const menu = document.getElementById('doc-more-menu')
+  menu.classList.remove('hidden')
+  const r = anchor.getBoundingClientRect()
+  const vw = window.innerWidth
+  const mw = Math.min(260, vw - 16)
+  menu.style.width = mw + 'px'
+  let left = Math.min(r.right - mw, vw - mw - 8)
+  if (left < 8) left = 8
+  const top = r.top - menu.offsetHeight - 8
+  menu.style.left = left + 'px'
+  menu.style.top = Math.max(8, top) + 'px'
+}
+function closeDocMoreMenu() {
+  document.getElementById('doc-more-menu').classList.add('hidden')
+}
+document.getElementById('mt-more').addEventListener('pointerdown', e => {
+  if (e.currentTarget.getAttribute('aria-disabled') === 'true') return
+  e.preventDefault()
+  const menu = document.getElementById('doc-more-menu')
+  if (menu.classList.contains('hidden')) openDocMoreMenu(e.currentTarget)
+  else closeDocMoreMenu()
+})
+document.getElementById('doc-more-menu').addEventListener('click', e => {
+  const li = e.target.closest('li.ctx-item'); if (!li) return
+  closeDocMoreMenu()
+  const a = li.dataset.action
+  if (a === 'mb-add-code')             docBarRun('add-code')
+  else if (a === 'mb-toggle-checkbox') docBarRun('toggle-checkbox')
+  else if (a === 'mb-check-off')       docBarRun('check-off')
+  else if (a === 'mb-zoom-in')         docBarRun('zoom-in')
+  else if (a === 'mb-zoom-out')        docBarRun('zoom-out')
+  else if (a === 'mb-delete')          docBarRun('delete')
+})
+
 // Restore raw text when a math- or link-rendered node is focused for editing.
 // Mirrors the swap-back pattern so contentEditable cursor behavior stays correct.
 document.getElementById('outline-tree').addEventListener('focus', e => {
@@ -6582,6 +8450,12 @@ document.getElementById('outline-tree').addEventListener('paste', async e => {
 document.addEventListener('click', e => {
   if (!document.getElementById('node-ctx-menu').classList.contains('hidden') &&
       !e.target.closest('#node-ctx-menu')) closeCtxMenu()
+  if (!document.getElementById('sidebar-ctx-menu').classList.contains('hidden') &&
+      !e.target.closest('#sidebar-ctx-menu')) closeSidebarCtxMenu()
+  if (!document.getElementById('sidebar-new-menu').classList.contains('hidden') &&
+      !e.target.closest('#sidebar-new-menu') && !e.target.closest('#new-item-btn')) closeSidebarNewMenu()
+  if (!document.getElementById('doc-more-menu').classList.contains('hidden') &&
+      !e.target.closest('#doc-more-menu') && !e.target.closest('#mt-more')) closeDocMoreMenu()
   // Phase 7 — card popover dismisses on outside click. Clicks on the pill
   // are handled by the toggle path in the outline click handler, so this
   // ignores them too.
@@ -6594,6 +8468,15 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !document.getElementById('node-ctx-menu').classList.contains('hidden')) {
     closeCtxMenu()
+  }
+  if (e.key === 'Escape' && !document.getElementById('sidebar-ctx-menu').classList.contains('hidden')) {
+    closeSidebarCtxMenu()
+  }
+  if (e.key === 'Escape' && !document.getElementById('sidebar-new-menu').classList.contains('hidden')) {
+    closeSidebarNewMenu()
+  }
+  if (e.key === 'Escape' && !document.getElementById('doc-more-menu').classList.contains('hidden')) {
+    closeDocMoreMenu()
   }
   if (e.key === 'Escape' && cardPopover.open) {
     closeCardPopover()
@@ -7075,10 +8958,13 @@ function renderSearchResults(tokens) {
       if (flatIdx === searchView.activeIdx) li.classList.add('active')
       const snip = document.createElement('div')
       snip.className = 'sr-snippet'
-      const source = (r.meta.kind === 'code' ? (r.meta.excerpt || '') : (r.meta.content || '')).trim()
+      const source = (r.meta.kind === 'code' || r.meta.kind === 'table'
+        ? (r.meta.excerpt || '')
+        : (r.meta.content || '')).trim()
       const label = source ||
         (r.meta.kind === 'code' ? '(code block)' :
-         r.meta.kind === 'image' ? '(image)' : '(empty)')
+         r.meta.kind === 'image' ? '(image)' :
+         r.meta.kind === 'table' ? '(table)' : '(empty)')
       snip.innerHTML = buildSnippet(label, tokens)
       const meta = document.createElement('div')
       meta.className = 'sr-meta'
@@ -7686,7 +9572,9 @@ function updatePaletteResults(query) {
       const matches = searchNodes(q, 30)
       palette.results = matches.map(m => {
         const doc = state.docs.find(d => d.id === m.meta.docId)
-        const label = (m.meta.content || '').trim() || (m.meta.kind === 'code' ? '(code block)' : '(empty)')
+        const label = (m.meta.content || '').trim() ||
+          (m.meta.kind === 'code' ? '(code block)' :
+           m.meta.kind === 'table' ? '(table)' : '(empty)')
         return {
           kind: 'node',
           nodeId: m.id,
@@ -7822,7 +9710,10 @@ document.getElementById('node-ctx-menu').addEventListener('click', e => {
   else if (action === 'ctx-number-children') applyOp(opNumberChildren(state.nodes, nodeId))
   else if (action === 'ctx-to-code') applyOp(opChangeKind(state.nodes, nodeId, 'code'))
   else if (action === 'ctx-to-text') applyOp(opChangeKind(state.nodes, nodeId, 'text'))
+  else if (action === 'ctx-to-table') applyOp(opChangeKind(state.nodes, nodeId, 'table'))
   else if (action === 'ctx-code-lang') { destroyCM(nodeId); applyOp(opChangeCodeLang(state.nodes, nodeId, param)) }
+  else if (action === 'ctx-heading-set') applyOp(opSetHeadingLevel(state.nodes, nodeId, parseInt(param, 10) || 0))
+  else if (action === 'ctx-preview') openPreview(nodeId)
 })
 
 // =====================================================================
@@ -7852,6 +9743,7 @@ function updateStatusBar() {
     if (n.documentId !== state.activeDocId) continue
     nodeCount++
     if (n.kind === 'code') wordCount += countWords(n.codeBody)
+    else if (n.kind === 'table') wordCount += countWords(tableCellText(n.tableData))
     else if (n.kind !== 'image') wordCount += countWords(n.content)
   }
   ncEl.textContent = `${nodeCount} node${nodeCount === 1 ? '' : 's'}`
@@ -7986,6 +9878,13 @@ if ('serviceWorker' in navigator) {
 })()
 </script>
 <div id="node-ctx-menu" class="ctx-menu hidden"></div>
+<div id="sidebar-ctx-menu" class="ctx-menu hidden"></div>
+<div id="sidebar-new-menu" class="ctx-menu hidden">
+  <ul>
+    <li class="ctx-item" data-action="new-doc">New document</li>
+    <li class="ctx-item" data-action="new-folder">New folder</li>
+  </ul>
+</div>
 <div id="card-popover" class="hidden"></div>
 <div id="help-overlay" class="hidden">
   <div class="modal">
