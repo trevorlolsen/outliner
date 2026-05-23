@@ -348,6 +348,17 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .node-text.heading-h6{font-size:13px;font-weight:600;line-height:1.45;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
 .node-text.callout-label{font-weight:600;color:var(--accent)}
 .node-text.callout-label::before{content:"▣ ";color:var(--accent);opacity:.7}
+.node-text.node-blockquote{border-left:3px solid var(--border-input);padding-left:10px;color:var(--text-dim);white-space:pre-wrap}
+.node-text.node-raw{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--text-muted)}
+.node-text.node-footnote-def{font-size:13px;color:var(--text-dim)}
+.node-text.node-footnote-def::before{content:"[^] ";color:var(--accent);opacity:.7;font-weight:600}
+.node-text.node-def-term{font-weight:600}
+.node-text.node-def-def{padding-left:18px;color:var(--text-dim)}
+.node-text.node-def-def::before{content:": ";color:var(--text-soft)}
+.node-hr{border:none;border-top:1px solid var(--border-input);margin:8px 0;width:100%}
+.math-block{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:4px;padding:8px 10px;color:var(--text);min-height:24px;white-space:pre-wrap;overflow-x:auto}
+.math-block:focus{outline:none;border-color:var(--accent)}
+.math-block .katex-display{margin:0!important}
 .vault-modal{width:460px}
 .vault-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .vault-modal-head h2{margin:0}
@@ -816,9 +827,14 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 <div id="import-modal" class="overlay hidden">
   <div class="modal">
     <h2>Import Markdown / Quarto / R Markdown</h2>
-    <p class="hint">Imports a Markdown (<code>.md</code>), R Markdown (<code>.Rmd</code>), or Quarto (<code>.qmd</code>) file as a new document. Headings, code chunks, callouts, tables, and YAML front-matter round-trip on export.</p>
-    <label>File</label>
-    <div class="file-row"><input type="file" id="imp-file" accept=".md,.markdown,.Rmd,.rmd,.qmd,.rmarkdown"></div>
+    <p class="hint">Imports one or more Markdown (<code>.md</code>), R Markdown (<code>.Rmd</code>), or Quarto (<code>.qmd</code>) files as new documents. Select multiple files to mass-import; non-markdown files in the selection are skipped. Headings, code chunks, callouts, tables, and YAML front-matter round-trip on export.</p>
+    <label>File(s)</label>
+    <div class="file-row"><input type="file" id="imp-file" multiple accept=".md,.markdown,.Rmd,.rmd,.qmd,.rmarkdown"></div>
+    <div id="imp-folder-row" class="hidden">
+      <label for="imp-folder-name">Group into folder</label>
+      <input type="text" id="imp-folder-name" placeholder="Leave blank to import at root">
+    </div>
+    <div class="hint" id="imp-progress"></div>
     <div class="error-msg" id="imp-error"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="imp-cancel">Cancel</button>
@@ -1012,7 +1028,8 @@ import {
   basicSetup, EditorView,
   javascript, python, markdownLang, css, html, json, sql, rust, cpp, java,
   StreamLanguage, julia, r,
-  oneDark, Dexie, MarkdownIt, generateKeyBetween, argon2id
+  oneDark, Dexie, MarkdownIt, mdFootnote, mdDeflist, mdAttrs,
+  generateKeyBetween, argon2id
 } from './libs/deps.js'
 
 // =====================================================================
@@ -2512,7 +2529,16 @@ const mdParser = new MarkdownIt({ breaks: true })
 // Separate parser for the in-app preview modal. html:true lets us inject
 // rendered KaTeX, Quarto callout `<div>` wrappers, and image substitutions
 // without escaping. Safe here because content is the user's own local data.
+//
+// Plugins enable the Quarto/Pandoc extras the outliner imports as structured
+// nodes but markdown-it doesn't recognize out of the box:
+//   - footnotes: [^id] references and [^id]: definitions
+//   - deflist: term\n: definition
+//   - attrs: trailing {#id .class key=val} on headings, images, etc.
 const previewMdParser = new MarkdownIt({ breaks: true, html: true, linkify: true })
+  .use(mdFootnote)
+  .use(mdDeflist)
+  .use(mdAttrs)
 
 // Export a subtree starting at rootNodeId as Quarto markdown, treating that
 // node as if it were a top-level doc. No front-matter, no synthetic title —
@@ -2603,6 +2629,41 @@ function renderMarkdownToPreviewHtml(doc, nodes, rootNodeId) {
   return html
 }
 
+// Serialize a Pandoc/Quarto attribute block `{#id .class1 .class2 key=val}`.
+// Returns '' if attrs is empty; otherwise the brace-wrapped form.
+function serializeAttrs(attrs) {
+  if (!attrs) return ''
+  const parts = []
+  if (attrs.id) parts.push('#' + attrs.id)
+  for (const c of attrs.classes || []) parts.push('.' + c)
+  for (const [k, v] of Object.entries(attrs.kvs || {})) {
+    const needsQuote = /[\s"]/.test(String(v))
+    parts.push(k + '=' + (needsQuote ? '"' + String(v).replace(/"/g, '\\"') + '"' : v))
+  }
+  return parts.length ? '{' + parts.join(' ') + '}' : ''
+}
+
+// Parse a Pandoc/Quarto attribute block. Input is the inner text (no braces).
+// Returns { id, classes[], kvs{} } or null if nothing parsed.
+function parseAttrs(inner) {
+  const attrs = { id: '', classes: [], kvs: {} }
+  const re = /(?:#([\w:-]+))|(?:\.([\w-]+))|(?:([\w-]+)=("(?:[^"\\]|\\.)*"|'[^']*'|\S+))/g
+  let m
+  let any = false
+  while ((m = re.exec(inner))) {
+    any = true
+    if (m[1]) attrs.id = m[1]
+    else if (m[2]) attrs.classes.push(m[2])
+    else if (m[3]) {
+      let v = m[4]
+      if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1).replace(/\\"/g, '"')
+      attrs.kvs[m[3]] = v
+    }
+  }
+  if (!any) return null
+  return attrs
+}
+
 // Emit Quarto-compatible markdown that round-trips with importRmd.
 //
 // Block-context nodes (headings, paragraphs, code, tables, callouts) emit at
@@ -2615,16 +2676,26 @@ function exportMarkdown(doc, nodes) {
   const isBlockText = n => n.kind === 'text' && (n.headingLevel || n.role === 'paragraph' || n.role === 'callout' || n.role === 'fenced-div')
   const isListContext = n => (n.kind === 'text' && !isBlockText(n)) || n.kind === 'checkbox'
 
+  const isListItem = n => (n.kind === 'text' && !isBlockText(n)) || n.kind === 'checkbox'
   function emitChildren(parentId, listDepth) {
     let s = ''
-    for (const k of sortedChildren(nodes, parentId, doc.id)) s += emit(k, listDepth)
+    const kids = sortedChildren(nodes, parentId, doc.id)
+    for (let i = 0; i < kids.length; i++) {
+      const k = kids[i]
+      s += emit(k, listDepth)
+      // Pad with a blank line when a list item is immediately followed by a
+      // non-list sibling, so the list visually "closes" before the next block.
+      const next = kids[i + 1]
+      if (next && isListItem(k) && !isListItem(next)) s += '\n'
+    }
     return s
   }
 
   function emit(node, listDepth) {
     if (node.kind === 'text' && node.headingLevel) {
       const lvl = Math.min(6, Math.max(1, node.headingLevel))
-      let s = '\n' + '#'.repeat(lvl) + ' ' + (node.content || '').trim() + '\n\n'
+      const attrs = node.attrs ? ' ' + serializeAttrs(node.attrs) : ''
+      let s = '\n' + '#'.repeat(lvl) + ' ' + (node.content || '').trim() + attrs + '\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
@@ -2642,10 +2713,57 @@ function exportMarkdown(doc, nodes) {
       s += emitChildren(node.id, 0)
       return s
     }
+    if (node.kind === 'raw') {
+      let s = (node.content ?? '')
+      if (!s.endsWith('\n')) s += '\n'
+      s += '\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'hr') {
+      let s = '\n---\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'math') {
+      let s = '\n$$\n' + (node.content ?? '') + '\n$$\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'footnote-def') {
+      const label = node.footnoteLabel || '1'
+      let s = '\n[^' + label + ']: ' + (node.content || '').trim() + '\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'text' && node.role === 'blockquote') {
+      const lines = (node.content || '').split('\n')
+      let s = '\n' + lines.map(l => '> ' + l).join('\n') + '\n\n'
+      s += emitChildren(node.id, 0)
+      return s
+    }
+    if (node.kind === 'text' && (node.role === 'def-term' || node.role === 'def-def')) {
+      const prefix = node.role === 'def-def' ? ': ' : ''
+      let s = prefix + (node.content || '').trim() + '\n'
+      // The very last def-def of a definition list should be followed by a blank line.
+      s += emitChildren(node.id, 0)
+      return s
+    }
     if (node.kind === 'code') {
       const lang = (node.content || '').trim()
-      const fence = node.codeExecutable && lang ? '```{' + lang + '}' : '```' + lang
       const body = node.codeBody ?? ''
+      // Indented (4-space) code block — only legal at top level, never inside a list item.
+      if (node.codeFence === 'indent' && listDepth === 0) {
+        const indented = body.split('\n').map(l => l ? '    ' + l : l).join('\n')
+        let s = '\n' + indented + (indented.endsWith('\n') ? '' : '\n') + '\n'
+        s += emitChildren(node.id, 0)
+        return s
+      }
+      let fence
+      if (node.codeRaw) fence = '```{=' + node.codeRaw + '}'
+      else if (node.codeChunkHeader) fence = '```{' + node.codeChunkHeader + '}'
+      else if (node.codeExecutable && lang) fence = '```{' + lang + '}'
+      else fence = '```' + lang
       if (listDepth > 0) {
         const pad = '    '.repeat(listDepth)
         const lines = body.split('\n').map(l => pad + l).join('\n')
@@ -2664,21 +2782,33 @@ function exportMarkdown(doc, nodes) {
       return s
     }
     if (node.kind === 'image') {
+      const src = node.imageSrc || ('asset:' + (node.assetId ?? ''))
+      const alt = node.imageAlt ?? 'image'
+      const attrs = node.imageAttrs ? serializeAttrs(node.imageAttrs) : ''
+      const md = '![' + alt + '](' + src + ')' + attrs
       if (listDepth > 0) {
         const pad = '  '.repeat(listDepth)
-        let s = pad + '- ![image](asset:' + (node.assetId ?? '') + ')\n'
+        let s = pad + '- ' + md + '\n'
         s += emitChildren(node.id, listDepth + 1)
         return s
       }
-      let s = '\n![image](asset:' + (node.assetId ?? '') + ')\n\n'
+      let s = '\n' + md + '\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
     // Default: text or checkbox as a list item.
     const indent = '  '.repeat(listDepth)
-    let prefix = '- '
-    if (node.kind === 'checkbox') prefix = '- [' + (node.checked ? 'x' : ' ') + '] '
-    let s = indent + prefix + (node.content || '') + '\n'
+    let prefix
+    if (node.kind === 'checkbox') {
+      prefix = '- [' + (node.checked ? 'x' : ' ') + '] '
+    } else if (node.listOrdered) {
+      const n = node.listStart ?? 1
+      prefix = String(n) + '. '
+    } else {
+      prefix = '- '
+    }
+    const lead = node.listLoose ? '\n' : ''
+    let s = lead + indent + prefix + (node.content || '') + '\n'
     s += emitChildren(node.id, listDepth + 1)
     return s
   }
@@ -2693,6 +2823,15 @@ function exportMarkdown(doc, nodes) {
     const first = childrenOf(null)[0]
     const leadsWithH1 = first && first.kind === 'text' && first.headingLevel === 1
     if (!leadsWithH1) out += '# ' + doc.title + '\n\n'
+  }
+  // Link reference definitions (Phase 2): emit after the front-matter/title
+  // but before the body, so referrers downstream resolve correctly.
+  if (doc.linkRefs && Object.keys(doc.linkRefs).length) {
+    for (const [label, ref] of Object.entries(doc.linkRefs)) {
+      const title = ref.title ? ' "' + ref.title.replace(/"/g, '\\"') + '"' : ''
+      out += '[' + label + ']: ' + ref.url + title + '\n'
+    }
+    out += '\n'
   }
   out += emitChildren(null, 0)
   return out.replace(/\n{3,}/g, '\n\n').replace(/^\n+/, '')
@@ -2992,84 +3131,12 @@ a{color:#3a5cd0}
 }
 
 function importMarkdown(text) {
-  const docId = genId(); const ts = now()
-  const lines = text.split('\n'); let title = 'Imported'; let i = 0
-  if (lines[0]?.startsWith('# ')) { title = lines[0].slice(2).trim(); i = 1 }
-
-  const nodes = []
-  // depthStack[d] = { parentId, lastOrder, lastId }
-  const depthStack = [{ parentId: null, lastOrder: null, lastId: null }]
-
-  while (i < lines.length) {
-    const line = lines[i]
-
-    // Fenced code block (may appear at any indent level)
-    const fenceM = line.match(/^(\s*)```(.*)$/)
-    if (fenceM) {
-      const depth = Math.floor(fenceM[1].length / 2)
-      const lang = fenceM[2].trim(); i++
-      const codeLines = []
-      while (i < lines.length && !lines[i].trimStart().startsWith('```')) codeLines.push(lines[i++])
-      i++ // closing ```
-      while (depthStack.length > depth + 1) depthStack.pop()
-      const entry = depthStack[depth] ?? depthStack[depthStack.length - 1]
-      const order = generateKeyBetween(entry.lastOrder, null)
-      const nodeId = genId()
-      nodes.push({ id: nodeId, parentId: entry.parentId, documentId: docId, order,
-        kind: 'code', content: lang, codeBody: codeLines.join('\n'), createdAt: ts, updatedAt: ts })
-      entry.lastOrder = order; entry.lastId = nodeId
-      if (!depthStack[depth + 1]) depthStack.push({ parentId: nodeId, lastOrder: null, lastId: null })
-      else { depthStack[depth + 1].parentId = nodeId; depthStack[depth + 1].lastOrder = null }
-      continue
-    }
-
-    // Pipe table — detect at the current indent so it nests like everything else.
-    const tblM = line.match(/^(\s*)\|/)
-    if (tblM) {
-      const indent = tblM[1].length
-      const sliced = lines.slice(i).map(l => l.startsWith(' '.repeat(indent)) ? l.slice(indent) : l)
-      const parsed = tryParsePipeTable(sliced, 0)
-      if (parsed) {
-        const depth = Math.floor(indent / 2)
-        while (depthStack.length > depth + 1) depthStack.pop()
-        const entry = depthStack[depth] ?? depthStack[depthStack.length - 1]
-        const order = generateKeyBetween(entry.lastOrder, null)
-        const nodeId = genId()
-        nodes.push({ id: nodeId, parentId: entry.parentId, documentId: docId, order,
-          kind: 'table', content: '', tableData: parsed.tableData, createdAt: ts, updatedAt: ts })
-        entry.lastOrder = order; entry.lastId = nodeId
-        if (!depthStack[depth + 1]) depthStack.push({ parentId: nodeId, lastOrder: null, lastId: null })
-        else { depthStack[depth + 1].parentId = nodeId; depthStack[depth + 1].lastOrder = null }
-        i += parsed.consumed
-        continue
-      }
-    }
-
-    // List item
-    const listM = line.match(/^(\s*)-\s+(.*)$/)
-    if (listM) {
-      const depth = Math.floor(listM[1].length / 2)
-      let content = listM[2]
-      while (depthStack.length > depth + 1) depthStack.pop()
-      if (!depthStack[depth]) {
-        depthStack.push({ parentId: depthStack[depth - 1]?.lastId ?? null, lastOrder: null, lastId: null })
-      }
-      const entry = depthStack[depth]
-      const order = generateKeyBetween(entry.lastOrder, null)
-      const nodeId = genId()
-      let kind = 'text', checked
-      if (content.match(/^\[(x|X| )\] /)) {
-        kind = 'checkbox'; checked = content[1].toLowerCase() === 'x'; content = content.slice(4)
-      }
-      nodes.push({ id: nodeId, parentId: entry.parentId, documentId: docId, order,
-        kind, content, checked, createdAt: ts, updatedAt: ts })
-      entry.lastOrder = order; entry.lastId = nodeId
-      if (!depthStack[depth + 1]) depthStack.push({ parentId: nodeId, lastOrder: null, lastId: null })
-      else { depthStack[depth + 1].parentId = nodeId; depthStack[depth + 1].lastOrder = null }
-    }
-    i++
-  }
-  return { doc: { id: docId, title, createdAt: ts, updatedAt: ts }, nodes }
+  // The "lite" importer is now a thin wrapper around importRmd. importRmd
+  // handles every CommonMark + GFM + Quarto construct we model, and treats a
+  // missing YAML front-matter gracefully. This used to be a separate,
+  // bare-bones parser that silently dropped everything except fenced code,
+  // tables, and bullet items — see git history if you need the old shape.
+  return importRmd(text)
 }
 
 // =====================================================================
@@ -3094,12 +3161,17 @@ function splitCsvRespectQuotes(s) {
 
 // Parse the bit after ``` on a fence line. Supports plain (` ```r `) and
 // Quarto braced (` ```{r setup, fig.cap="x"} `) forms. Returns
-// { lang, executable, optionLines } where optionLines are `#| key: value`
-// strings to prepend to the chunk body (Quarto-native option syntax).
+// { lang, executable, optionLines, rawInner } where:
+//   - lang is the language tag (r, python, ...)
+//   - executable is true for braced forms (`{r}`) — i.e. Quarto/knitr chunks
+//   - rawInner is the verbatim inner-braces text (e.g. 'r setup, include=FALSE'),
+//     preserved so the exporter can round-trip the original chunk header
+//   - optionLines is the same options translated to Quarto-native `#| key: value`
+//     comments — kept as a fallback when we don't have rawInner to re-emit
 function parseChunkHeader(rest) {
   const trimmed = rest.trim()
   const braced = trimmed.match(/^\{([^}]*)\}$/)
-  if (!braced) return { lang: trimmed, executable: false, optionLines: [] }
+  if (!braced) return { lang: trimmed, executable: false, optionLines: [], rawInner: '' }
   const inner = braced[1].trim()
   const langMatch = inner.match(/^([a-zA-Z][a-zA-Z0-9_-]*)/)
   const lang = langMatch ? langMatch[1] : ''
@@ -3118,19 +3190,41 @@ function parseChunkHeader(rest) {
       }
     }
   }
-  return { lang, executable: true, optionLines }
+  return { lang, executable: true, optionLines, rawInner: inner }
 }
 
-// Import an R Markdown (.Rmd) or Quarto (.qmd) document and produce a smart
-// outline: YAML front-matter → doc.frontMatter; ATX headings drive nesting;
-// fenced chunks become code nodes (executable ones flagged); pipe tables
-// become table nodes; `::: {.callout-…}` divs become labeled parent text
-// nodes; everything else falls back to paragraphs and list items.
+// Import an R Markdown / Quarto / CommonMark / GFM document and produce a
+// structured outline.
+//
+// What's modeled as a typed node (round-trips with full fidelity via the
+// exporter):
+//   - YAML front-matter → doc.frontMatter
+//   - ATX + setext headings → text node with `headingLevel` and optional `attrs`
+//   - Paragraphs → text node with role='paragraph'
+//   - Fenced code (incl. Quarto `{r}` chunks and raw `{=html}`/`{=latex}`) → code node
+//   - Indented (4-space) code → code node with codeFence='indent'
+//   - Pipe tables → table node
+//   - `::: {.callout-…}` fenced divs → text node with role='callout'/'fenced-div'
+//   - Bullet & ordered & task list items → text/checkbox node (ordered: listOrdered/listStart)
+//   - Blockquotes → text node with role='blockquote'
+//   - Thematic breaks (---, ***, ___) → kind='hr'
+//   - Display math ($$...$$) → kind='math'
+//   - Footnote definitions ([^id]: …) → kind='footnote-def'
+//   - Link reference definitions ([label]: url "title") → doc.linkRefs map
+//   - Definition lists (term\n: def) → role='def-term' + role='def-def'
+//
+// Anything that doesn't match a typed rule (raw HTML blocks, unknown fenced
+// directives, etc.) lands in a `kind: 'raw'` node whose content is preserved
+// verbatim and re-emitted unchanged. Inline-level constructs (emphasis,
+// strong, code spans, strikethrough, links, citations, cross-refs, inline
+// math, inline R) stay in `content` as raw markdown source and round-trip
+// trivially; the Preview modal renders them via markdown-it + KaTeX.
 function importRmd(text) {
   const docId = genId(); const ts = now()
   const nodes = []
   let title = 'Imported'
   let frontMatter = ''
+  const linkRefs = {}
 
   // 1. Strip YAML front-matter.
   const fmMatch = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text)
@@ -3145,14 +3239,9 @@ function importRmd(text) {
   // 2. Walk lines with section + callout + list state.
   const lines = body.split('\n')
   const lastOrderByParent = new Map()
-  // sectionAtLevel: level → nodeId. Level 0 = doc root (null).
   const sectionAtLevel = new Map([[0, null]])
-  // calloutStack: nodeIds for nested `::: {.x}` divs. The topmost is the
-  // active parent for content; pops on bare `:::`.
   const calloutStack = []
-  // listStack: list-item nesting *inside the current container*. Reset
-  // whenever the current container changes.
-  let listStack = []
+  let listStack = []  // [{ id, ordered, depth }]
   let lastContainer = null
 
   const currentContainer = () => {
@@ -3177,8 +3266,14 @@ function importRmd(text) {
     return id
   }
 
-  // Paragraph buffer — accumulates consecutive non-classified lines.
+  // Buffers — accumulate consecutive same-kind lines.
   let paraBuf = ''
+  let rawBuf = ''
+  // Loose-list tracking: when we see a blank line and the last thing emitted
+  // was a list item, the next list item at the same level should carry
+  // listLoose:true so the exporter re-emits the separator blank line.
+  let wasInList = false
+  let loosePending = false
   const flushParagraph = () => {
     const t = paraBuf.trim()
     paraBuf = ''
@@ -3186,59 +3281,130 @@ function importRmd(text) {
     syncListStack()
     pushNode({ kind: 'text', content: t, role: 'paragraph' }, currentContainer())
   }
+  const flushRaw = () => {
+    if (!rawBuf) return
+    const content = rawBuf.replace(/\n+$/, '')
+    rawBuf = ''
+    if (!content) return
+    syncListStack()
+    pushNode({ kind: 'raw', content }, currentContainer())
+  }
+  const flushAll = () => { flushParagraph(); flushRaw() }
+
+  // Strip and parse a trailing `{#id .class key=val}` attribute block from a
+  // heading title. Returns { text, attrs|null }.
+  const stripHeadingAttrs = (s) => {
+    const m = s.match(/^(.*?)\s*\{([^}]*)\}\s*$/)
+    if (!m) return { text: s, attrs: null }
+    const attrs = parseAttrs(m[2])
+    if (!attrs) return { text: s, attrs: null }
+    return { text: m[1].trim(), attrs }
+  }
 
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
     const trimmed = line.trim()
 
-    // Blank line — terminates a paragraph and resets list stack scoping.
-    if (!trimmed) { flushParagraph(); listStack = []; i++; continue }
+    // Blank line — terminates buffered paragraphs/raw, resets list scope.
+    if (!trimmed) {
+      flushAll(); listStack = []
+      if (wasInList) loosePending = true
+      i++; continue
+    }
 
-    // Fenced div / callout open or close.
+    // Quarto fenced div / callout.
     const divOpen = trimmed.match(/^:::+\s*\{\.([^}\s]+)([^}]*)\}\s*$/)
     if (divOpen) {
-      flushParagraph()
+      flushAll()
       const cls = divOpen[1]
       const role = cls.startsWith('callout-') ? 'callout' : 'fenced-div'
       const id = pushNode({ kind: 'text', content: '', role, divClass: cls }, currentContainer())
       calloutStack.push(id)
-      listStack = []; lastContainer = id
+      listStack = []; lastContainer = id; wasInList = false; loosePending = false
       i++; continue
     }
     if (trimmed.match(/^:::+\s*$/)) {
-      flushParagraph()
+      flushAll()
       if (calloutStack.length) calloutStack.pop()
-      listStack = []; lastContainer = null
+      listStack = []; lastContainer = null; wasInList = false; loosePending = false
       i++; continue
     }
 
-    // ATX heading.
+    // ATX heading (with optional Pandoc/Quarto attrs).
     const hm = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/)
     if (hm) {
-      flushParagraph()
+      flushAll()
+      wasInList = false; loosePending = false
       const level = hm[1].length
-      const headingText = hm[2].trim()
-      // Parent = deepest section above this level.
+      const { text: headingText, attrs } = stripHeadingAttrs(hm[2].trim())
+
+      // Quarto convention: a heading as the first thing inside a callout is
+      // the callout's *title*, not a separate heading. Splice it into the
+      // callout node's content rather than pushing a sibling/child.
+      if (calloutStack.length) {
+        const calloutId = calloutStack[calloutStack.length - 1]
+        const calloutNode = nodes.find(n => n.id === calloutId)
+        if (calloutNode && !calloutNode.content) {
+          calloutNode.content = headingText
+          if (attrs) calloutNode.attrs = attrs
+          listStack = []
+          i++; continue
+        }
+        // Otherwise: heading inside a callout becomes a child of the callout,
+        // not a section-breaking escape. Keeps the callout container intact.
+        const id = pushNode({ kind: 'text', content: headingText, headingLevel: level, ...(attrs ? { attrs } : {}) }, calloutId)
+        listStack = []; lastContainer = calloutId
+        i++; continue
+      }
+
       let parentLvl = 0
       for (const lvl of sectionAtLevel.keys()) if (lvl < level && lvl > parentLvl) parentLvl = lvl
       const parentId = sectionAtLevel.get(parentLvl)
-      const id = pushNode({ kind: 'text', content: headingText, headingLevel: level }, parentId)
-      // Headings invalidate callout scope and deeper sections.
+      const props = { kind: 'text', content: headingText, headingLevel: level }
+      if (attrs) props.attrs = attrs
+      const id = pushNode(props, parentId)
       for (const lvl of Array.from(sectionAtLevel.keys())) if (lvl >= level) sectionAtLevel.delete(lvl)
       sectionAtLevel.set(level, id)
-      calloutStack.length = 0
       listStack = []; lastContainer = id
       i++; continue
     }
 
-    // Fenced code block.
+    // Setext heading: a non-blank prose line followed by ===+ (h1) or ---+ (h2).
+    // We only get here if no other rule fired for the current line, so anything
+    // we've buffered into paraBuf belongs to this setext heading.
+    if (paraBuf.trim() === '' && i + 1 < lines.length) {
+      const nxt = lines[i + 1]
+      if (/^=+\s*$/.test(nxt) || /^-+\s*$/.test(nxt)) {
+        // Need to confirm the current line is plain prose (not a table sep, etc.).
+        // Tables have already had a chance to match above (the table matcher uses
+        // lookahead too), so anything else with prose content qualifies.
+        if (trimmed && !line.match(/^(\s*)```/) && !line.match(/^(\s*)\|/)) {
+          flushRaw()
+          const level = /^=+\s*$/.test(nxt) ? 1 : 2
+          const { text: headingText, attrs } = stripHeadingAttrs(trimmed)
+          let parentLvl = 0
+          for (const lvl of sectionAtLevel.keys()) if (lvl < level && lvl > parentLvl) parentLvl = lvl
+          const parentId = sectionAtLevel.get(parentLvl)
+          const props = { kind: 'text', content: headingText, headingLevel: level }
+          if (attrs) props.attrs = attrs
+          const id = pushNode(props, parentId)
+          for (const lvl of Array.from(sectionAtLevel.keys())) if (lvl >= level) sectionAtLevel.delete(lvl)
+          sectionAtLevel.set(level, id)
+          calloutStack.length = 0
+          listStack = []; lastContainer = id
+          i += 2; continue
+        }
+      }
+    }
+
+    // Fenced code block (incl. Quarto chunks and raw `{=html}` / `{=latex}` blocks).
     const fenceM = line.match(/^(\s*)```(.*)$/)
     if (fenceM) {
-      flushParagraph()
+      flushAll()
       const indent = fenceM[1]
       const header = fenceM[2]
-      const { lang, executable, optionLines } = parseChunkHeader(header)
+      const rawBlockM = header.trim().match(/^\{=([a-zA-Z][\w-]*)\}$/)
       i++
       const codeLines = []
       while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
@@ -3247,11 +3413,22 @@ function importRmd(text) {
         i++
       }
       i++ // closing fence
-      const body = [...optionLines, ...codeLines].join('\n')
       syncListStack()
-      const props = { kind: 'code', content: lang, codeBody: body }
-      if (executable) props.codeExecutable = true
-      pushNode(props, currentContainer())
+      if (rawBlockM) {
+        pushNode({ kind: 'code', content: rawBlockM[1], codeBody: codeLines.join('\n'), codeRaw: rawBlockM[1] }, currentContainer())
+      } else {
+        const { lang, executable, rawInner } = parseChunkHeader(header)
+        const props = { kind: 'code', content: lang, codeBody: codeLines.join('\n') }
+        if (executable) {
+          props.codeExecutable = true
+          // Keep the original `{r setup, include=FALSE}` body so we can
+          // re-emit the same chunk header verbatim on export. Without this
+          // we'd transform Rmd inline opts into Quarto-native `#|` lines and
+          // lose byte-level fidelity (semantically equivalent but noisy diff).
+          if (rawInner && rawInner !== lang) props.codeChunkHeader = rawInner
+        }
+        pushNode(props, currentContainer())
+      }
       continue
     }
 
@@ -3259,7 +3436,7 @@ function importRmd(text) {
     if (line.includes('|')) {
       const parsed = tryParsePipeTable(lines, i)
       if (parsed) {
-        flushParagraph()
+        flushAll()
         syncListStack()
         pushNode({ kind: 'table', content: '', tableData: parsed.tableData }, currentContainer())
         i += parsed.consumed
@@ -3267,10 +3444,102 @@ function importRmd(text) {
       }
     }
 
-    // List item (bullet or task).
+    // Display math $$ ... $$ (may be on one line or span multiple).
+    if (/^\$\$/.test(trimmed)) {
+      flushAll()
+      const oneLine = trimmed.match(/^\$\$([\s\S]*)\$\$\s*$/)
+      if (oneLine && oneLine[1].length > 0) {
+        syncListStack()
+        pushNode({ kind: 'math', content: oneLine[1].trim() }, currentContainer())
+        i++; continue
+      }
+      // Multi-line: collect until closing $$.
+      const mathLines = []
+      // Capture anything on the opening line after the $$.
+      const opener = trimmed.replace(/^\$\$/, '')
+      if (opener.trim()) mathLines.push(opener)
+      i++
+      while (i < lines.length && !/^\$\$/.test(lines[i].trim())) {
+        mathLines.push(lines[i]); i++
+      }
+      if (i < lines.length) i++ // skip closing $$
+      syncListStack()
+      pushNode({ kind: 'math', content: mathLines.join('\n').trim() }, currentContainer())
+      continue
+    }
+
+    // Footnote definition: [^label]: content (continuation lines are
+    // recognized via leading 4-space indent — kept simple here: single-line).
+    const fnDef = line.match(/^\[\^([^\]\s]+)\]:\s*(.*)$/)
+    if (fnDef) {
+      flushAll()
+      syncListStack()
+      pushNode({ kind: 'footnote-def', footnoteLabel: fnDef[1], content: fnDef[2].trim() }, currentContainer())
+      i++; continue
+    }
+
+    // Link reference definition: [label]: url "optional title"
+    const linkRef = line.match(/^\[([^\]]+)\]:\s*(\S+)(?:\s+"([^"]*)")?\s*$/)
+    if (linkRef && !line.startsWith(' ')) {
+      flushAll()
+      linkRefs[linkRef[1]] = { url: linkRef[2], title: linkRef[3] || '' }
+      i++; continue
+    }
+
+    // Blockquote (>, possibly nested >>; we collapse to a single role='blockquote' node).
+    if (/^\s*>/.test(line)) {
+      flushParagraph()
+      flushRaw()
+      const bqLines = []
+      while (i < lines.length && (/^\s*>/.test(lines[i]) || (bqLines.length && lines[i].trim() && !/^\s*[-*+]\s/.test(lines[i]) && !/^\s*\d+\.\s/.test(lines[i])))) {
+        const ln = lines[i]
+        if (/^\s*>/.test(ln)) {
+          bqLines.push(ln.replace(/^\s*>\s?/, ''))
+        } else {
+          // Lazy continuation inside a blockquote.
+          bqLines.push(ln)
+        }
+        i++
+      }
+      syncListStack()
+      pushNode({ kind: 'text', role: 'blockquote', content: bqLines.join('\n') }, currentContainer())
+      continue
+    }
+
+    // Thematic break (only when no paragraph is being accumulated — otherwise
+    // a bare `---` is the setext-h2 underline and is consumed above).
+    if (paraBuf.trim() === '' && rawBuf.trim() === '' && /^[ \t]*(\*{3,}|_{3,}|-{3,})[ \t]*$/.test(line)) {
+      syncListStack()
+      pushNode({ kind: 'hr' }, currentContainer())
+      i++; continue
+    }
+
+    // Ordered list item.
+    const olM = line.match(/^(\s*)(\d+)\.\s+(.*)$/)
+    if (olM) {
+      flushAll()
+      syncListStack()
+      const indent = olM[1].length
+      const depth = Math.floor(indent / 2)
+      const startN = parseInt(olM[2], 10)
+      let content = olM[3]
+      let kind = 'text'; let checked
+      const taskM = content.match(/^\[(x|X| )\]\s+(.*)$/)
+      if (taskM) { kind = 'checkbox'; checked = taskM[1].toLowerCase() === 'x'; content = taskM[2] }
+      while (listStack.length > depth) listStack.pop()
+      const parent = listStack.length ? listStack[listStack.length - 1] : currentContainer()
+      const props = { kind, content, listOrdered: true, listStart: startN }
+      if (kind === 'checkbox') props.checked = checked
+      if (loosePending) props.listLoose = true
+      const id = pushNode(props, parent)
+      listStack.push(id); wasInList = true; loosePending = false
+      i++; continue
+    }
+
+    // Unordered / task list item.
     const listM = line.match(/^(\s*)[-*+]\s+(.*)$/)
     if (listM) {
-      flushParagraph()
+      flushAll()
       syncListStack()
       const indent = listM[1].length
       const depth = Math.floor(indent / 2)
@@ -3282,19 +3551,63 @@ function importRmd(text) {
       const parent = listStack.length ? listStack[listStack.length - 1] : currentContainer()
       const props = { kind, content }
       if (kind === 'checkbox') props.checked = checked
+      if (loosePending) props.listLoose = true
       const id = pushNode(props, parent)
-      listStack.push(id)
+      listStack.push(id); wasInList = true; loosePending = false
       i++; continue
     }
 
-    // Default: paragraph line — accumulate.
+    // Definition list: prose term followed by `: definition`.
+    if (paraBuf.trim() === '' && i + 1 < lines.length && /^:\s+/.test(lines[i + 1]) && trimmed && !line.startsWith('    ')) {
+      flushRaw()
+      syncListStack()
+      const termId = pushNode({ kind: 'text', role: 'def-term', content: trimmed }, currentContainer())
+      i++
+      // Consume all consecutive `: definition` lines as siblings of the term.
+      while (i < lines.length && /^:\s+/.test(lines[i])) {
+        pushNode({ kind: 'text', role: 'def-def', content: lines[i].replace(/^:\s+/, '').trim() }, currentContainer())
+        i++
+      }
+      continue
+    }
+
+    // Indented (4-space) code block — only when no paragraph is open and we
+    // aren't inside list context (lists own their own indentation).
+    if (paraBuf.trim() === '' && !listStack.length && /^    [^\s]/.test(line)) {
+      flushRaw()
+      const codeLines = []
+      while (i < lines.length && (/^    /.test(lines[i]) || lines[i].trim() === '')) {
+        if (lines[i].trim() === '') {
+          // Look ahead — if the next non-blank line is still indented, the blank
+          // is part of the code block; otherwise we're done.
+          let j = i + 1
+          while (j < lines.length && lines[j].trim() === '') j++
+          if (j < lines.length && /^    /.test(lines[j])) {
+            codeLines.push('')
+            i++
+          } else {
+            break
+          }
+        } else {
+          codeLines.push(lines[i].slice(4))
+          i++
+        }
+      }
+      syncListStack()
+      pushNode({ kind: 'code', content: '', codeBody: codeLines.join('\n'), codeFence: 'indent' }, currentContainer())
+      continue
+    }
+
+    // Default: accumulate as paragraph (preserves inline markdown verbatim).
     paraBuf += (paraBuf ? '\n' : '') + line
+    wasInList = false; loosePending = false
     i++
   }
-  flushParagraph()
+  flushAll()
 
   const doc = { id: docId, title, createdAt: ts, updatedAt: ts }
   if (frontMatter.trim()) doc.frontMatter = frontMatter.trim()
+  if (Object.keys(linkRefs).length) doc.linkRefs = linkRefs
   return { doc, nodes }
 }
 
@@ -5406,6 +5719,17 @@ function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
     toolbar.appendChild(editBtn)
     wrapper.appendChild(toolbar)
     row.appendChild(wrapper)
+  } else if (node.kind === 'hr') {
+    const hr = document.createElement('hr'); hr.className = 'node-hr'
+    row.appendChild(hr)
+  } else if (node.kind === 'math') {
+    // Show raw TeX source verbatim — same UX choice as for inline markdown.
+    // KaTeX rendering happens in the Preview modal.
+    const wrap = document.createElement('div'); wrap.className = 'math-block'
+    wrap.contentEditable = 'true'; wrap.dataset.nodeId = node.id
+    wrap.dataset.placeholder = 'Empty math'
+    wrap.textContent = node.content || ''
+    row.appendChild(wrap)
   } else {
     const textDiv = document.createElement('div')
     let cls = 'node-text' + (node.kind === 'checkbox' && node.checked ? ' done' : '')
@@ -5417,6 +5741,11 @@ function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
       cls += ' callout-label'
       if (node.divClass) cls += ` callout-${String(node.divClass).replace(/[^a-zA-Z0-9_-]/g, '')}`
     }
+    if (node.kind === 'text' && node.role === 'blockquote') cls += ' node-blockquote'
+    if (node.kind === 'text' && node.role === 'def-term') cls += ' node-def-term'
+    if (node.kind === 'text' && node.role === 'def-def') cls += ' node-def-def'
+    if (node.kind === 'raw') cls += ' node-raw'
+    if (node.kind === 'footnote-def') cls += ' node-footnote-def'
     textDiv.className = cls
     textDiv.contentEditable = 'true'; textDiv.dataset.nodeId = node.id
     textDiv.dataset.placeholder = 'Empty note'
@@ -7637,33 +7966,77 @@ document.getElementById('exp-submit').addEventListener('click', async () => {
   btn.disabled = false; btn.textContent = origLabel
 })
 
-// Import modal (Markdown only)
+// Import modal (Markdown, single-file or mass)
+const MD_IMPORT_EXTS = new Set(['md', 'markdown', 'rmd', 'qmd', 'rmarkdown'])
+function impUpdateFolderRowVisibility() {
+  const count = document.getElementById('imp-file').files?.length ?? 0
+  document.getElementById('imp-folder-row').classList.toggle('hidden', count <= 1)
+}
 document.getElementById('import-btn').addEventListener('click', () => {
   document.getElementById('imp-file').value = ''
+  document.getElementById('imp-folder-name').value = ''
+  document.getElementById('imp-progress').textContent = ''
+  impUpdateFolderRowVisibility()
   setErr('imp-error', '')
   show('import-modal')
 })
+document.getElementById('imp-file').addEventListener('change', impUpdateFolderRowVisibility)
 document.getElementById('imp-cancel').addEventListener('click', () => hide('import-modal'))
 document.getElementById('imp-submit').addEventListener('click', async () => {
   setErr('imp-error', '')
-  const file = document.getElementById('imp-file').files?.[0]
-  if (!file) { setErr('imp-error', 'Select a file.'); return }
+  const files = Array.from(document.getElementById('imp-file').files || [])
+  if (!files.length) { setErr('imp-error', 'Select at least one file.'); return }
+  const accepted = files.filter(f => MD_IMPORT_EXTS.has((f.name.split('.').pop() || '').toLowerCase()))
+  const skipped = files.length - accepted.length
+  if (!accepted.length) { setErr('imp-error', `No markdown files in selection (skipped ${skipped}).`); return }
+
+  let folderId = null
+  if (accepted.length > 1) {
+    const name = document.getElementById('imp-folder-name').value.trim()
+    if (name) folderId = await ensureFolderPath([name])
+  }
+
+  const siblings = sortedSidebarSiblings(folderId)
+  let prevOrder = siblings.length ? siblings[siblings.length - 1].order : null
+
+  const progress = document.getElementById('imp-progress')
   const btn = document.getElementById('imp-submit'); btn.disabled = true; btn.textContent = 'Importing…'
-  try {
-    const text = await file.text()
-    const ext = (file.name.split('.').pop() || '').toLowerCase()
-    const isRmd = ext === 'rmd' || ext === 'qmd' || ext === 'rmarkdown'
-    const { doc, nodes } = isRmd ? importRmd(text) : importMarkdown(text)
-    const rootSiblings = sortedSidebarSiblings(null)
-    doc.folderId = null
-    doc.order = generateKeyBetween(rootSiblings.length ? rootSiblings[rootSiblings.length - 1].order : null, null)
-    await putDoc(doc, state.ctx)
-    await putNodes(nodes, state.ctx)
-    await reloadDocsAndFolders(state.ctx)
-    await selectDoc(doc.id)
-    hide('import-modal')
-  } catch (e) { setErr('imp-error', String(e)) }
+  const failed = []
+  let ok = 0
+  let lastDocId = null
+  for (let i = 0; i < accepted.length; i++) {
+    const file = accepted[i]
+    progress.textContent = `Importing ${i + 1} of ${accepted.length}: ${file.name}`
+    try {
+      const text = await file.text()
+      const ext = (file.name.split('.').pop() || '').toLowerCase()
+      const isRmd = ext === 'rmd' || ext === 'qmd' || ext === 'rmarkdown'
+      const { doc, nodes } = isRmd ? importRmd(text) : importMarkdown(text)
+      doc.folderId = folderId
+      doc.order = generateKeyBetween(prevOrder, null)
+      prevOrder = doc.order
+      await putDoc(doc, state.ctx)
+      await putNodes(nodes, state.ctx)
+      lastDocId = doc.id
+      ok++
+    } catch (e) {
+      failed.push(`${file.name}: ${e?.message || e}`)
+    }
+  }
+
+  await reloadDocsAndFolders(state.ctx)
+  const parts = [`Imported ${ok}`]
+  if (skipped) parts.push(`skipped ${skipped} non-markdown`)
+  if (failed.length) parts.push(`${failed.length} failed`)
+  progress.textContent = parts.join(', ') + '.'
   btn.disabled = false; btn.textContent = 'Import'
+
+  if (failed.length) {
+    setErr('imp-error', failed.join('\n'))
+  } else {
+    if (accepted.length === 1 && lastDocId) await selectDoc(lastDocId)
+    hide('import-modal')
+  }
 })
 
 // =====================================================================

@@ -4,3 +4,4 @@ dist/
 Thumbs.db
 .claude/
 *.log
+.tmp-*/

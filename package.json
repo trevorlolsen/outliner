@@ -27,7 +27,10 @@
     "dexie": "^4.0.10",
     "fractional-indexing": "^1.1.0",
     "hash-wasm": "^4.12.0",
-    "markdown-it": "^14.1.0"
+    "markdown-it": "^14.1.0",
+    "markdown-it-attrs": "^4.5.0",
+    "markdown-it-deflist": "^3.0.0",
+    "markdown-it-footnote": "^4.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
