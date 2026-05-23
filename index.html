@@ -8012,6 +8012,13 @@ document.getElementById('imp-submit').addEventListener('click', async () => {
       const ext = (file.name.split('.').pop() || '').toLowerCase()
       const isRmd = ext === 'rmd' || ext === 'qmd' || ext === 'rmarkdown'
       const { doc, nodes } = isRmd ? importRmd(text) : importMarkdown(text)
+      // Mass import: use the filename (sans extension) as the title — the
+      // user clearly cared about the on-disk naming. Single-file import keeps
+      // the YAML/H1-derived title, which is what the single-file flow has
+      // always done.
+      if (accepted.length > 1) {
+        doc.title = file.name.replace(/\.(md|markdown|rmd|qmd|rmarkdown)$/i, '')
+      }
       doc.folderId = folderId
       doc.order = generateKeyBetween(prevOrder, null)
       prevOrder = doc.order
@@ -8025,6 +8032,11 @@ document.getElementById('imp-submit').addEventListener('click', async () => {
   }
 
   await reloadDocsAndFolders(state.ctx)
+  // Expand the destination folder so the freshly-imported docs are visible
+  // (mass-import otherwise drops them into a collapsed folder and looks like
+  // nothing happened).
+  if (folderId) state.expandedFolderIds.add(folderId)
+  renderSidebar()
   const parts = [`Imported ${ok}`]
   if (skipped) parts.push(`skipped ${skipped} non-markdown`)
   if (failed.length) parts.push(`${failed.length} failed`)
