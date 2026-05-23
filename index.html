@@ -197,8 +197,10 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 
 /* Sidebar */
 #sidebar{width:220px;background:var(--bg-1);border-right:1px solid var(--border-bg);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:width .15s ease}
-#sidebar .sidebar-top{padding:14px 12px 8px;display:flex;align-items:center;justify-content:space-between}
-#sidebar .app-title{font-size:12px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+#sidebar .sidebar-top{padding:14px 12px 4px;display:flex;align-items:center;gap:4px}
+#sidebar .sidebar-top #search-btn{margin-left:auto}
+#sidebar .sidebar-title-row{padding:0 12px 8px}
+#sidebar .app-title{display:block;font-size:12px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #new-item-btn{padding:2px 8px;background:var(--bg-3);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);font-size:14px;line-height:1.1;cursor:pointer;flex-shrink:0}
 #new-item-btn:hover{background:var(--bg-3-hover)}
 #search-btn,#help-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:14px;padding:2px 6px;line-height:1;flex-shrink:0}
@@ -233,6 +235,7 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #auto-snap-btn.active{color:var(--autosnap-active-text);border-color:var(--autosnap-active-border);background:var(--autosnap-active-bg)}
 .autosnap-notice{color:var(--text-soft);font-size:11px;line-height:1.4;background:var(--bg-1);border:1px solid var(--border-soft);border-radius:4px;padding:6px 8px}
 #sidebar.collapsed{width:36px}
+#sidebar.collapsed .sidebar-title-row{display:none}
 #sidebar.collapsed .sidebar-top{justify-content:center;padding:14px 6px 8px}
 #sidebar.collapsed #back-to-vaults-btn,#sidebar.collapsed #active-vault-label,#sidebar.collapsed #new-item-btn,#sidebar.collapsed #search-btn,#sidebar.collapsed #help-btn{display:none}
 #sidebar.collapsed #doc-list{display:none}
@@ -359,14 +362,15 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .math-block{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:4px;padding:8px 10px;color:var(--text);min-height:24px;white-space:pre-wrap;overflow-x:auto}
 .math-block:focus{outline:none;border-color:var(--accent)}
 .math-block .katex-display{margin:0!important}
-.vault-modal{width:460px}
+.vault-modal{width:min(560px,95vw)}
 .vault-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .vault-modal-head h2{margin:0}
 #vault-list{list-style:none;margin:0 0 10px;padding:0;max-height:340px;overflow-y:auto}
-#vault-list li{display:flex;align-items:center;gap:8px;padding:9px 2px;border-bottom:1px solid var(--vault-divider)}
+#vault-list li{display:grid;grid-template-columns:1fr auto;grid-template-areas:"name date" "actions actions";gap:6px 8px;padding:9px 2px;border-bottom:1px solid var(--vault-divider);align-items:center}
 #vault-list li:last-child{border-bottom:none}
-#vault-list .vl-name{flex:1;font-size:14px;color:var(--text-muted)}
-#vault-list .vl-date{font-size:11px;color:var(--text-fainter);flex-shrink:0}
+#vault-list .vl-name{grid-area:name;min-width:0;font-size:14px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#vault-list .vl-date{grid-area:date;font-size:11px;color:var(--text-fainter)}
+#vault-list .vl-actions{grid-area:actions;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .vl-btn{background:var(--bg-3);border:1px solid var(--border);border-radius:3px;color:var(--text-dim);font-size:11px;padding:3px 9px;cursor:pointer;flex-shrink:0}
 .vl-btn:hover{background:var(--bg-3-hover);color:var(--text)}
 .vl-btn.danger:hover{color:var(--danger);border-color:var(--danger)}
@@ -949,11 +953,13 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
   <aside id="sidebar">
     <div class="sidebar-top">
       <button id="back-to-vaults-btn" title="All vaults">⊞</button>
-      <span class="app-title" id="active-vault-label">Outline</span>
       <button id="search-btn" title="Search (Ctrl+Shift+F)">🔍</button>
       <button id="help-btn" title="Help & documentation (?)">❔</button>
       <button id="new-item-btn" title="New document or folder">+</button>
       <button id="sidebar-toggle" title="Toggle sidebar">‹</button>
+    </div>
+    <div class="sidebar-title-row">
+      <span class="app-title" id="active-vault-label">Outline</span>
     </div>
     <div id="daily-section">
       <button id="today-btn" title="Open or create today's daily note">📅 Today</button>
@@ -4819,20 +4825,25 @@ function renderVaultScreen() {
     const li = document.createElement('li')
     const d = new Date(v.createdAt || 0)
     const dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' })
-    li.innerHTML = `<span class="vl-name">${v.name || 'Unnamed'}</span><span class="vl-date">${dateStr}</span>`
-    const openBtn = document.createElement('button')
-    openBtn.className = 'vl-btn'; openBtn.textContent = 'Open'
-    openBtn.onclick = () => startUnlock(v)
-    const expBtn = document.createElement('button')
-    expBtn.className = 'vl-btn'; expBtn.textContent = 'Export'
-    expBtn.onclick = () => exportVault(v)
-    const pwdBtn = document.createElement('button')
-    pwdBtn.className = 'vl-btn'; pwdBtn.textContent = 'Change password'
-    pwdBtn.onclick = () => openChpassModal(v)
-    const delBtn = document.createElement('button')
-    delBtn.className = 'vl-btn danger'; delBtn.textContent = 'Delete'
-    delBtn.onclick = () => confirmDeleteVault(v)
-    li.append(openBtn, expBtn, pwdBtn, delBtn)
+    const nameSpan = document.createElement('span')
+    nameSpan.className = 'vl-name'; nameSpan.textContent = v.name || 'Unnamed'; nameSpan.title = v.name || 'Unnamed'
+    const dateSpan = document.createElement('span')
+    dateSpan.className = 'vl-date'; dateSpan.textContent = dateStr
+    const actions = document.createElement('div')
+    actions.className = 'vl-actions'
+    const mkBtn = (label, cls, onClick) => {
+      const b = document.createElement('button')
+      b.className = 'vl-btn' + (cls ? ' ' + cls : '')
+      b.textContent = label; b.onclick = onClick
+      return b
+    }
+    actions.append(
+      mkBtn('Open',            '',       () => startUnlock(v)),
+      mkBtn('Export',          '',       () => exportVault(v)),
+      mkBtn('Change password', '',       () => openChpassModal(v)),
+      mkBtn('Delete',          'danger', () => confirmDeleteVault(v))
+    )
+    li.append(nameSpan, dateSpan, actions)
     list.appendChild(li)
   }
 }
@@ -5089,7 +5100,7 @@ function folderDueCount(folderId) {
 function renderSidebar() {
   const vault = state.vaults.find(v => v.id === state.ctx?.vaultId)
   const label = document.getElementById('active-vault-label')
-  if (label) label.textContent = vault?.name || 'Outline'
+  if (label) { label.textContent = vault?.name || 'Outline'; label.title = vault?.name || 'Outline' }
   const list = document.getElementById('doc-list')
   list.innerHTML = ''
   renderSidebarLevel(list, null, 0)
