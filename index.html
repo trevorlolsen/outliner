@@ -209,10 +209,8 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #doc-list li{display:flex;align-items:center;border-radius:4px;padding:1px 4px}
 #doc-list li.active{background:var(--bg-list-active)}
 #doc-list .doc-name{flex:1;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;text-align:left;padding:5px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
-#doc-list .doc-actions{display:none;gap:2px}
-#doc-list li:hover .doc-actions{display:flex}
-#doc-list .doc-actions button{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:11px;padding:2px 4px}
-#doc-list .doc-actions button:hover{color:var(--text-muted)}
+#doc-list .row-menu-btn{background:none;border:none;color:var(--text-fainter);cursor:pointer;font-size:16px;line-height:1;padding:4px 8px;flex-shrink:0;min-width:32px;min-height:32px;touch-action:manipulation;display:flex;align-items:center;justify-content:center;border-radius:4px}
+#doc-list .row-menu-btn:hover{color:var(--text-muted);background:var(--bg-3)}
 #doc-list li[data-folder-id] .doc-name{color:var(--text-dim);font-weight:500}
 #doc-list .row-indent{display:inline-block;flex-shrink:0;width:calc(var(--depth, 0) * 12px)}
 #doc-list .folder-chevron{background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;flex-shrink:0;width:14px;text-align:center}
@@ -492,9 +490,17 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .ctx-arrow{font-size:9px;color:var(--text-fainter);flex-shrink:0;margin-left:2px}
 .ctx-sub{position:absolute;left:100%;top:-4px;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:130px;box-shadow:var(--shadow);display:none;z-index:501}
 .ctx-item:hover .ctx-sub{display:block}
+.ctx-item.ctx-open .ctx-sub{display:block}
 .ctx-section-label{font-size:11px;color:var(--text-fainter);padding:3px 12px 2px;cursor:default}
 .ctx-cur-lang{font-style:normal;color:var(--text-soft);font-size:12px}
 .ctx-sub.ctx-langs{min-width:150px;max-height:280px;overflow-y:auto}
+/* Narrow viewports: the sidebar context menu sits near the right edge, so a
+   left:100% submenu fly-out would clip off-screen. Render the submenu inline
+   as an indented drawer below its parent item, and enlarge tap targets. */
+@media (max-width: 600px) {
+  #sidebar-ctx-menu .ctx-sub{position:static;left:auto;top:auto;box-shadow:none;border:none;margin:2px 0 4px 16px;padding:0;min-width:0;max-height:240px;overflow-y:auto}
+  #sidebar-ctx-menu .ctx-item{padding:8px 12px}
+}
 
 /* Help overlay */
 #help-overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:600}
@@ -5754,21 +5760,14 @@ function renderFolderRow(list, folder, depth) {
   btn.textContent = folder.name || 'Untitled folder'
   btn.title = folder.name || ''
   btn.onclick = () => toggleFolderExpanded(folder.id)
-  const actions = document.createElement('div')
-  actions.className = 'doc-actions'
-  const newDocBtn = document.createElement('button')
-  newDocBtn.textContent = '+'; newDocBtn.title = 'New doc in folder'
-  newDocBtn.onclick = (e) => { e.stopPropagation(); newDoc(folder.id) }
-  const newSubBtn = document.createElement('button')
-  newSubBtn.textContent = '📁'; newSubBtn.title = 'New subfolder'
-  newSubBtn.onclick = (e) => { e.stopPropagation(); newFolder(folder.id) }
-  const renBtn = document.createElement('button')
-  renBtn.textContent = '✎'; renBtn.title = 'Rename'
-  renBtn.onclick = (e) => { e.stopPropagation(); renameFolder(folder) }
-  const delBtn = document.createElement('button')
-  delBtn.textContent = '✕'; delBtn.title = 'Delete folder'
-  delBtn.onclick = (e) => { e.stopPropagation(); removeFolder(folder) }
-  actions.append(newDocBtn, newSubBtn, renBtn, delBtn)
+  const menuBtn = document.createElement('button')
+  menuBtn.className = 'row-menu-btn'
+  menuBtn.textContent = '⋯'; menuBtn.title = 'Folder actions'
+  menuBtn.onclick = (e) => {
+    e.stopPropagation()
+    const r = menuBtn.getBoundingClientRect()
+    openSidebarCtxMenu('folder', folder.id, r.right, r.bottom)
+  }
   li.append(indent, chev, btn)
   // Collapsed folders aggregate their descendants' due counts into one badge.
   if (!expanded) {
@@ -5781,7 +5780,7 @@ function renderFolderRow(list, folder, depth) {
       li.appendChild(span)
     }
   }
-  li.appendChild(actions)
+  li.appendChild(menuBtn)
   list.appendChild(li)
 }
 
@@ -5796,25 +5795,22 @@ function renderDocRow(list, doc, depth) {
   const btn = document.createElement('button')
   btn.className = 'doc-name'; btn.textContent = doc.title || 'Untitled'
   btn.onclick = () => selectDoc(doc.id)
-  const actions = document.createElement('div')
-  actions.className = 'doc-actions'
-  const renBtn = document.createElement('button')
-  renBtn.textContent = '✎'; renBtn.title = 'Rename'
-  renBtn.onclick = (e) => { e.stopPropagation(); renameDoc(doc) }
-  const delBtn = document.createElement('button')
-  delBtn.textContent = '✕'; delBtn.title = 'Delete'
-  delBtn.onclick = (e) => { e.stopPropagation(); removeDoc(doc) }
-  actions.append(renBtn, delBtn)
-  li.append(indent, spacer, btn, actions)
-  // Per-doc due counter — placed before .doc-actions so the badge stays
-  // stable when hover reveals the rename/delete buttons.
+  const menuBtn = document.createElement('button')
+  menuBtn.className = 'row-menu-btn'
+  menuBtn.textContent = '⋯'; menuBtn.title = 'Document actions'
+  menuBtn.onclick = (e) => {
+    e.stopPropagation()
+    const r = menuBtn.getBoundingClientRect()
+    openSidebarCtxMenu('doc', doc.id, r.right, r.bottom)
+  }
+  li.append(indent, spacer, btn, menuBtn)
   const due = dueCountForDoc(doc.id)
   if (due > 0) {
     const span = document.createElement('span')
     span.className = 'due-counter'
     span.title = `${due} card${due === 1 ? '' : 's'} due`
     span.textContent = String(due)
-    li.insertBefore(span, actions)
+    li.insertBefore(span, menuBtn)
   }
   list.appendChild(li)
 }
@@ -5890,11 +5886,27 @@ function renderSidebarCtxMenu(kind, id, el) {
        <li class="ctx-item" data-action="sb-new-folder">New subfolder here</li>
        <li class="ctx-sep"></li>`
     : ''
+  // Reorder block — shown only when the item has siblings to reorder against.
+  // Disabled at the edges so the menu shape stays stable across positions.
+  const parentFolderId = kind === 'folder'
+    ? (item.parentFolderId ?? null)
+    : (item.folderId ?? null)
+  const sibs = sortedSidebarSiblings(parentFolderId)
+  const sibIdx = sibs.findIndex(s => s.id === id)
+  const atTop = sibIdx <= 0
+  const atBot = sibIdx < 0 || sibIdx >= sibs.length - 1
+  const reorder = sibs.length >= 2
+    ? `<li class="ctx-item${atTop ? ' ctx-disabled' : ''}" data-action="sb-move-up">Move up</li>
+       <li class="ctx-item${atBot ? ' ctx-disabled' : ''}" data-action="sb-move-down">Move down</li>
+       <li class="ctx-item${atTop ? ' ctx-disabled' : ''}" data-action="sb-move-top">Move to top</li>
+       <li class="ctx-item${atBot ? ' ctx-disabled' : ''}" data-action="sb-move-bottom">Move to bottom</li>`
+    : ''
   el.innerHTML = `
     <ul>
       <li class="ctx-section-label">${escapeHtml(label)}</li>
       ${extra}
       <li class="ctx-item" data-action="sb-rename">Rename</li>
+      ${reorder}
       ${moveSub}
       <li class="ctx-sep"></li>
       <li class="ctx-item" data-action="sb-delete">Delete</li>
@@ -5910,6 +5922,10 @@ async function sidebarCtxDispatch(action, targetId) {
   const id = menu.dataset.id
   closeSidebarCtxMenu()
   if (action === 'sb-move-sub') return
+  if (action === 'sb-move-up')     return reorderSidebarItem(kind, id, 'up')
+  if (action === 'sb-move-down')   return reorderSidebarItem(kind, id, 'down')
+  if (action === 'sb-move-top')    return reorderSidebarItem(kind, id, 'top')
+  if (action === 'sb-move-bottom') return reorderSidebarItem(kind, id, 'bottom')
   if (kind === 'folder') {
     const folder = state.folders.find(f => f.id === id); if (!folder) return
     if (action === 'sb-rename') return renameFolder(folder)
@@ -5923,6 +5939,43 @@ async function sidebarCtxDispatch(action, targetId) {
     if (action === 'sb-delete') return removeDoc(doc)
     if (action === 'sb-move') return moveDocToFolder(doc.id, targetId)
   }
+}
+
+// Reorder a sidebar doc/folder within its current parent. Touch-friendly
+// alternative to drag-and-drop. Delegates to applySidebarMove so the
+// persistence + fractional-order pipeline matches the drag-drop path exactly.
+async function reorderSidebarItem(kind, id, direction) {
+  const item = kind === 'folder'
+    ? state.folders.find(f => f.id === id)
+    : state.docs.find(d => d.id === id)
+  if (!item) return
+  const parentFolderId = kind === 'folder'
+    ? (item.parentFolderId ?? null)
+    : (item.folderId ?? null)
+  const sibs = sortedSidebarSiblings(parentFolderId)
+  const i = sibs.findIndex(s => s.id === id)
+  if (i < 0 || sibs.length < 2) return
+  let prevOrder = null, nextOrder = null
+  if (direction === 'up') {
+    if (i === 0) return
+    prevOrder = i >= 2 ? sibs[i - 2].order : null
+    nextOrder = sibs[i - 1].order
+  } else if (direction === 'down') {
+    if (i === sibs.length - 1) return
+    prevOrder = sibs[i + 1].order
+    nextOrder = i + 2 < sibs.length ? sibs[i + 2].order : null
+  } else if (direction === 'top') {
+    if (i === 0) return
+    prevOrder = null
+    nextOrder = sibs[0].order
+  } else if (direction === 'bottom') {
+    if (i === sibs.length - 1) return
+    prevOrder = sibs[sibs.length - 1].order
+    nextOrder = null
+  } else {
+    return
+  }
+  await applySidebarMove(kind, id, { parentFolderId, prevOrder, nextOrder })
 }
 
 // Move a doc to a target folder (null = root). Appends at the end of the
@@ -6026,8 +6079,8 @@ function refreshDueCounter(docId) {
       if (!span) {
         span = document.createElement('span')
         span.className = 'due-counter'
-        const actions = li.querySelector('.doc-actions')
-        if (actions) li.insertBefore(span, actions)
+        const menuBtn = li.querySelector('.row-menu-btn')
+        if (menuBtn) li.insertBefore(span, menuBtn)
         else li.appendChild(span)
       }
       span.title = `${n} card${n === 1 ? '' : 's'} due`
@@ -6058,8 +6111,8 @@ function refreshFolderDueBadge(folderId) {
     if (!span) {
       span = document.createElement('span')
       span.className = 'due-counter'
-      const actions = fli.querySelector('.doc-actions')
-      if (actions) fli.insertBefore(span, actions)
+      const menuBtn = fli.querySelector('.row-menu-btn')
+      if (menuBtn) fli.insertBefore(span, menuBtn)
       else fli.appendChild(span)
     }
     span.title = `${n} card${n === 1 ? '' : 's'} due in this folder`
@@ -8407,6 +8460,15 @@ document.getElementById('doc-list').addEventListener('contextmenu', e => {
 document.getElementById('sidebar-ctx-menu').addEventListener('click', e => {
   const li = e.target.closest('li.ctx-item'); if (!li) return
   if (li.classList.contains('ctx-disabled')) return
+  // "Move to" parent item: on touch (no hover) and on click, toggle the
+  // submenu in place instead of dispatching a no-op action.
+  if (li.dataset.action === 'sb-move-sub') {
+    const wasOpen = li.classList.contains('ctx-open')
+    for (const o of e.currentTarget.querySelectorAll('.ctx-item.ctx-open')) o.classList.remove('ctx-open')
+    if (!wasOpen) li.classList.add('ctx-open')
+    e.stopPropagation()
+    return
+  }
   sidebarCtxDispatch(li.dataset.action, li.dataset.targetId || null)
 })
 
