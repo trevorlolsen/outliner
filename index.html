@@ -10994,7 +10994,10 @@ function ttsPlayFromHere(nodeId) {
     .filter(n => tailSet.has(n.id))
     .map(n => tailSet.has(n.parentId) ? n : { ...n, parentId: null })
   // Roots of the trimmed graph: nodes whose (possibly-rewritten) parent is null.
-  const roots = trimmedNodes.filter(n => n.parentId === null).map(n => n.id)
+  // Order them by `tail` (doc order) so playback starts at the clicked node —
+  // state.nodes is in storage order (IndexedDB) which is not doc order.
+  const rootSet = new Set(trimmedNodes.filter(n => n.parentId === null).map(n => n.id))
+  const roots = tail.filter(id => rootSet.has(id))
   ttsPlay(extractTtsChunks(roots, trimmedNodes, doc))
 }
 
