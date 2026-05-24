@@ -458,6 +458,13 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 .ctx-menu li.ctx-item{padding:5px 12px;font-size:13px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;user-select:none}
 .ctx-menu li.ctx-item:hover,.ctx-menu li.ctx-item.ctx-open{background:var(--bg-3)}
 .ctx-menu li.ctx-item.ctx-disabled{color:var(--text-faintest);cursor:default;pointer-events:none}
+#tts-mini{position:fixed;bottom:16px;right:16px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;box-shadow:var(--shadow);z-index:600;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-muted);max-width:min(720px,calc(100vw - 32px))}
+#tts-mini.hidden{display:none}
+#tts-mini button{background:var(--bg-3);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 10px;font-size:14px;cursor:pointer}
+#tts-mini button:hover{background:var(--bg-3-hover)}
+#tts-mini .tts-field{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)}
+#tts-mini .tts-field select{background:var(--bg-input);border:1px solid var(--border-input);color:var(--text);border-radius:4px;padding:3px 6px;font-size:12px;max-width:180px}
+#tts-mini .tts-now{flex:1;min-width:0;color:var(--text-dim);font-style:italic;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .due-counter{background:var(--accent,#ef4444);color:#fff;font-size:.7em;padding:1px 6px;border-radius:8px;margin-left:6px;line-height:1.4;font-weight:600;flex-shrink:0}
 #card-popover{position:fixed;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:4px 0 0;min-width:200px;z-index:550;box-shadow:var(--shadow);display:flex;flex-direction:column}
 #card-popover.hidden{display:none}
@@ -1010,6 +1017,8 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
     </div>
     <div id="doc-more-menu" class="ctx-menu hidden">
       <ul>
+        <li class="ctx-item" data-action="mb-tts">🔊 Listen to document</li>
+        <li class="ctx-sep"></li>
         <li class="ctx-item" data-action="mb-add-code">Insert code block</li>
         <li class="ctx-item" data-action="mb-toggle-checkbox">Toggle as checkbox</li>
         <li class="ctx-item" data-action="mb-check-off">Toggle checked</li>
@@ -3279,6 +3288,119 @@ function exportMarkdown(doc, nodes) {
 }
 
 // =====================================================================
+// TTS TEXT EXTRACTION
+// =====================================================================
+
+// Strip inline markdown / syntax so the speech synthesizer says the words a
+// reader would say, not the punctuation. Wiki titles, link labels, and
+// noderef contents are kept; emphasis markers, code ticks, and zero-width
+// chars are dropped.
+function stripInlineMarkdown(s) {
+  if (!s) return ''
+  let t = String(s)
+  // Resolve noderefs ((uuid)) to indexed content; fall back to "reference".
+  t = t.replace(/\(\(([0-9a-fA-F-]{8,})\)\)/g, (_, nid) => {
+    const meta = searchIndex.nodeMeta.get(nid)
+    return meta?.content ? meta.content : 'reference'
+  })
+  // Wiki link [[Title]] -> Title
+  t = t.replace(/\[\[([^\]\n]+)\]\]/g, (_, title) => title.trim())
+  // Markdown link [label](url) -> label
+  t = t.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, label) => label)
+  // Inline code `x`
+  t = t.replace(/`+([^`]*)`+/g, (_, body) => body)
+  // Strikethrough ~~x~~
+  t = t.replace(/~~([^~]+)~~/g, (_, body) => body)
+  // Bold **x** / __x__
+  t = t.replace(/\*\*([^*]+)\*\*/g, (_, body) => body)
+  t = t.replace(/__([^_]+)__/g, (_, body) => body)
+  // Italic *x* / _x_ (single delim; avoid touching list markers since we
+  // operate on node.content which has already been stripped of bullets).
+  t = t.replace(/(^|\s)\*([^*\n]+)\*/g, (_, lead, body) => lead + body)
+  t = t.replace(/(^|\s)_([^_\n]+)_/g, (_, lead, body) => lead + body)
+  // Drop zero-width chars used as no-op separators in some menus.
+  t = t.replace(/[​-‍﻿]/g, '')
+  // Collapse whitespace.
+  t = t.replace(/\s+/g, ' ').trim()
+  return t
+}
+
+// Split a long string into ~chunks of <= maxLen, preferring sentence
+// boundaries (`. ` `! ` `? `). Used to keep individual SpeechSynthesisUtterance
+// payloads short enough to dodge Chromium's silent-cutoff bug on long inputs.
+function splitForTts(text, maxLen = 200) {
+  const out = []
+  let s = text.trim()
+  if (!s) return out
+  while (s.length > maxLen) {
+    let cut = -1
+    for (const sep of ['. ', '! ', '? ', '; ', ', ', ' ']) {
+      const idx = s.lastIndexOf(sep, maxLen)
+      if (idx > 40) { cut = idx + sep.length; break }
+    }
+    if (cut < 0) cut = maxLen
+    out.push(s.slice(0, cut).trim())
+    s = s.slice(cut).trim()
+  }
+  if (s) out.push(s)
+  return out
+}
+
+// Build TTS chunks for a list of root node ids. Walks each root + all
+// descendants in tree order regardless of `collapsed` state (per UX
+// decision). Returns [{ nodeId, text }, ...] suitable for ttsPlay.
+function extractTtsChunks(rootIds, nodes, doc) {
+  const chunks = []
+  const push = (nodeId, text) => {
+    const stripped = stripInlineMarkdown(text)
+    if (!stripped) return
+    for (const piece of splitForTts(stripped)) chunks.push({ nodeId, text: piece })
+  }
+  const visit = (node) => {
+    if (!node) return
+    if (node.kind === 'text') {
+      if (node.headingLevel) {
+        const lvl = Math.min(6, Math.max(1, node.headingLevel))
+        push(node.id, `Heading level ${lvl}. ` + (node.content || ''))
+      } else if (node.role === 'callout' || node.role === 'fenced-div') {
+        const label = node.divClass || (node.role === 'callout' ? 'callout' : 'aside')
+        push(node.id, `${label}. ` + (node.content || ''))
+      } else if (node.role === 'blockquote') {
+        push(node.id, 'Quote. ' + (node.content || ''))
+      } else {
+        push(node.id, node.content || '')
+      }
+    } else if (node.kind === 'checkbox') {
+      const prefix = node.checked ? 'Done. ' : 'Not done. '
+      push(node.id, prefix + (node.content || ''))
+    } else if (node.kind === 'code') {
+      const lang = (node.content || '').trim() || 'plain text'
+      chunks.push({ nodeId: node.id, text: `${lang} code block.` })
+    } else if (node.kind === 'math') {
+      chunks.push({ nodeId: node.id, text: 'Equation.' })
+    } else if (node.kind === 'table') {
+      const rows = node.tableData?.rows?.length ?? 0
+      const cols = node.tableData?.header?.length ?? 0
+      chunks.push({ nodeId: node.id, text: `Table with ${rows} ${rows === 1 ? 'row' : 'rows'} and ${cols} ${cols === 1 ? 'column' : 'columns'}.` })
+    } else if (node.kind === 'image') {
+      const alt = (node.imageAlt || '').trim()
+      chunks.push({ nodeId: node.id, text: alt ? `Image. ${alt}` : 'Image.' })
+    } else if (node.kind === 'hr') {
+      chunks.push({ nodeId: node.id, text: 'Section break.' })
+    } else if (node.kind === 'raw' || node.kind === 'footnote-def') {
+      push(node.id, node.content || '')
+    }
+    const kids = sortedChildren(nodes, node.id, doc.id)
+    for (const k of kids) visit(k)
+  }
+  for (const rid of rootIds) {
+    const n = nodes.find(x => x.id === rid)
+    if (n) visit(n)
+  }
+  return chunks
+}
+
+// =====================================================================
 // PIPE-TABLE HELPERS
 // =====================================================================
 
@@ -4803,6 +4925,7 @@ function lockVault() {
   closePalette()
   closeSearchView()
   closeSession()
+  if (typeof ttsStop === 'function') ttsStop()
   searchView.history = []
   for (const [id] of cmInstances) destroyCM(id)
   stopAutoLockTimer()
@@ -5175,6 +5298,8 @@ function renderCtxMenu(nodeId, el) {
     ${item('ctx-preview', '👁 Render preview')}
     ${sep()}
     ${item('study-here', '🎴 Study cards under here')}
+    ${sep()}
+    ${item('ctx-tts', '🔊 Listen to this & children')}
     ${sep()}
     ${item('ctx-delete', 'Delete', SHORTCUTS['delete'].keys)}
     ${item('ctx-delete-checked', 'Delete checked items', '', !hasCheckedDesc)}
@@ -9203,6 +9328,7 @@ document.getElementById('doc-more-menu').addEventListener('click', e => {
   else if (a === 'mb-zoom-in')         docBarRun('zoom-in')
   else if (a === 'mb-zoom-out')        docBarRun('zoom-out')
   else if (a === 'mb-delete')          docBarRun('delete')
+  else if (a === 'mb-tts')             ttsPlayDoc()
 })
 
 // Restore raw text when a math- or link-rendered node is focused for editing.
@@ -10512,6 +10638,7 @@ document.getElementById('node-ctx-menu').addEventListener('click', e => {
   else if (action === 'ctx-expand-siblings') applyOp(opExpandSiblings(state.nodes, nodeId))
   else if (action === 'ctx-zoom') { state.zoomedId = nodeId; renderEditor() }
   else if (action === 'study-here') { openSession(nodeId) }
+  else if (action === 'ctx-tts') { ttsPlayFromNode(nodeId) }
   else if (action === 'ctx-delete') {
     const node = state.nodes.find(n => n.id === nodeId)
     if (!node) return
@@ -10583,12 +10710,234 @@ function updateStatusBar() {
 }
 
 // =====================================================================
+// TEXT-TO-SPEECH
+// =====================================================================
+
+const tts = {
+  queue: [], index: 0,
+  playing: false, paused: false,
+  voiceURI: null, rate: 1.0, pitch: 1.0,
+  voices: [], voicesLoaded: false,
+}
+const TTS_RATES = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0]
+
+function ttsSupported() {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window
+}
+
+function ttsLoadVoices() {
+  if (!ttsSupported()) return
+  const list = window.speechSynthesis.getVoices()
+  if (!list.length) return
+  tts.voices = list
+  tts.voicesLoaded = true
+  if (!tts.voiceURI || !list.some(v => v.voiceURI === tts.voiceURI)) {
+    const lang = (navigator.language || 'en').toLowerCase()
+    const match = list.find(v => v.lang && v.lang.toLowerCase().startsWith(lang.slice(0, 2)))
+    tts.voiceURI = (match || list[0]).voiceURI
+  }
+  ttsRenderMini()
+}
+
+async function ttsLoadSettings() {
+  const saved = await getAppState('ttsSettings', null)
+  if (saved && typeof saved === 'object') {
+    if (typeof saved.rate === 'number') tts.rate = saved.rate
+    if (typeof saved.pitch === 'number') tts.pitch = saved.pitch
+    if (typeof saved.voiceURI === 'string') tts.voiceURI = saved.voiceURI
+  }
+}
+
+function ttsSaveSettings() {
+  setAppState('ttsSettings', { rate: tts.rate, pitch: tts.pitch, voiceURI: tts.voiceURI })
+}
+
+function ttsBuildUtterance(chunk) {
+  const u = new SpeechSynthesisUtterance(chunk.text)
+  u.rate = tts.rate
+  u.pitch = tts.pitch
+  const v = tts.voices.find(x => x.voiceURI === tts.voiceURI)
+  if (v) { u.voice = v; u.lang = v.lang }
+  u.onend = () => {
+    if (!tts.playing) return
+    tts.index += 1
+    if (tts.index >= tts.queue.length) { ttsStop(); return }
+    ttsSpeakCurrent()
+  }
+  u.onerror = () => {
+    if (!tts.playing) return
+    tts.index += 1
+    if (tts.index >= tts.queue.length) { ttsStop(); return }
+    ttsSpeakCurrent()
+  }
+  return u
+}
+
+function ttsSpeakCurrent() {
+  if (!ttsSupported()) return
+  const chunk = tts.queue[tts.index]
+  if (!chunk) { ttsStop(); return }
+  ttsRenderMini()
+  window.speechSynthesis.speak(ttsBuildUtterance(chunk))
+}
+
+function ttsPlay(chunks) {
+  if (!ttsSupported() || !chunks.length) return
+  window.speechSynthesis.cancel()
+  tts.queue = chunks
+  tts.index = 0
+  tts.playing = true
+  tts.paused = false
+  showTtsMini()
+  ttsSpeakCurrent()
+}
+
+function ttsPause() {
+  if (!ttsSupported() || !tts.playing) return
+  window.speechSynthesis.pause()
+  tts.paused = true
+  ttsRenderMini()
+}
+
+function ttsResume() {
+  if (!ttsSupported() || !tts.playing) return
+  window.speechSynthesis.resume()
+  tts.paused = false
+  ttsRenderMini()
+}
+
+function ttsStop() {
+  if (!ttsSupported()) return
+  window.speechSynthesis.cancel()
+  tts.playing = false
+  tts.paused = false
+  tts.queue = []
+  tts.index = 0
+  hideTtsMini()
+}
+
+// Apply a new rate/voice immediately: cancel the in-flight utterance and
+// re-speak the same chunk so the listener hears the change at once.
+function ttsApplyChangeMidPlayback() {
+  if (!tts.playing) return
+  window.speechSynthesis.cancel()
+  if (tts.paused) { tts.paused = false }
+  ttsSpeakCurrent()
+}
+
+function ttsPlayFromNode(nodeId) {
+  if (!ttsSupported()) return
+  const doc = state.docs.find(d => d.id === state.activeDocId)
+  if (!doc) return
+  ttsPlay(extractTtsChunks([nodeId], state.nodes, doc))
+}
+
+function ttsPlayDoc() {
+  if (!ttsSupported()) return
+  const doc = state.docs.find(d => d.id === state.activeDocId)
+  if (!doc) return
+  const roots = sortedChildren(state.nodes, null, doc.id)
+  ttsPlay(extractTtsChunks(roots.map(r => r.id), state.nodes, doc))
+}
+
+function showTtsMini() {
+  const el = document.getElementById('tts-mini')
+  if (!el) return
+  el.classList.remove('hidden')
+  ttsRenderMini()
+}
+
+function hideTtsMini() {
+  const el = document.getElementById('tts-mini')
+  if (!el) return
+  el.classList.add('hidden')
+}
+
+function ttsRenderMini() {
+  const el = document.getElementById('tts-mini')
+  if (!el || el.classList.contains('hidden')) return
+  const playBtn = el.querySelector('#tts-playpause')
+  if (playBtn) {
+    playBtn.textContent = tts.paused ? '▶' : '⏸'
+    playBtn.title = tts.paused ? 'Resume' : 'Pause'
+  }
+  const rateSel = el.querySelector('#tts-rate')
+  if (rateSel) rateSel.value = String(tts.rate)
+  const voiceSel = el.querySelector('#tts-voice')
+  if (voiceSel) {
+    if (voiceSel.dataset.voicesLen !== String(tts.voices.length)) {
+      voiceSel.innerHTML = ''
+      if (!tts.voices.length) {
+        const opt = document.createElement('option')
+        opt.value = ''; opt.textContent = 'Loading voices…'
+        voiceSel.appendChild(opt)
+      } else {
+        for (const v of tts.voices) {
+          const opt = document.createElement('option')
+          opt.value = v.voiceURI
+          opt.textContent = `${v.name} (${v.lang})`
+          voiceSel.appendChild(opt)
+        }
+      }
+      voiceSel.dataset.voicesLen = String(tts.voices.length)
+    }
+    if (tts.voiceURI) voiceSel.value = tts.voiceURI
+  }
+  const now = el.querySelector('#tts-now')
+  if (now) {
+    const t = tts.queue[tts.index]?.text || ''
+    now.textContent = t.length > 80 ? t.slice(0, 80) + '…' : t
+  }
+}
+
+function initTtsControls() {
+  if (!ttsSupported()) {
+    const mini = document.getElementById('tts-mini')
+    if (mini) mini.remove()
+    return
+  }
+  const el = document.getElementById('tts-mini')
+  if (!el) return
+  // Populate rate options once.
+  const rateSel = el.querySelector('#tts-rate')
+  if (rateSel && !rateSel.options.length) {
+    for (const r of TTS_RATES) {
+      const opt = document.createElement('option')
+      opt.value = String(r); opt.textContent = `${r}×`
+      rateSel.appendChild(opt)
+    }
+    rateSel.value = String(tts.rate)
+  }
+  el.querySelector('#tts-playpause')?.addEventListener('click', () => {
+    if (tts.paused) ttsResume(); else ttsPause()
+  })
+  el.querySelector('#tts-stop')?.addEventListener('click', () => ttsStop())
+  rateSel?.addEventListener('change', () => {
+    const v = parseFloat(rateSel.value)
+    if (!isFinite(v) || v <= 0) return
+    tts.rate = v
+    ttsSaveSettings()
+    ttsApplyChangeMidPlayback()
+  })
+  el.querySelector('#tts-voice')?.addEventListener('change', (e) => {
+    tts.voiceURI = e.target.value
+    ttsSaveSettings()
+    ttsApplyChangeMidPlayback()
+  })
+  // Voice list is async in Chrome.
+  window.speechSynthesis.addEventListener?.('voiceschanged', ttsLoadVoices)
+  ttsLoadVoices()
+}
+
+// =====================================================================
 // INIT
 // =====================================================================
 
 async function init() {
   await loadTheme()
   await loadAutoLockSetting()
+  await ttsLoadSettings()
+  initTtsControls()
   loadArgon2()  // warm the WASM fetch so the new-vault path doesn't pay the cost on first click
   cloudRevealEntryPoints()
   state.vaults = await getAllVaults()
@@ -10711,6 +11060,13 @@ if ('serviceWorker' in navigator) {
 </script>
 <div id="node-ctx-menu" class="ctx-menu hidden"></div>
 <div id="sidebar-ctx-menu" class="ctx-menu hidden"></div>
+<div id="tts-mini" class="hidden" role="region" aria-label="Text-to-speech playback">
+  <button id="tts-playpause" type="button" title="Pause">⏸</button>
+  <button id="tts-stop" type="button" title="Stop">⏹</button>
+  <label class="tts-field"><span>Speed</span><select id="tts-rate"></select></label>
+  <label class="tts-field"><span>Voice</span><select id="tts-voice"></select></label>
+  <span id="tts-now" class="tts-now"></span>
+</div>
 <div id="sidebar-new-menu" class="ctx-menu hidden">
   <ul>
     <li class="ctx-item" data-action="new-doc">New document</li>
