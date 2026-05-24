@@ -1894,7 +1894,11 @@ async function importSnapshot(json, password, vaultName) {
 // =====================================================================
 
 const FIREBASE_SDK_VERSION = '10.13.0'
-const CLOUD_SCHEMA_VERSION = 1
+// v1: one Firestore doc per record (document / folder / node)
+// v2: per-document bundles + single tree blob — drastically fewer reads/writes.
+//     New vaults always start on v2. v1 vaults are migrated on their first
+//     push under this code (legacy `records/` is deleted after bundles land).
+const CLOUD_SCHEMA_VERSION = 2
 
 // Firestore caps single docs at ~1 MB. Small assets fit inline; larger ones
 // are split into ~900 KB base64 chunks stored under
@@ -2108,20 +2112,37 @@ async function cloudPullNewVault(cloudVaultId, password) {
   return { ctx, localVaultId }
 }
 
-// ---- Cloud manifest fetch (id + updatedAt only — cheap reads) -----------
+// ---- Cloud manifest fetch -----------------------------------------------
+// Firestore's client SDK can't project specific fields, so getDocs() already
+// streams the full record/asset documents over the wire. We keep ciphertext +
+// iv on the manifest so the pull/push paths can write them directly instead of
+// re-fetching every doc one-by-one (an N+1 round-trip that made big vaults
+// hang). Inline assets ship their ciphertext here too; chunked assets only
+// expose chunkCount and the chunks subcollection still has to be fetched.
 async function cloudFetchManifest(uid, cvId) {
   const { getDocs } = cloud.fbStore
   const recSnap = await getDocs(cloudVaultRecordsCol(uid, cvId))
   const assetSnap = await getDocs(cloudVaultAssetsCol(uid, cvId))
-  const records = new Map() // id -> { updatedAt, store }
+  const records = new Map() // id -> { updatedAt, store, ciphertext, iv }
   for (const d of recSnap.docs) {
     const data = d.data()
-    records.set(d.id, { updatedAt: data.updatedAt || 0, store: data.store })
+    records.set(d.id, {
+      updatedAt: data.updatedAt || 0,
+      store: data.store,
+      ciphertext: data.ciphertext,
+      iv: data.iv,
+    })
   }
-  const assets = new Map() // id -> { updatedAt, kind }
+  const assets = new Map() // id -> { updatedAt, kind, iv, chunkCount, ciphertext? }
   for (const d of assetSnap.docs) {
     const data = d.data()
-    assets.set(d.id, { updatedAt: data.updatedAt || 0, kind: data.kind })
+    assets.set(d.id, {
+      updatedAt: data.updatedAt || 0,
+      kind: data.kind,
+      iv: data.iv,
+      chunkCount: data.chunkCount ?? 1,
+      ciphertext: data.ciphertext,
+    })
   }
   return { records, assets }
 }
@@ -2129,6 +2150,9 @@ async function cloudFetchManifest(uid, cvId) {
 // ---- Dry-run classification: returns conflicts (with decrypted previews) so
 // the UI can ask the user how to resolve before any write happens. Used by
 // both push and pull paths — conflict detection is symmetric.
+//
+// Dispatches by cloud schema: v2 detects conflicts at document-bundle
+// granularity, v1 detects at per-record granularity (legacy until migration).
 async function cloudClassifyChanges(localVaultId, ctx) {
   if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
   const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
@@ -2138,26 +2162,67 @@ async function cloudClassifyChanges(localVaultId, ctx) {
   const since = link.lastSyncedAt || 0
   // First sync = no shared history → newer-wins downstream, nothing to ask.
   if (!since) return { conflicts: [] }
+  const { getDoc } = cloud.fbStore
+  const metaSnap = await getDoc(cloudVaultMetaDoc(uid, cvId))
+  const schemaVersion = (metaSnap.exists() ? metaSnap.data().schemaVersion : 1) || 1
+  if (schemaVersion >= 2) return cloudClassifyChangesV2(localVaultId, ctx, { uid, cvId, since })
+  return cloudClassifyChangesV1(localVaultId, ctx, { uid, cvId, since })
+}
+
+async function cloudClassifyChangesV1(localVaultId, ctx, { uid, cvId, since }) {
   const manifest = await cloudFetchManifest(uid, cvId)
   const localRecs = await db.encryptedRecords.where('vaultId').equals(localVaultId).toArray()
-  const localById = new Map(localRecs.map(r => [r.id, r]))
-  const { getDoc, doc } = cloud.fbStore
   const conflicts = []
-  // Iterate intersection of local + cloud, looking for both-changed-since-sync.
   for (const lr of localRecs) {
     const cm = manifest.records.get(lr.id)
     if (!cm || cm.updatedAt === lr.updatedAt) continue
     if (lr.updatedAt <= since || cm.updatedAt <= since) continue
+    if (!cm.ciphertext) continue
     const localPlain = await decPayload(lr.ciphertext, lr.iv, ctx)
-    const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', lr.id))
-    if (!cSnap.exists()) continue
-    const cData = cSnap.data()
-    const cloudPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
+    const cloudPlain = await decPayload(cm.ciphertext, cm.iv, ctx)
     conflicts.push({
       id: lr.id, store: lr.store,
       localPreview: cloudPreviewOf(lr.store, localPlain),
       cloudPreview: cloudPreviewOf(lr.store, cloudPlain),
       localUpdatedAt: lr.updatedAt,
+      cloudUpdatedAt: cm.updatedAt,
+    })
+  }
+  return { conflicts }
+}
+
+async function cloudClassifyChangesV2(localVaultId, ctx, { uid, cvId, since }) {
+  // Only fetch bundles that changed in cloud since last sync — server-filtered.
+  const bundles = await cloudFetchBundleManifest(uid, cvId, since)
+  if (!bundles.size) return { conflicts: [] }
+  const [localDocs, localNodes] = await Promise.all([getAllDocs(ctx), getAllNodes(ctx)])
+  const localDocById = new Map(localDocs.map(d => [d.id, d]))
+  const localBundleTs = new Map()
+  for (const doc of localDocs) {
+    let max = doc.updatedAt || 0
+    for (const n of localNodes) {
+      if (n.documentId === doc.id && (n.updatedAt || 0) > max) max = n.updatedAt
+    }
+    localBundleTs.set(doc.id, max)
+  }
+  const conflicts = []
+  for (const [docId, cm] of bundles) {
+    const localTs = localBundleTs.get(docId) || 0
+    if (localTs === cm.updatedAt) continue
+    if (localTs <= since || cm.updatedAt <= since) continue
+    // Both sides changed since last sync — conflict. Decrypt for preview.
+    const fetched = cm.ciphertext
+      ? { ciphertext: cm.ciphertext, meta: { iv: cm.iv } }
+      : await cloudFetchBlob(uid, cvId, 'bundles', docId, cm)
+    if (!fetched) continue
+    const cPlain = await decPayload(fetched.ciphertext, fetched.meta.iv, ctx)
+    const cDoc = cloudUnpackDocumentBundle(cPlain).document
+    const lDoc = localDocById.get(docId)
+    conflicts.push({
+      id: docId, store: 'documents',
+      localPreview: lDoc?.title || 'Untitled',
+      cloudPreview: cDoc?.title || 'Untitled',
+      localUpdatedAt: localTs,
       cloudUpdatedAt: cm.updatedAt,
     })
   }
@@ -2178,6 +2243,9 @@ function cloudPreviewOf(store, plain) {
 }
 
 // ---- Push: upload local→cloud, detect conflicts, never overwrite newer cloud
+// Always uses sync schema v2 (per-document bundles). On a first push from a
+// v1 vault, also migrates: flips `schemaVersion` to 2 on the meta doc and
+// deletes the legacy `records/` subcollection.
 async function cloudPush(localVaultId, ctx, options = {}) {
   if (!(await cloudEnsureLoaded())) throw new Error('Cloud sync not configured.')
   const uid = cloudUserUid(); if (!uid) throw new Error('Sign in first.')
@@ -2185,117 +2253,238 @@ async function cloudPush(localVaultId, ctx, options = {}) {
   if (!link?.cloudVaultId) throw new Error('Vault is not linked to cloud yet.')
   const cvId = link.cloudVaultId
   const since = link.lastSyncedAt || 0
-  // On the very first sync against a given link (since=0) there is no shared
-  // history to detect conflicts against, so we apply newer-wins instead of
-  // duplicating. Real conflict detection kicks in on later syncs once
-  // lastSyncedAt is set.
+  // First sync against this link has no shared history → newer-wins, no
+  // conflict prompts. Real conflict detection kicks in on later syncs.
   const isFirstSync = !since
-  // conflictStrategy: 'both' (default — create duplicates tagged [conflict])
-  //                   'overwrite' (force-push local; discard cloud-side edits)
+  // 'both' = create duplicate document tagged "(cloud conflict)" locally and
+  //          push that too; 'overwrite' = force-push local, discard cloud edits.
   const conflictStrategy = options.conflictStrategy || 'both'
-  const manifest = await cloudFetchManifest(uid, cvId)
 
-  // Local records, raw rows (we re-use the encrypted ciphertext as-is).
-  const localRecs = await db.encryptedRecords.where('vaultId').equals(localVaultId).toArray()
+  // Read the current cloud meta to learn its schema version. We always push
+  // v2 — meta tells us whether to also migrate (delete `records/`) afterwards.
+  const { getDoc, updateDoc } = cloud.fbStore
+  const metaSnap = await getDoc(cloudVaultMetaDoc(uid, cvId))
+  const cmeta = metaSnap.exists() ? metaSnap.data() : null
+  const cloudSchemaVersion = cmeta?.schemaVersion || 1
+  const needsMigration = cloudSchemaVersion < 2
+
+  // Read local state. getAllNodes decrypts all nodes — we need their
+  // documentId + updatedAt to group by document, and ciphertext to bundle.
+  const [localDocs, localFolders, localNodes] = await Promise.all([
+    getAllDocs(ctx), getAllFolders(ctx), getAllNodes(ctx),
+  ])
   const localAssets = await db.encryptedAssets.where('vaultId').equals(localVaultId).toArray()
 
-  let pushed = 0, skipped = 0, conflicts = 0
-  const conflictRecords = [] // { localRec, cloudId } for follow-up duplicate handling
+  // Server-side filtered bundle manifest: on re-sync only fetches bundles
+  // that changed in the cloud since lastSyncedAt. On first sync (or v1→v2
+  // migration) fetches everything so we can do newer-wins reconciliation.
+  // After migration the cloud `bundles/` subcollection is empty, so this is
+  // ~free for vaults being migrated up from v1. All three reads are
+  // independent — fire them in parallel.
+  const sinceArg = isFirstSync ? 0 : since
+  const [cloudBundles, cloudTree, cloudAssets] = await Promise.all([
+    cloudFetchBundleManifest(uid, cvId, sinceArg),
+    cloudFetchTreeBundle(uid, cvId),
+    cloudFetchAssetManifest(uid, cvId, sinceArg),
+  ])
 
-  // ---- records ----
-  const { setDoc, writeBatch, doc, getDoc } = cloud.fbStore
-  const batchOps = []
-  for (const lr of localRecs) {
-    const cm = manifest.records.get(lr.id)
-    if (cm && cm.updatedAt === lr.updatedAt) { skipped++; continue }
-    if (cm && cm.updatedAt > lr.updatedAt && conflictStrategy !== 'overwrite') {
-      skipped++; continue  // cloud strictly newer (and we're not force-overwriting)
+  // Build local bundles (one per outliner document) and the folder tree blob.
+  const localBundles = new Map()  // docId -> { plaintext, bundleUpdatedAt }
+  for (const doc of localDocs) {
+    localBundles.set(doc.id, cloudBuildDocumentBundle(doc, localNodes))
+  }
+  const localTree = cloudBuildTreeBundle(localFolders)
+
+  // ---- decide what to push, collect bundle conflicts ----
+  let pushed = 0, skipped = 0, conflicts = 0
+  const toPushBundles = []     // { docId, plaintext, bundleUpdatedAt }
+  const conflictedBundles = [] // { docId, cloudMeta }
+
+  for (const [docId, lb] of localBundles) {
+    const cm = cloudBundles.get(docId)
+    if (cm && cm.updatedAt === lb.bundleUpdatedAt) { skipped++; continue }
+    if (cm && cm.updatedAt > lb.bundleUpdatedAt && conflictStrategy !== 'overwrite') {
+      skipped++; continue  // cloud strictly newer (and not force-overwriting)
     }
     if (!isFirstSync) {
-      const localChanged = lr.updatedAt > since
+      const localChanged = lb.bundleUpdatedAt > since
       const cloudChanged = cm && cm.updatedAt > since
       if (localChanged && cloudChanged) {
         if (conflictStrategy !== 'overwrite') {
           conflicts++
-          conflictRecords.push({ localRec: lr })
+          conflictedBundles.push({ docId, cloudMeta: cm })
           continue
         }
-        // conflictStrategy === 'overwrite': fall through to push local
+        // 'overwrite' → fall through to push local
+      } else if (!localChanged) {
+        skipped++; continue  // nothing changed locally for this doc
       }
     }
-    batchOps.push({ id: lr.id, store: lr.store, ciphertext: lr.ciphertext, iv: lr.iv, updatedAt: lr.updatedAt })
+    toPushBundles.push({ docId, ...lb })
   }
-  await cloudCommitRecordWrites(uid, cvId, batchOps)
-  pushed += batchOps.length
 
-  // ---- assets ---- (inline if small, chunked into a subcollection if not)
+  // ---- push bundles in parallel (bounded) ----
+  await runWithConcurrency(toPushBundles, 6, async ({ docId, plaintext, bundleUpdatedAt }) => {
+    const { ciphertext, iv } = await encPayload(plaintext, ctx)
+    await cloudPushBundle(uid, cvId, docId, ciphertext, iv, bundleUpdatedAt)
+  })
+  pushed += toPushBundles.length
+
+  // ---- push tree if changed (newer-wins; folders rarely conflict) ----
+  let pushedTree = false
+  const cloudTreeUpdatedAt = cloudTree?.meta?.updatedAt || 0
+  const localTreeUpdatedAt = localTree.treeUpdatedAt
+  const treeShouldPush = localTreeUpdatedAt > 0 && (
+    isFirstSync
+      ? localTreeUpdatedAt > cloudTreeUpdatedAt
+      : (localTreeUpdatedAt > since && (cloudTreeUpdatedAt <= since || conflictStrategy === 'overwrite'))
+  )
+  if (treeShouldPush) {
+    const { ciphertext, iv } = await encPayload(localTree.plaintext, ctx)
+    await cloudPushTree(uid, cvId, ciphertext, iv, localTreeUpdatedAt)
+    pushedTree = true
+  }
+
+  // ---- push assets (parallel; same logic as before, now bounded-concurrent) ----
   let pushedAssets = 0, conflictAssets = 0, skippedAssetsTooBig = 0
+  const toPushAssets = []
   for (const la of localAssets) {
-    const cm = manifest.assets.get(la.id)
+    const cm = cloudAssets.get(la.id)
     if (cm && cm.updatedAt === la.updatedAt) continue
     if (cm && cm.updatedAt > la.updatedAt) continue
     if (!isFirstSync) {
       const localChanged = la.updatedAt > since
       const cloudChanged = cm && cm.updatedAt > since
       if (localChanged && cloudChanged) { conflictAssets++; continue }
+      if (!localChanged) continue
     }
     const b64 = la.ciphertext || ''
     if (b64.length > CLOUD_ASSET_MAX_TOTAL_B64) { skippedAssetsTooBig++; continue }
+    toPushAssets.push(la)
+  }
+  await runWithConcurrency(toPushAssets, 6, async la => {
     await cloudPushAsset(uid, cvId, la)
-    pushedAssets++
-  }
+  })
+  pushedAssets = toPushAssets.length
 
-  // ---- resolve record conflicts by creating local duplicates ----
-  // For each conflicted record we fetch the cloud version, decrypt it, build a
-  // sibling/duplicate locally (so user sees both), then push the duplicate up.
-  const duplicateOps = []
-  for (const { localRec } of conflictRecords) {
-    const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', localRec.id))
-    if (!cSnap.exists()) continue
-    const cData = cSnap.data()
-    const cPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
-    if (cData.store === 'documents') {
-      const dup = await cloudMakeDocumentDuplicate(ctx, cPlain)
-      duplicateOps.push(...dup)
-    } else if (cData.store === 'nodes') {
-      const dup = await cloudMakeNodeDuplicate(ctx, cPlain)
-      duplicateOps.push(...dup)
-    } else if (cData.store === 'folders') {
-      const dup = await cloudMakeFolderDuplicate(ctx, cPlain)
-      duplicateOps.push(...dup)
-    }
+  // ---- resolve bundle conflicts: duplicate cloud version locally + push it ----
+  // The local document keeps its in-progress edits; the cloud version is
+  // cloned as a sibling document tagged "(cloud conflict)" so the user sees
+  // both versions and can copy material across manually.
+  const duplicates = []
+  for (const { docId, cloudMeta } of conflictedBundles) {
+    const fetched = await cloudFetchBlob(uid, cvId, 'bundles', docId, cloudMeta)
+    if (!fetched) continue
+    const cPlain = await decPayload(fetched.ciphertext, fetched.meta.iv, ctx)
+    const { document: cloudDoc, nodes: cloudNodes } = cloudUnpackDocumentBundle(cPlain)
+    const dup = await cloudMakeDocumentBundleDuplicate(ctx, cloudDoc, cloudNodes)
+    duplicates.push(dup)
   }
-  // Push the duplicates immediately so other devices learn about them.
-  if (duplicateOps.length) await cloudCommitRecordWrites(uid, cvId, duplicateOps)
+  await runWithConcurrency(duplicates, 6, async ({ docId, plaintext, bundleUpdatedAt }) => {
+    const { ciphertext, iv } = await encPayload(plaintext, ctx)
+    await cloudPushBundle(uid, cvId, docId, ciphertext, iv, bundleUpdatedAt)
+  })
+
+  // ---- migrate v1 → v2: flip schema flag, delete legacy `records/` ----
+  let migrated = false
+  if (needsMigration && cmeta) {
+    await updateDoc(cloudVaultMetaDoc(uid, cvId), { schemaVersion: 2 })
+    await cloudDeleteLegacyRecords(uid, cvId)
+    migrated = true
+  } else if (!cmeta) {
+    // Meta doc somehow missing (shouldn't happen for a linked vault) — leave
+    // alone rather than fabricate one; user can re-link.
+  }
 
   const stamp = now()
   await cloudSetVaultLink(localVaultId, { lastPushedAt: stamp, lastSyncedAt: stamp })
-  return { pushed, pushedAssets, skipped, conflicts, conflictAssets, skippedAssetsTooBig, duplicates: duplicateOps.length }
-}
-
-// Firestore writeBatch is capped at 500 ops; chunk transparently.
-async function cloudCommitRecordWrites(uid, cvId, ops) {
-  if (!ops.length) return
-  const { writeBatch, doc } = cloud.fbStore
-  for (let i = 0; i < ops.length; i += 450) {
-    const batch = writeBatch(cloud.db)
-    for (const op of ops.slice(i, i + 450)) {
-      batch.set(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', op.id), {
-        store: op.store, ciphertext: op.ciphertext, iv: op.iv, updatedAt: op.updatedAt,
-      })
-    }
-    await batch.commit()
+  return {
+    pushed, pushedAssets, skipped, conflicts, conflictAssets, skippedAssetsTooBig,
+    duplicates: duplicates.length, pushedTree, migrated,
   }
 }
 
-// Push one asset. Small enough → inline ciphertext on the asset doc; larger →
-// chunkCount: N with the base64 split across assets/{id}/chunks/{0..N-1}.
-async function cloudPushAsset(uid, cvId, la) {
-  const { setDoc, deleteDoc, writeBatch, doc, getDocs, collection } = cloud.fbStore
-  const b64 = la.ciphertext || ''
-  // Wipe any stale chunks from a prior version of this asset so we never end
-  // up reading a mix of old + new chunks back.
-  const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets', la.id, 'chunks')
+// Manifest of cloud assets — server-filtered to changed-since-`since` on
+// re-sync. Same shape as the legacy v1 manifest but only the assets half.
+async function cloudFetchAssetManifest(uid, cvId, since = 0) {
+  const { getDocs, query, where, collection } = cloud.fbStore
+  const ref = collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets')
+  const snap = since > 0 ? await getDocs(query(ref, where('updatedAt', '>', since)))
+                         : await getDocs(ref)
+  const assets = new Map()
+  for (const d of snap.docs) {
+    const data = d.data()
+    assets.set(d.id, {
+      updatedAt: data.updatedAt || 0,
+      kind: data.kind,
+      iv: data.iv,
+      chunkCount: data.chunkCount ?? 1,
+      ciphertext: data.ciphertext,
+    })
+  }
+  return assets
+}
+
+// Build a duplicate document + cloned nodes from a cloud bundle. Local doc is
+// untouched; this creates a new sibling document tagged "(cloud conflict)".
+// Returns the bundle payload so the caller can re-push the duplicate so other
+// devices see it.
+async function cloudMakeDocumentBundleDuplicate(ctx, cloudDoc, cloudNodes) {
+  const newDocId = genId()
+  const newDoc = {
+    ...cloudDoc,
+    id: newDocId,
+    title: `${cloudDoc.title || 'Untitled'} (cloud conflict)`,
+    createdAt: now(), updatedAt: now(),
+  }
+  await putDoc(newDoc, ctx)
+  // Remap node ids so the duplicate has its own fresh ids; keep parent-child
+  // relationships intact via the id map.
+  const idMap = new Map()
+  for (const n of cloudNodes) idMap.set(n.id, genId())
+  const newNodes = cloudNodes.map(n => ({
+    ...n,
+    id: idMap.get(n.id),
+    parentId: n.parentId ? (idMap.get(n.parentId) || null) : null,
+    documentId: newDocId,
+    createdAt: now(), updatedAt: now(),
+  }))
+  for (const n of newNodes) await putNode(n, ctx)
+  const bundleUpdatedAt = newDoc.updatedAt
+  const plaintext = { v: 2, document: newDoc, nodes: newNodes, bundleUpdatedAt }
+  return { docId: newDocId, plaintext, bundleUpdatedAt }
+}
+
+// Bounded-concurrency worker pool. Replaces sequential `for (const x of items)
+// await fn(x)` loops where each call is an independent network round-trip — a
+// pool of `limit` workers drains the queue and returns results in input order.
+async function runWithConcurrency(items, limit, fn) {
+  const results = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (true) {
+      const i = next++
+      if (i >= items.length) return
+      results[i] = await fn(items[i], i)
+    }
+  }
+  const n = Math.min(limit, items.length)
+  if (n <= 0) return results
+  await Promise.all(Array.from({ length: n }, worker))
+  return results
+}
+
+// Generic chunked-blob writer. Stores ciphertext at
+// `<collectionName>/<docId>` as either an inline blob or a chunkCount=N doc
+// with body chunks under `<collectionName>/<docId>/chunks/{0..N-1}`. The meta
+// doc is written LAST so readers that see chunkCount can trust the chunks
+// are all in place. `extraFields` is merged into the meta doc (used for
+// per-collection bookkeeping like `kind` on assets or `v: 2` on bundles).
+async function cloudPushBlob(uid, cvId, collectionName, docId, { ciphertext, iv, updatedAt, extraFields = {} }) {
+  const { setDoc, writeBatch, doc, getDocs, collection } = cloud.fbStore
+  const b64 = ciphertext || ''
+  const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, collectionName, docId, 'chunks')
+  // Wipe stale chunks from a prior version so we never mix old + new chunks.
   const oldChunks = await getDocs(chunksCol)
   if (oldChunks.size) {
     for (let i = 0; i < oldChunks.docs.length; i += 450) {
@@ -2305,16 +2494,13 @@ async function cloudPushAsset(uid, cvId, la) {
     }
   }
   if (b64.length <= CLOUD_ASSET_INLINE_MAX_B64) {
-    await setDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'assets', la.id), {
-      kind: la.kind, iv: la.iv, updatedAt: la.updatedAt,
-      chunkCount: 1, ciphertext: b64,
+    await setDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, collectionName, docId), {
+      ...extraFields, iv, updatedAt, chunkCount: 1, ciphertext: b64,
     })
     return
   }
   const chunks = []
   for (let i = 0; i < b64.length; i += CLOUD_ASSET_CHUNK_B64) chunks.push(b64.slice(i, i + CLOUD_ASSET_CHUNK_B64))
-  // Write chunks first, then the meta doc — readers that see chunkCount can
-  // trust the chunks are all present.
   for (let i = 0; i < chunks.length; i += 450) {
     const batch = writeBatch(cloud.db)
     for (let j = i; j < Math.min(i + 450, chunks.length); j++) {
@@ -2322,28 +2508,131 @@ async function cloudPushAsset(uid, cvId, la) {
     }
     await batch.commit()
   }
-  await setDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'assets', la.id), {
-    kind: la.kind, iv: la.iv, updatedAt: la.updatedAt,
-    chunkCount: chunks.length,
+  await setDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, collectionName, docId), {
+    ...extraFields, iv, updatedAt, chunkCount: chunks.length,
   })
 }
 
-// Pull one asset's ciphertext. Handles both inline and chunked layouts.
-async function cloudFetchAssetCiphertext(uid, cvId, assetId) {
-  const { getDoc, getDocs, doc, collection, query, orderBy } = cloud.fbStore
-  const metaSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'assets', assetId))
-  if (!metaSnap.exists()) return null
-  const meta = metaSnap.data()
+// Generic chunked-blob reader. Handles both inline and chunked layouts.
+// `manifestMeta` (optional) is the meta data from a bulk manifest fetch — when
+// provided we skip the metadata getDoc since the bulk read already returned it.
+async function cloudFetchBlob(uid, cvId, collectionName, docId, manifestMeta = null) {
+  const { getDoc, getDocs, doc, collection } = cloud.fbStore
+  let meta = manifestMeta
+  if (!meta) {
+    const metaSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, collectionName, docId))
+    if (!metaSnap.exists()) return null
+    meta = metaSnap.data()
+  }
   if ((meta.chunkCount ?? 1) <= 1 && meta.ciphertext) return { meta, ciphertext: meta.ciphertext }
-  const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets', assetId, 'chunks')
+  const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, collectionName, docId, 'chunks')
   const snap = await getDocs(chunksCol)
   if (snap.size !== meta.chunkCount) {
-    throw new Error(`Asset ${assetId}: expected ${meta.chunkCount} chunks, got ${snap.size}`)
+    throw new Error(`${collectionName}/${docId}: expected ${meta.chunkCount} chunks, got ${snap.size}`)
   }
   // Sort by numeric chunk id since Firestore returns string-ordered docs.
   const ordered = snap.docs.map(d => ({ idx: Number(d.id), data: d.data().data || '' }))
                             .sort((a, b) => a.idx - b.idx)
   return { meta, ciphertext: ordered.map(c => c.data).join('') }
+}
+
+// Push one asset — thin wrapper around the generic chunked-blob writer.
+async function cloudPushAsset(uid, cvId, la) {
+  return cloudPushBlob(uid, cvId, 'assets', la.id, {
+    ciphertext: la.ciphertext || '',
+    iv: la.iv,
+    updatedAt: la.updatedAt,
+    extraFields: { kind: la.kind },
+  })
+}
+
+// Pull one asset's ciphertext — thin wrapper around the generic reader.
+async function cloudFetchAssetCiphertext(uid, cvId, assetId, manifestMeta = null) {
+  return cloudFetchBlob(uid, cvId, 'assets', assetId, manifestMeta)
+}
+
+// ---- v2 bundle helpers --------------------------------------------------
+// A "bundle" is one outliner document plus all its nodes, encrypted as a
+// single Firestore doc. ~100x reduction in record count for typical vaults.
+// Folders ride in a single "tree" blob since they're few and small.
+
+function cloudBuildDocumentBundle(doc, nodes) {
+  const bundleNodes = nodes.filter(n => n.documentId === doc.id)
+  let bundleUpdatedAt = doc.updatedAt || 0
+  for (const n of bundleNodes) if ((n.updatedAt || 0) > bundleUpdatedAt) bundleUpdatedAt = n.updatedAt
+  const plaintext = { v: 2, document: doc, nodes: bundleNodes, bundleUpdatedAt }
+  return { plaintext, bundleUpdatedAt }
+}
+
+function cloudUnpackDocumentBundle(plaintext) {
+  // plaintext.document and plaintext.nodes are the canonical local shapes
+  // (same fields putDoc/putNode persist), so callers can write them directly.
+  return { document: plaintext.document, nodes: plaintext.nodes || [] }
+}
+
+function cloudBuildTreeBundle(folders) {
+  let treeUpdatedAt = 0
+  for (const f of folders) if ((f.updatedAt || 0) > treeUpdatedAt) treeUpdatedAt = f.updatedAt
+  const plaintext = { v: 2, folders, treeUpdatedAt }
+  return { plaintext, treeUpdatedAt }
+}
+
+function cloudUnpackTreeBundle(plaintext) {
+  return { folders: plaintext.folders || [] }
+}
+
+// Fetch bundle manifest — when `since > 0`, server-side filter so re-syncs
+// only read the changed bundles. The returned map carries inline ciphertext
+// directly; chunked bundles need a follow-up cloudFetchBlob().
+async function cloudFetchBundleManifest(uid, cvId, since = 0) {
+  const { getDocs, query, where, collection } = cloud.fbStore
+  const ref = collection(cloud.db, 'users', uid, 'vaults', cvId, 'bundles')
+  const snap = since > 0 ? await getDocs(query(ref, where('updatedAt', '>', since)))
+                         : await getDocs(ref)
+  const bundles = new Map() // docId -> { updatedAt, chunkCount, ciphertext?, iv }
+  for (const d of snap.docs) {
+    const data = d.data()
+    bundles.set(d.id, {
+      updatedAt: data.updatedAt || 0,
+      chunkCount: data.chunkCount ?? 1,
+      ciphertext: data.ciphertext,
+      iv: data.iv,
+    })
+  }
+  return bundles
+}
+
+// Fetch the singleton tree blob. Returns null if it doesn't exist yet.
+async function cloudFetchTreeBundle(uid, cvId) {
+  const fetched = await cloudFetchBlob(uid, cvId, 'tree', 'bundle')
+  return fetched  // { meta: { updatedAt, iv, chunkCount }, ciphertext } | null
+}
+
+// Same chunked-blob asset cap also applies to bundles — protects free-tier
+// budget if a document accidentally balloons in size.
+async function cloudPushBundle(uid, cvId, docId, ciphertext, iv, updatedAt) {
+  return cloudPushBlob(uid, cvId, 'bundles', docId, {
+    ciphertext, iv, updatedAt, extraFields: { v: 2 },
+  })
+}
+
+async function cloudPushTree(uid, cvId, ciphertext, iv, updatedAt) {
+  return cloudPushBlob(uid, cvId, 'tree', 'bundle', {
+    ciphertext, iv, updatedAt, extraFields: { v: 2 },
+  })
+}
+
+// Delete the entire legacy `records/` subcollection. Called once during the
+// v1→v2 migration after bundles have been written successfully.
+async function cloudDeleteLegacyRecords(uid, cvId) {
+  const { getDocs, writeBatch, collection } = cloud.fbStore
+  const ref = collection(cloud.db, 'users', uid, 'vaults', cvId, 'records')
+  const snap = await getDocs(ref)
+  for (let i = 0; i < snap.docs.length; i += 450) {
+    const batch = writeBatch(cloud.db)
+    for (const d of snap.docs.slice(i, i + 450)) batch.delete(d.ref)
+    await batch.commit()
+  }
 }
 
 // Build a duplicate document (with all its nodes) from a decrypted cloud doc.
@@ -2405,6 +2694,10 @@ async function cloudMakeNodeDuplicate(ctx, cloudNode) {
 }
 
 // ---- Pull: download cloud→local, duplicate on conflict ------------------
+// Dispatches by cloud schema version: v2 vaults use the bundled path
+// (cloudPullV2), older v1 vaults still work via cloudPullV1 until their next
+// push migrates them.
+//
 // fullFetch=true means we just pulled a vault from scratch (cloudPullNewVault)
 // and want everything regardless of timestamps.
 async function cloudPull(localVaultId, ctx, fullFetch = false, options = {}) {
@@ -2413,13 +2706,22 @@ async function cloudPull(localVaultId, ctx, fullFetch = false, options = {}) {
   const link = await cloudGetVaultLink(localVaultId)
   if (!link?.cloudVaultId) throw new Error('Vault is not linked to cloud yet.')
   const cvId = link.cloudVaultId
+  // One getDoc on meta to learn the schema. Cheap and unavoidable on every
+  // pull — same meta read existed before for cloudPullNewVault's password
+  // unlock; for re-syncs this is a single extra read.
+  const { getDoc } = cloud.fbStore
+  const metaSnap = await getDoc(cloudVaultMetaDoc(uid, cvId))
+  const schemaVersion = (metaSnap.exists() ? metaSnap.data().schemaVersion : 1) || 1
+  if (schemaVersion >= 2) return cloudPullV2(localVaultId, ctx, fullFetch, options, { uid, cvId, link })
+  return cloudPullV1(localVaultId, ctx, fullFetch, options, { uid, cvId, link })
+}
+
+// v1 pull: one Firestore doc per record (legacy). Preserved so vaults that
+// were last pushed before this change still pull correctly. Next push from
+// any device migrates them up to v2.
+async function cloudPullV1(localVaultId, ctx, fullFetch, options, { uid, cvId, link }) {
   const since = fullFetch ? -1 : (link.lastSyncedAt || 0)
-  // First sync (fullFetch on a fresh pull, or since=0 on re-link) has no
-  // shared history → newer-wins, no conflict duplication.
   const isFirstSync = fullFetch || !since
-  // conflictStrategy: 'both' (default — duplicate cloud version locally with
-  //                            [conflict] tag, leave local untouched)
-  //                   'overwrite' (force-pull cloud; discard local edits)
   const conflictStrategy = options.conflictStrategy || 'both'
   const manifest = await cloudFetchManifest(uid, cvId)
 
@@ -2427,62 +2729,53 @@ async function cloudPull(localVaultId, ctx, fullFetch = false, options = {}) {
   const localMap = new Map(localRecs.map(r => [r.id, r]))
 
   let pulled = 0, skipped = 0, conflicts = 0
-  const { getDoc, doc } = cloud.fbStore
-
-  // Process records that exist in the cloud.
+  const writes = []
   for (const [id, cm] of manifest.records) {
+    if (!cm.ciphertext) continue
     const local = localMap.get(id)
     if (local && local.updatedAt === cm.updatedAt) { skipped++; continue }
     if (local && local.updatedAt > cm.updatedAt && conflictStrategy !== 'overwrite') {
-      skipped++; continue  // local strictly newer (and we're not force-overwriting)
+      skipped++; continue
     }
     if (!isFirstSync) {
       const cloudChanged = cm.updatedAt > since
       const localChanged = local && local.updatedAt > since
       if (cloudChanged && localChanged && conflictStrategy !== 'overwrite') {
-        // Default behavior: keep both. Create a sibling duplicate of the cloud
-        // version locally so both versions are visible; leave local untouched.
-        const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', id))
-        if (!cSnap.exists()) continue
-        const cData = cSnap.data()
-        const cPlain = await decPayload(cData.ciphertext, cData.iv, ctx)
+        const cPlain = await decPayload(cm.ciphertext, cm.iv, ctx)
         if (cm.store === 'documents') await cloudMakeDocumentDuplicate(ctx, cPlain)
         else if (cm.store === 'nodes') await cloudMakeNodeDuplicate(ctx, cPlain)
         else if (cm.store === 'folders') await cloudMakeFolderDuplicate(ctx, cPlain)
         conflicts++
         continue
       }
-      // Otherwise (conflictStrategy === 'overwrite') fall through to download
-      // and replace the local copy.
     }
-    // Cloud-only or cloud-newer: download and store.
-    const cSnap = await getDoc(doc(cloud.db, 'users', uid, 'vaults', cvId, 'records', id))
-    if (!cSnap.exists()) continue
-    const cData = cSnap.data()
-    await db.encryptedRecords.put({
-      id, store: cData.store, vaultId: localVaultId,
-      ciphertext: cData.ciphertext, iv: cData.iv, updatedAt: cData.updatedAt,
+    writes.push({
+      id, store: cm.store, vaultId: localVaultId,
+      ciphertext: cm.ciphertext, iv: cm.iv, updatedAt: cm.updatedAt,
     })
-    pulled++
+  }
+  if (writes.length) {
+    await db.encryptedRecords.bulkPut(writes)
+    pulled = writes.length
   }
 
-  // Assets — read ciphertext (inline or chunked) from the asset doc tree.
-  // Conflict handling for assets is implicit: a node-conflict copy keeps the
-  // original asset id, which is enough to preserve user work.
   let pulledAssets = 0
+  const assetsToFetch = []
   for (const [id, cm] of manifest.assets) {
     const localAsset = await db.encryptedAssets.get(id)
     if (localAsset && localAsset.updatedAt >= cm.updatedAt) continue
-    const fetched = await cloudFetchAssetCiphertext(uid, cvId, id)
-    if (!fetched) continue
+    assetsToFetch.push({ id, cm })
+  }
+  await runWithConcurrency(assetsToFetch, 6, async ({ id, cm }) => {
+    const fetched = await cloudFetchAssetCiphertext(uid, cvId, id, cm)
+    if (!fetched) return
     await db.encryptedAssets.put({
       id, kind: cm.kind, vaultId: localVaultId,
       ciphertext: fetched.ciphertext, iv: fetched.meta.iv, updatedAt: cm.updatedAt,
     })
     pulledAssets++
-  }
+  })
 
-  // Refresh in-memory state if the currently open vault is the one we pulled.
   if (state.ctx?.vaultId === localVaultId) {
     await reloadDocsAndFolders(ctx)
     if (state.activeDocId) state.nodes = await getAllNodes(ctx)
@@ -2494,37 +2787,179 @@ async function cloudPull(localVaultId, ctx, fullFetch = false, options = {}) {
   return { pulled, pulledAssets, skipped, conflicts }
 }
 
+// v2 pull: per-document bundles + single tree blob. Server-side filter on
+// re-sync means we only fetch bundles that actually changed in the cloud.
+async function cloudPullV2(localVaultId, ctx, fullFetch, options, { uid, cvId, link }) {
+  const since = fullFetch ? -1 : (link.lastSyncedAt || 0)
+  const isFirstSync = fullFetch || !since
+  const conflictStrategy = options.conflictStrategy || 'both'
+
+  // Cloud manifests — filtered to changed-since on re-sync, full on first sync.
+  // All three are independent; fire in parallel.
+  const sinceArg = isFirstSync ? 0 : since
+  const [bundles, cloudTree, cloudAssets] = await Promise.all([
+    cloudFetchBundleManifest(uid, cvId, sinceArg),
+    cloudFetchTreeBundle(uid, cvId),
+    cloudFetchAssetManifest(uid, cvId, sinceArg),
+  ])
+
+  // Compute each local document's bundleUpdatedAt (max of doc + node ts).
+  // Decrypting all nodes is unavoidable here because documentId lives inside
+  // each node's ciphertext — but this is one batch of crypto work, not N
+  // network round-trips.
+  const [localDocs, localFolders, localNodes] = await Promise.all([
+    getAllDocs(ctx), getAllFolders(ctx), getAllNodes(ctx),
+  ])
+  const localDocById = new Map(localDocs.map(d => [d.id, d]))
+  const localNodesByDoc = new Map() // docId -> node[]
+  for (const n of localNodes) {
+    if (!localNodesByDoc.has(n.documentId)) localNodesByDoc.set(n.documentId, [])
+    localNodesByDoc.get(n.documentId).push(n)
+  }
+  const localBundleTs = new Map()
+  for (const doc of localDocs) {
+    let max = doc.updatedAt || 0
+    for (const n of (localNodesByDoc.get(doc.id) || [])) {
+      if ((n.updatedAt || 0) > max) max = n.updatedAt
+    }
+    localBundleTs.set(doc.id, max)
+  }
+
+  let pulled = 0, skipped = 0, conflicts = 0
+
+  // ---- process bundles ----
+  // Each bundle is the unit of conflict — edits to different nodes within the
+  // same document on two devices register as one document-level conflict.
+  for (const [docId, cm] of bundles) {
+    const localTs = localBundleTs.get(docId) || 0
+    if (localTs === cm.updatedAt) { skipped++; continue }
+    if (localTs > cm.updatedAt && conflictStrategy !== 'overwrite') {
+      skipped++; continue  // local strictly newer
+    }
+    if (!isFirstSync) {
+      const cloudChanged = cm.updatedAt > since
+      const localChanged = localTs > since
+      if (cloudChanged && localChanged && conflictStrategy !== 'overwrite') {
+        // Keep both: duplicate cloud version locally; local stays as-is.
+        const fetched = await cloudFetchBlob(uid, cvId, 'bundles', docId, cm)
+        if (!fetched) continue
+        const cPlain = await decPayload(fetched.ciphertext, fetched.meta.iv, ctx)
+        const { document: cDoc, nodes: cNodes } = cloudUnpackDocumentBundle(cPlain)
+        await cloudMakeDocumentBundleDuplicate(ctx, cDoc, cNodes)
+        conflicts++
+        continue
+      }
+      // Otherwise fall through to overwrite-local-with-cloud.
+    }
+    // Cloud-only or cloud-newer: replace local doc + its nodes wholesale.
+    const fetched = await cloudFetchBlob(uid, cvId, 'bundles', docId, cm)
+    if (!fetched) continue
+    const cPlain = await decPayload(fetched.ciphertext, fetched.meta.iv, ctx)
+    const { document: cDoc, nodes: cNodes } = cloudUnpackDocumentBundle(cPlain)
+    // Wipe any local nodes that belong to this doc but won't be in the cloud
+    // version (otherwise stale nodes would linger after sync). Cloud is the
+    // source of truth for this bundle.
+    const localNodeIds = (localNodesByDoc.get(docId) || []).map(n => n.id)
+    if (localNodeIds.length) await db.encryptedRecords.bulkDelete(localNodeIds)
+    await putDoc(cDoc, ctx)
+    if (cNodes.length) {
+      const writes = await Promise.all(cNodes.map(async n => {
+        const { ciphertext, iv } = await encPayload(n, ctx)
+        return { id: n.id, store: 'nodes', vaultId: localVaultId, ciphertext, iv, updatedAt: n.updatedAt }
+      }))
+      await db.encryptedRecords.bulkPut(writes)
+    }
+    pulled++
+  }
+
+  // ---- tree (folders) ----
+  // Per-folder newer-wins. Cloud-side folder deletions are not propagated —
+  // matches the v1 behavior; explicit delete sync is out of scope for now.
+  let pulledTree = 0
+  if (cloudTree) {
+    const tPlain = await decPayload(cloudTree.ciphertext, cloudTree.meta.iv, ctx)
+    const { folders: cFolders } = cloudUnpackTreeBundle(tPlain)
+    const localFolderById = new Map(localFolders.map(f => [f.id, f]))
+    for (const cf of cFolders) {
+      const lf = localFolderById.get(cf.id)
+      if (!lf || (cf.updatedAt || 0) > (lf.updatedAt || 0)) {
+        await putFolder(cf, ctx); pulledTree++
+      }
+    }
+  }
+
+  // ---- assets (parallel) ----
+  let pulledAssets = 0
+  const assetsToFetch = []
+  for (const [id, cm] of cloudAssets) {
+    const localAsset = await db.encryptedAssets.get(id)
+    if (localAsset && localAsset.updatedAt >= cm.updatedAt) continue
+    assetsToFetch.push({ id, cm })
+  }
+  await runWithConcurrency(assetsToFetch, 6, async ({ id, cm }) => {
+    const fetched = await cloudFetchAssetCiphertext(uid, cvId, id, cm)
+    if (!fetched) return
+    await db.encryptedAssets.put({
+      id, kind: cm.kind, vaultId: localVaultId,
+      ciphertext: fetched.ciphertext, iv: fetched.meta.iv, updatedAt: cm.updatedAt,
+    })
+    pulledAssets++
+  })
+
+  // Refresh in-memory state if the currently open vault is the one we pulled.
+  if (state.ctx?.vaultId === localVaultId) {
+    await reloadDocsAndFolders(ctx)
+    if (state.activeDocId) state.nodes = await getAllNodes(ctx)
+    await rebuildSearchIndexFromVault(ctx)
+  }
+
+  const stamp = now()
+  await cloudSetVaultLink(localVaultId, { lastPulledAt: stamp, lastSyncedAt: stamp })
+  return { pulled, pulledAssets, skipped, conflicts, pulledTree }
+}
+
 // ---- Unlink: remove the cloud copy of a vault and forget the link -------
+// Deletes everything under the vault root: legacy v1 `records/`, v2
+// `bundles/` (including each bundle's `chunks/` subcollection), `tree/`,
+// `assets/` (including chunks), then the meta doc.
 async function cloudUnlinkVault(localVaultId, { deleteRemote = false } = {}) {
   const link = await cloudGetVaultLink(localVaultId)
   if (!link?.cloudVaultId) { await cloudClearVaultLink(localVaultId); return }
   if (deleteRemote && cloud.ready && cloudUserUid()) {
     const uid = cloudUserUid()
     const cvId = link.cloudVaultId
-    const { getDocs, writeBatch, deleteDoc, doc } = cloud.fbStore
-    // Delete records, assets (storage objects + docs), then meta + vault root.
-    const recsSnap = await getDocs(cloudVaultRecordsCol(uid, cvId))
-    for (let i = 0; i < recsSnap.docs.length; i += 450) {
-      const batch = writeBatch(cloud.db)
-      for (const d of recsSnap.docs.slice(i, i + 450)) batch.delete(d.ref)
-      await batch.commit()
-    }
-    const assetsSnap = await getDocs(cloudVaultAssetsCol(uid, cvId))
-    const { collection } = cloud.fbStore
-    for (const d of assetsSnap.docs) {
-      const chunksCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets', d.id, 'chunks')
-      const chunkSnap = await getDocs(chunksCol)
-      for (let i = 0; i < chunkSnap.docs.length; i += 450) {
+    const { getDocs, writeBatch, deleteDoc, doc, collection } = cloud.fbStore
+    // Helper: bulk-delete every doc in a collection in 450-op batches.
+    const deleteAll = async (col) => {
+      const snap = await getDocs(col)
+      for (let i = 0; i < snap.docs.length; i += 450) {
         const batch = writeBatch(cloud.db)
-        for (const cd of chunkSnap.docs.slice(i, i + 450)) batch.delete(cd.ref)
+        for (const d of snap.docs.slice(i, i + 450)) batch.delete(d.ref)
         await batch.commit()
       }
+      return snap.docs
     }
-    for (let i = 0; i < assetsSnap.docs.length; i += 450) {
-      const batch = writeBatch(cloud.db)
-      for (const d of assetsSnap.docs.slice(i, i + 450)) batch.delete(d.ref)
-      await batch.commit()
+    // v1 records (no-op for v2-only vaults but cheap).
+    await deleteAll(cloudVaultRecordsCol(uid, cvId))
+    // v2 bundles — each bundle may have a chunks subcollection.
+    const bundlesCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'bundles')
+    const bundleDocs = await deleteAll(bundlesCol)
+    for (const d of bundleDocs) {
+      await deleteAll(collection(cloud.db, 'users', uid, 'vaults', cvId, 'bundles', d.id, 'chunks'))
     }
+    // v2 tree singleton (with possible chunks).
+    const treeCol = collection(cloud.db, 'users', uid, 'vaults', cvId, 'tree')
+    const treeDocs = await deleteAll(treeCol)
+    for (const d of treeDocs) {
+      await deleteAll(collection(cloud.db, 'users', uid, 'vaults', cvId, 'tree', d.id, 'chunks'))
+    }
+    // Assets (with chunks).
+    const assetsCol = cloudVaultAssetsCol(uid, cvId)
+    const assetsSnap = await getDocs(assetsCol)
+    for (const d of assetsSnap.docs) {
+      await deleteAll(collection(cloud.db, 'users', uid, 'vaults', cvId, 'assets', d.id, 'chunks'))
+    }
+    await deleteAll(assetsCol)
     try { await deleteDoc(cloudVaultMetaDoc(uid, cvId)) } catch {}
   }
   await cloudClearVaultLink(localVaultId)
@@ -7331,9 +7766,11 @@ async function cloudGuardBusy(fn) {
 }
 
 function cloudFormatPushSummary(r) {
-  const bits = [`Pushed ${r.pushed} records, ${r.pushedAssets} assets`]
-  if (r.conflicts) bits.push(`${r.conflicts} conflicts duplicated`)
+  const bits = [`Pushed ${r.pushed} document${r.pushed === 1 ? '' : 's'}, ${r.pushedAssets} asset${r.pushedAssets === 1 ? '' : 's'}`]
+  if (r.pushedTree) bits.push('folder tree updated')
+  if (r.conflicts) bits.push(`${r.conflicts} conflict${r.conflicts === 1 ? '' : 's'} duplicated`)
   if (r.skippedAssetsTooBig) bits.push(`${r.skippedAssetsTooBig} image(s) skipped — over 15 MB`)
+  if (r.migrated) bits.push('migrated to v2 sync schema')
   return bits.join('. ') + '.'
 }
 
@@ -7444,9 +7881,8 @@ async function cloudRunPush(localVaultId) {
       await reloadDocsAndFolders(state.ctx)
       if (state.activeDocId) state.nodes = await getAllNodes(state.ctx)
     }
-    const tone = r.conflicts ? 'warn' : 'success'
-    const verb = strategy === 'overwrite' ? ' forced over cloud' : ' duplicated'
-    cloudSetResult(`Pushed ${r.pushed} records, ${r.pushedAssets} assets.${r.conflicts ? ` ${r.conflicts} conflicts${verb}.` : ''}`.trim(), tone)
+    const tone = (r.conflicts || r.skippedAssetsTooBig) ? 'warn' : 'success'
+    cloudSetResult(cloudFormatPushSummary(r), tone)
     renderSidebar(); if (state.activeDocId) renderEditor()
   })
 }
