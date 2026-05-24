@@ -465,6 +465,17 @@ button.btn-secondary:hover:not(:disabled){background:var(--border-secondary-hove
 #tts-mini .tts-field{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)}
 #tts-mini .tts-field select{background:var(--bg-input);border:1px solid var(--border-input);color:var(--text);border-radius:4px;padding:3px 6px;font-size:12px;max-width:180px}
 #tts-mini .tts-now{flex:1;min-width:0;color:var(--text-dim);font-style:italic;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tts-block-play{width:18px;height:18px;padding:0;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--text-soft);font-size:9px;line-height:1;cursor:pointer;transition:opacity .12s,color .12s,background .12s}
+.tts-block-play:hover{color:var(--accent);background:var(--bg-3)}
+.node-meta .tts-block-play{background:none;border:none;width:auto;height:auto;font-size:11px;color:var(--text-soft);border-radius:0}
+.node-meta .tts-block-play:hover{color:var(--accent);background:none}
+.preview-body .tts-block-play{position:absolute;left:-22px;top:2px;opacity:0;z-index:5}
+.preview-body [data-node-id]{position:relative}
+.preview-body [data-node-id]:hover > .tts-block-play{opacity:1}
+.node-wrap.tts-current > .node-row .node-text,.preview-body [data-node-id].tts-current{background:rgba(255,224,102,0.28);border-radius:3px;box-shadow:0 0 0 2px rgba(255,224,102,0.28)}
+#tts-selection-play{position:fixed;z-index:601;background:var(--accent,#5b8def);color:#fff;border:none;border-radius:14px;padding:4px 10px 4px 8px;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;gap:4px}
+#tts-selection-play.hidden{display:none}
+#tts-selection-play:hover{filter:brightness(1.1)}
 .due-counter{background:var(--accent,#ef4444);color:#fff;font-size:.7em;padding:1px 6px;border-radius:8px;margin-left:6px;line-height:1.4;font-weight:600;flex-shrink:0}
 #card-popover{position:fixed;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:4px 0 0;min-width:200px;z-index:550;box-shadow:var(--shadow);display:flex;flex-direction:column}
 #card-popover.hidden{display:none}
@@ -2993,8 +3004,8 @@ const previewMdParser = new MarkdownIt({ breaks: true, html: true, linkify: true
 // Export a subtree starting at rootNodeId as Quarto markdown, treating that
 // node as if it were a top-level doc. No front-matter, no synthetic title —
 // the modal supplies its own header instead.
-function exportSubtreeMarkdown(doc, nodes, rootNodeId) {
-  if (!rootNodeId) return exportMarkdown(doc, nodes)
+function exportSubtreeMarkdown(doc, nodes, rootNodeId, opts) {
+  if (!rootNodeId) return exportMarkdown(doc, nodes, opts)
   const ids = new Set([rootNodeId])
   const stack = [rootNodeId]
   while (stack.length) {
@@ -3006,7 +3017,7 @@ function exportSubtreeMarkdown(doc, nodes, rootNodeId) {
   const reparented = nodes
     .filter(n => ids.has(n.id))
     .map(n => n.id === rootNodeId ? { ...n, parentId: null } : n)
-  return exportMarkdown({ id: doc.id, title: '', createdAt: doc.createdAt, updatedAt: doc.updatedAt }, reparented)
+  return exportMarkdown({ id: doc.id, title: '', createdAt: doc.createdAt, updatedAt: doc.updatedAt }, reparented, opts)
 }
 
 // Rewrites Quarto fenced divs (`::: {.callout-note}` ... `:::`) into raw
@@ -3048,9 +3059,9 @@ function normalizeExecChunkFences(md) {
   return md.replace(/^(\s*)```\{([a-zA-Z][\w-]*)[^}]*\}\s*$/gm, '$1```$2')
 }
 
-// Pipeline: subtree → markdown → normalize → wrap divs → extract KaTeX → render → splice KaTeX HTML back.
+// Pipeline: subtree → markdown → normalize → wrap divs → extract KaTeX → render → splice KaTeX HTML back → annotate nodeIds.
 function renderMarkdownToPreviewHtml(doc, nodes, rootNodeId) {
-  let md = exportSubtreeMarkdown(doc, nodes, rootNodeId)
+  let md = exportSubtreeMarkdown(doc, nodes, rootNodeId, { withNodeIds: true })
   // Strip leading YAML front-matter so markdown-it doesn't render the `---`
   // as an <hr> followed by a setext heading. The modal header already shows
   // the doc title.
@@ -3076,7 +3087,47 @@ function renderMarkdownToPreviewHtml(doc, nodes, rootNodeId) {
 
   let html = previewMdParser.render(md)
   for (const s of slots) html = html.split(s.key).join(s.html)
-  return html
+  return annotatePreviewBlocksWithNodeIds(html)
+}
+
+// Lift `<!--node:UUID-->` sentinels (emitted by exportMarkdown with
+// withNodeIds) onto the data-node-id attribute of the immediately-following
+// element, recursively. Also injects a ▶ play button inside each annotated
+// block so hovering a paragraph/heading in the preview reveals a click target
+// that starts TTS from that block.
+function annotatePreviewBlocksWithNodeIds(html) {
+  const wrap = document.createElement('div')
+  wrap.innerHTML = html
+  const SENT = /^node:([0-9a-fA-F-]{8,})$/
+  const walk = (parent) => {
+    let child = parent.firstChild
+    while (child) {
+      const next = child.nextSibling
+      if (child.nodeType === Node.COMMENT_NODE) {
+        const m = (child.nodeValue || '').trim().match(SENT)
+        if (m) {
+          let sib = child.nextSibling
+          while (sib && sib.nodeType !== Node.ELEMENT_NODE) sib = sib.nextSibling
+          if (sib && sib.nodeType === Node.ELEMENT_NODE && !sib.hasAttribute('data-node-id')) {
+            sib.setAttribute('data-node-id', m[1])
+            const btn = document.createElement('button')
+            btn.className = 'tts-block-play'
+            btn.type = 'button'
+            btn.title = 'Read from here'
+            btn.setAttribute('aria-label', 'Read from here')
+            btn.textContent = '▶'
+            sib.insertBefore(btn, sib.firstChild)
+          }
+          child.remove()
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        walk(child)
+      }
+      child = next
+    }
+  }
+  walk(wrap)
+  return wrap.innerHTML
 }
 
 // Serialize a Pandoc/Quarto attribute block `{#id .class1 .class2 key=val}`.
@@ -3121,12 +3172,18 @@ function parseAttrs(inner) {
 // a heading or block role) indent by `listDepth * 2`. A text node's children
 // inherit list context unless the parent is itself block-shaped, in which
 // case children reset to listDepth 0.
-function exportMarkdown(doc, nodes) {
+function exportMarkdown(doc, nodes, opts) {
+  const withNodeIds = !!(opts && opts.withNodeIds)
   const childrenOf = id => sortedChildren(nodes, id, doc.id)
   const isBlockText = n => n.kind === 'text' && (n.headingLevel || n.role === 'paragraph' || n.role === 'callout' || n.role === 'fenced-div')
   const isListContext = n => (n.kind === 'text' && !isBlockText(n)) || n.kind === 'checkbox'
 
   const isListItem = n => (n.kind === 'text' && !isBlockText(n)) || n.kind === 'checkbox'
+  // Sentinel emitted before a block when withNodeIds is on. The preview
+  // pipeline post-processes the rendered HTML and lifts the id onto the
+  // following block element so click-to-play and highlight-while-reading can
+  // map back to the source node.
+  const tag = n => withNodeIds ? ('\n<!--node:' + n.id + '-->\n\n') : ''
   function emitChildren(parentId, listDepth) {
     let s = ''
     const kids = sortedChildren(nodes, parentId, doc.id)
@@ -3145,13 +3202,13 @@ function exportMarkdown(doc, nodes) {
     if (node.kind === 'text' && node.headingLevel) {
       const lvl = Math.min(6, Math.max(1, node.headingLevel))
       const attrs = node.attrs ? ' ' + serializeAttrs(node.attrs) : ''
-      let s = '\n' + '#'.repeat(lvl) + ' ' + (node.content || '').trim() + attrs + '\n\n'
+      let s = tag(node) + '\n' + '#'.repeat(lvl) + ' ' + (node.content || '').trim() + attrs + '\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
     if (node.kind === 'text' && (node.role === 'callout' || node.role === 'fenced-div')) {
       const cls = node.divClass || (node.role === 'callout' ? 'callout-note' : 'aside')
-      let s = '\n::: {.' + cls + '}\n\n'
+      let s = tag(node) + '\n::: {.' + cls + '}\n\n'
       const title = (node.content || '').trim()
       if (title) s += '## ' + title + '\n\n'
       s += emitChildren(node.id, 0)
@@ -3159,36 +3216,36 @@ function exportMarkdown(doc, nodes) {
       return s
     }
     if (node.kind === 'text' && node.role === 'paragraph') {
-      let s = (node.content || '').trim() + '\n\n'
+      let s = tag(node) + (node.content || '').trim() + '\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
     if (node.kind === 'raw') {
-      let s = (node.content ?? '')
+      let s = tag(node) + (node.content ?? '')
       if (!s.endsWith('\n')) s += '\n'
       s += '\n'
       s += emitChildren(node.id, 0)
       return s
     }
     if (node.kind === 'hr') {
-      let s = '\n---\n\n'
+      let s = tag(node) + '\n---\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
     if (node.kind === 'math') {
-      let s = '\n$$\n' + (node.content ?? '') + '\n$$\n\n'
+      let s = tag(node) + '\n$$\n' + (node.content ?? '') + '\n$$\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
     if (node.kind === 'footnote-def') {
       const label = node.footnoteLabel || '1'
-      let s = '\n[^' + label + ']: ' + (node.content || '').trim() + '\n\n'
+      let s = tag(node) + '\n[^' + label + ']: ' + (node.content || '').trim() + '\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
     if (node.kind === 'text' && node.role === 'blockquote') {
       const lines = (node.content || '').split('\n')
-      let s = '\n' + lines.map(l => '> ' + l).join('\n') + '\n\n'
+      let s = tag(node) + '\n' + lines.map(l => '> ' + l).join('\n') + '\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
@@ -3205,7 +3262,7 @@ function exportMarkdown(doc, nodes) {
       // Indented (4-space) code block — only legal at top level, never inside a list item.
       if (node.codeFence === 'indent' && listDepth === 0) {
         const indented = body.split('\n').map(l => l ? '    ' + l : l).join('\n')
-        let s = '\n' + indented + (indented.endsWith('\n') ? '' : '\n') + '\n'
+        let s = tag(node) + '\n' + indented + (indented.endsWith('\n') ? '' : '\n') + '\n'
         s += emitChildren(node.id, 0)
         return s
       }
@@ -3221,13 +3278,13 @@ function exportMarkdown(doc, nodes) {
         s += emitChildren(node.id, listDepth)
         return s
       }
-      let s = '\n' + fence + '\n' + body + (body.endsWith('\n') ? '' : '\n') + '```\n\n'
+      let s = tag(node) + '\n' + fence + '\n' + body + (body.endsWith('\n') ? '' : '\n') + '```\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
     if (node.kind === 'table') {
       const indent = listDepth > 0 ? '    '.repeat(listDepth) : ''
-      let s = '\n' + tableDataToPipeMarkdown(node.tableData, indent) + '\n'
+      let s = (listDepth === 0 ? tag(node) : '') + '\n' + tableDataToPipeMarkdown(node.tableData, indent) + '\n'
       s += emitChildren(node.id, listDepth)
       return s
     }
@@ -3242,7 +3299,7 @@ function exportMarkdown(doc, nodes) {
         s += emitChildren(node.id, listDepth + 1)
         return s
       }
-      let s = '\n' + md + '\n\n'
+      let s = tag(node) + '\n' + md + '\n\n'
       s += emitChildren(node.id, 0)
       return s
     }
@@ -6332,6 +6389,18 @@ function buildNodeEl(node, treeMap, depth, neededCM, forceExpand = false) {
   const kindBtn = document.createElement('button'); kindBtn.title = 'Node menu'
   kindBtn.textContent = '☰'; kindBtn.dataset.action = 'kindmenu'; kindBtn.dataset.nodeId = node.id
   meta.appendChild(kindBtn)
+  // ▶ "Read from here" appears for block-context nodes so a click starts TTS
+  // at this point and continues to the document end. Skipping list items keeps
+  // the hover area uncluttered for the common case.
+  if (node.kind === 'text' && (node.headingLevel || node.role === 'paragraph' || node.role === 'callout' || node.role === 'fenced-div' || node.role === 'blockquote')) {
+    const playBtn = document.createElement('button')
+    playBtn.className = 'tts-block-play'
+    playBtn.type = 'button'
+    playBtn.title = 'Read from here'
+    playBtn.setAttribute('aria-label', 'Read from here')
+    playBtn.textContent = '▶'
+    meta.appendChild(playBtn)
+  }
   row.insertBefore(meta, row.firstChild)
 
   // Trailing meta (right edge): card / memo pills. margin-left:auto in CSS
@@ -10759,13 +10828,13 @@ function ttsBuildUtterance(chunk) {
   const v = tts.voices.find(x => x.voiceURI === tts.voiceURI)
   if (v) { u.voice = v; u.lang = v.lang }
   u.onend = () => {
-    if (!tts.playing) return
+    if (!tts.playing || tts.paused) return
     tts.index += 1
     if (tts.index >= tts.queue.length) { ttsStop(); return }
     ttsSpeakCurrent()
   }
   u.onerror = () => {
-    if (!tts.playing) return
+    if (!tts.playing || tts.paused) return
     tts.index += 1
     if (tts.index >= tts.queue.length) { ttsStop(); return }
     ttsSpeakCurrent()
@@ -10777,6 +10846,7 @@ function ttsSpeakCurrent() {
   if (!ttsSupported()) return
   const chunk = tts.queue[tts.index]
   if (!chunk) { ttsStop(); return }
+  ttsHighlightCurrent(chunk.nodeId || null)
   ttsRenderMini()
   window.speechSynthesis.speak(ttsBuildUtterance(chunk))
 }
@@ -10792,18 +10862,22 @@ function ttsPlay(chunks) {
   ttsSpeakCurrent()
 }
 
+// Chromium's speechSynthesis.pause() often leaves the engine in a state where
+// resume() does nothing — particularly after the pause exceeds ~14s. Cancel +
+// re-speak the current chunk from the start. Chunks are short sentences
+// (<=200 chars from splitForTts), so losing sub-chunk position is acceptable
+// and mirrors how NaturalReaders behaves.
 function ttsPause() {
   if (!ttsSupported() || !tts.playing) return
-  window.speechSynthesis.pause()
   tts.paused = true
+  window.speechSynthesis.cancel()
   ttsRenderMini()
 }
 
 function ttsResume() {
   if (!ttsSupported() || !tts.playing) return
-  window.speechSynthesis.resume()
   tts.paused = false
-  ttsRenderMini()
+  ttsSpeakCurrent()
 }
 
 function ttsStop() {
@@ -10813,6 +10887,7 @@ function ttsStop() {
   tts.paused = false
   tts.queue = []
   tts.index = 0
+  ttsHighlightCurrent(null)
   hideTtsMini()
 }
 
@@ -10832,12 +10907,74 @@ function ttsPlayFromNode(nodeId) {
   ttsPlay(extractTtsChunks([nodeId], state.nodes, doc))
 }
 
+// "Read from here to end of document": depth-first walk the doc, collect every
+// node starting at nodeId (inclusive), then feed only those roots (with no
+// descendants — extractTtsChunks expands them itself, which would double-visit
+// children). Instead we pass each visited node as its own root with a stripped
+// children list to keep the visit linear.
+function ttsPlayFromHere(nodeId) {
+  if (!ttsSupported() || !nodeId) return
+  const doc = state.docs.find(d => d.id === state.activeDocId)
+  if (!doc) return
+  const order = []
+  const visit = (id) => {
+    order.push(id)
+    for (const k of sortedChildren(state.nodes, id, doc.id)) visit(k.id)
+  }
+  for (const r of sortedChildren(state.nodes, null, doc.id)) visit(r.id)
+  const i = order.indexOf(nodeId)
+  if (i < 0) return ttsPlayFromNode(nodeId)
+  const tail = order.slice(i)
+  const tailSet = new Set(tail)
+  // Reparent any node whose parent is outside the tail set to null, so the
+  // traversal in extractTtsChunks doesn't escape upward and re-emit ancestors.
+  const trimmedNodes = state.nodes
+    .filter(n => tailSet.has(n.id))
+    .map(n => tailSet.has(n.parentId) ? n : { ...n, parentId: null })
+  // Roots of the trimmed graph: nodes whose (possibly-rewritten) parent is null.
+  const roots = trimmedNodes.filter(n => n.parentId === null).map(n => n.id)
+  ttsPlay(extractTtsChunks(roots, trimmedNodes, doc))
+}
+
+// Play an ad-hoc text string (used by the "Read selection" popover).
+function ttsPlayText(text) {
+  if (!ttsSupported()) return
+  const clean = stripInlineMarkdown(text || '')
+  if (!clean) return
+  const chunks = splitForTts(clean).map(t => ({ nodeId: null, text: t }))
+  if (chunks.length) ttsPlay(chunks)
+}
+
 function ttsPlayDoc() {
   if (!ttsSupported()) return
   const doc = state.docs.find(d => d.id === state.activeDocId)
   if (!doc) return
   const roots = sortedChildren(state.nodes, null, doc.id)
   ttsPlay(extractTtsChunks(roots.map(r => r.id), state.nodes, doc))
+}
+
+function ttsSkipToNextNode() {
+  if (!ttsSupported() || !tts.playing) return
+  const cur = tts.queue[tts.index]?.nodeId
+  let i = tts.index + 1
+  while (i < tts.queue.length && tts.queue[i].nodeId === cur) i++
+  if (i >= tts.queue.length) { ttsStop(); return }
+  tts.index = i
+  window.speechSynthesis.cancel()
+  if (tts.paused) tts.paused = false
+  ttsSpeakCurrent()
+}
+
+function ttsHighlightCurrent(nodeId) {
+  // Clear any prior highlights across both views.
+  document.querySelectorAll('.tts-current').forEach(el => el.classList.remove('tts-current'))
+  if (!nodeId) return
+  const targets = document.querySelectorAll('[data-node-id="' + nodeId + '"]')
+  targets.forEach(el => el.classList.add('tts-current'))
+  const first = targets[0]
+  if (first && typeof first.scrollIntoView === 'function') {
+    try { first.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) } catch {}
+  }
 }
 
 function showTtsMini() {
@@ -10911,6 +11048,7 @@ function initTtsControls() {
   el.querySelector('#tts-playpause')?.addEventListener('click', () => {
     if (tts.paused) ttsResume(); else ttsPause()
   })
+  el.querySelector('#tts-next')?.addEventListener('click', () => ttsSkipToNextNode())
   el.querySelector('#tts-stop')?.addEventListener('click', () => ttsStop())
   rateSel?.addEventListener('change', () => {
     const v = parseFloat(rateSel.value)
@@ -10927,6 +11065,81 @@ function initTtsControls() {
   // Voice list is async in Chrome.
   window.speechSynthesis.addEventListener?.('voiceschanged', ttsLoadVoices)
   ttsLoadVoices()
+
+  ttsBindBlockPlayClicks()
+  ttsBindSelectionPopover()
+}
+
+// Delegated click handler for the ▶ play affordance attached to outline
+// .node-row and preview blocks. Both views surface the same .tts-block-play
+// element; the source nodeId lives on the closest [data-node-id] ancestor.
+function ttsBindBlockPlayClicks() {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('.tts-block-play')
+    if (!btn) return
+    e.preventDefault()
+    e.stopPropagation()
+    const host = btn.closest('[data-node-id]')
+    const id = host?.getAttribute('data-node-id')
+    if (id) ttsPlayFromHere(id)
+  })
+}
+
+// NaturalReaders-style "highlight to read": after the user releases the
+// mouse/keyboard with a non-empty selection inside the outline editor or
+// preview body, anchor a floating "▶ Read selection" button near the end of
+// the selection. The button is a singleton injected next to #tts-mini.
+function ttsBindSelectionPopover() {
+  const btn = document.getElementById('tts-selection-play')
+  if (!btn) return
+  const hide = () => btn.classList.add('hidden')
+  const tryShow = () => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || !sel.rangeCount) { hide(); return }
+    const txt = sel.toString().trim()
+    if (txt.length < 4) { hide(); return }
+    const anchor = sel.anchorNode
+    const host = anchor && (anchor.nodeType === Node.ELEMENT_NODE ? anchor : anchor.parentElement)
+    if (!host || !host.closest('.preview-body, .node-text')) { hide(); return }
+    const rect = sel.getRangeAt(sel.rangeCount - 1).getBoundingClientRect()
+    if (!rect || (!rect.width && !rect.height)) { hide(); return }
+    // Make the button measurable before positioning.
+    btn.classList.remove('hidden')
+    const bw = btn.offsetWidth || 130
+    const bh = btn.offsetHeight || 28
+    const vw = window.innerWidth, vh = window.innerHeight
+    let top = rect.bottom + 6
+    if (top + bh > vh - 8) top = Math.max(8, rect.top - bh - 6)
+    let left = rect.right - bw
+    if (left < 8) left = 8
+    if (left + bw > vw - 8) left = vw - bw - 8
+    btn.style.top = top + 'px'
+    btn.style.left = left + 'px'
+  }
+  // Show on selection commit (mouseup/keyup); hide on collapse or scroll.
+  document.addEventListener('mouseup', () => setTimeout(tryShow, 0))
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift' || (e.key && e.key.startsWith('Arrow'))) setTimeout(tryShow, 0)
+  })
+  let t = 0
+  document.addEventListener('selectionchange', () => {
+    clearTimeout(t)
+    t = setTimeout(() => {
+      const sel = window.getSelection()
+      if (!sel || sel.isCollapsed) hide()
+    }, 80)
+  })
+  document.addEventListener('scroll', hide, true)
+  // Clicking the button itself shouldn't blur the selection before we read it.
+  btn.addEventListener('mousedown', (e) => e.preventDefault())
+  btn.addEventListener('click', (e) => {
+    e.preventDefault()
+    const sel = window.getSelection()
+    const txt = sel ? sel.toString() : ''
+    hide()
+    if (sel) sel.removeAllRanges()
+    ttsPlayText(txt)
+  })
 }
 
 // =====================================================================
@@ -11062,11 +11275,13 @@ if ('serviceWorker' in navigator) {
 <div id="sidebar-ctx-menu" class="ctx-menu hidden"></div>
 <div id="tts-mini" class="hidden" role="region" aria-label="Text-to-speech playback">
   <button id="tts-playpause" type="button" title="Pause">⏸</button>
+  <button id="tts-next" type="button" title="Next paragraph/heading">⏭</button>
   <button id="tts-stop" type="button" title="Stop">⏹</button>
   <label class="tts-field"><span>Speed</span><select id="tts-rate"></select></label>
   <label class="tts-field"><span>Voice</span><select id="tts-voice"></select></label>
   <span id="tts-now" class="tts-now"></span>
 </div>
+<button id="tts-selection-play" class="hidden" type="button" title="Read selection aloud">▶ Read selection</button>
 <div id="sidebar-new-menu" class="ctx-menu hidden">
   <ul>
     <li class="ctx-item" data-action="new-doc">New document</li>
